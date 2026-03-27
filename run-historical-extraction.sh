@@ -431,7 +431,13 @@ else
   echo "=== No active skills to enrich, skipping. ==="
 fi
 
-# ── Final compile ────────────────────────────────────────────────────────────
+# ── Dedup + reclass + compile ────────────────────────────────────────────────
+echo "=== Deduplicating patterns... ==="
+source "$VENV" && python "$PROJECT_DIR/extract.py" dedup --input patterns.json
+
+echo "=== Reclassifying modes... ==="
+source "$VENV" && python "$PROJECT_DIR/extract.py" reclass --input patterns.json
+
 echo "=== Compiling rules... ==="
 source "$VENV" && python "$PROJECT_DIR/compile.py" --input patterns.json --output output/
 
