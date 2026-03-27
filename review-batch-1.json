@@ -1,0 +1,386 @@
+[
+  {
+    "pr_number": 47170,
+    "pr_title": "DOM-74899 Integrate Apps into Elastic Search",
+    "pr_author": "ddl-aj-rossman",
+    "file_path": "server/app/domino/server/search/client/IndexFieldName.scala",
+    "line": 99,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "ddl-aj-rossman",
+        "body": "At the moment, taxonomyTagLabels and taxonomyTagDescriptions aren't used. But, in the next PR, I plan to integrate an Apps tags such that an App can be searched for based on it's tags labels/descriptions"
+      }
+    ]
+  },
+  {
+    "pr_number": 47170,
+    "pr_title": "DOM-74899 Integrate Apps into Elastic Search",
+    "pr_author": "ddl-aj-rossman",
+    "file_path": "server/app/domino/server/search/Results.scala",
+    "line": 283,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-bira-ignacio",
+        "body": "thought: for future us and posterity \ud83d\ude04 \n`override def project: Project = ???` follows the same pattern as other places in the code so this is consistent with the codebase but it could be problematic since `Project` is required.\nThe real fix would be making project optional in the `SearchResult` trait, but that's a larger refactor and out of scope here. \nAll good as-is!"
+      },
+      {
+        "author": "ddl-aj-rossman",
+        "body": "Good callout \u2014 agreed this is tech debt inherited from the trait. The optional refactor makes sense as a follow-up but is out of scope here. We've been throwing around the idea for a larger ES refactor, I will add a ticket for this"
+      }
+    ]
+  },
+  {
+    "pr_number": 47170,
+    "pr_title": "DOM-74899 Integrate Apps into Elastic Search",
+    "pr_author": "ddl-aj-rossman",
+    "file_path": "server/app/domino/server/search/types/app/AppIndexer.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-bira-ignacio",
+        "body": "question: I see we're indexing on archive as well. Will this return archived apps as well?\n\nIf there isn't a unit test for this case, maybe we could add one"
+      },
+      {
+        "author": "ddl-aj-rossman",
+        "body": "Good catch! `findById` in `MongoModelProductRepository` filters out archived apps `(isArchived == false),` so getApp returns None for archived apps. However, the previous `indexAppById` would throw an `IllegalArgumentException` in that case rather than cleaning up the index entry. I've fixed this so that when getApp returns None (archived/deleted), we now call `deleteDocument` to remove it from the ES index instead."
+      }
+    ]
+  },
+  {
+    "pr_number": 47170,
+    "pr_title": "DOM-74899 Integrate Apps into Elastic Search",
+    "pr_author": "ddl-aj-rossman",
+    "file_path": "server/app/domino/server/search/types/app/AppIndexer.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-bira-ignacio",
+        "body": "nit: maybe this and the log line below should be a debug level"
+      },
+      {
+        "author": "ddl-aj-rossman",
+        "body": "Fixed \ud83d\udc4d "
+      }
+    ]
+  },
+  {
+    "pr_number": 47170,
+    "pr_title": "DOM-74899 Integrate Apps into Elastic Search",
+    "pr_author": "ddl-aj-rossman",
+    "file_path": "server/app/domino/server/search/types/app/AppIndexer.scala",
+    "line": 98,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-bira-ignacio",
+        "body": "question: this loads all apps into memory at once. For deployments with a large number of apps, is this a concern?"
+      },
+      {
+        "author": "ddl-aj-rossman",
+        "body": "This is a reasonable concern- at the current scale of our cloud customers, I don't see this being an issue but definitely something we should consider for our customer managed deployments. They better way would be to \"stream\" apps, so we'd need listApps (or a new method) to return a lazy collection, which would be a change to the AppService interface. Is it ok if I tackle this in a subsequent PR?"
+      },
+      {
+        "author": "ddl-bira-ignacio",
+        "body": "sure thing"
+      }
+    ]
+  },
+  {
+    "pr_number": 47170,
+    "pr_title": "DOM-74899 Integrate Apps into Elastic Search",
+    "pr_author": "ddl-aj-rossman",
+    "file_path": "server/app/domino/server/search/client/ElasticSearchQueryBuilder.scala",
+    "line": 127,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-bira-ignacio",
+        "body": " question: It looks like it would match everything alongside the constrained query, is it intentional? I see some of the other search methods here don't do that."
+      },
+      {
+        "author": "ddl-aj-rossman",
+        "body": "Yes, this is intentional. The `matchAllQuery` is used as a filter subquery in `makeSearchSourceBuilder` \u2014 it's the same pattern used by `searchFeatureViewsQuery` and `searchDatasetRwQuery`. The actual search constraint comes from the `makeConstrainedQuery` call which builds the must clause with the user's search phrase. The `matchAllQuery` filter just means \"don't additionally restrict by project/environment/user\" \u2014 apps are globally searchable (with post-query authorization filtering in `canUserViewApp`)"
+      }
+    ]
+  },
+  {
+    "pr_number": 47178,
+    "pr_title": "DOM-75031 chore(Admin): Rework user admin services to support keycloak-only",
+    "pr_author": "ddl-martin-currao",
+    "file_path": "server/app/domino/server/admin/ui/views/users.scala.html",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-awroblicky",
+        "body": "Can we perhaps say \"User hasn't logged in yet\" or something like that just so it's clear to customers how they can resolve it themselves without coming to support"
+      },
+      {
+        "author": "ddl-martin-currao",
+        "body": "\"Can't update until user logs in for the first time\", perhaps? Or too long for a title? "
+      },
+      {
+        "author": "ddl-awroblicky",
+        "body": "that works for me"
+      }
+    ]
+  },
+  {
+    "pr_number": 47178,
+    "pr_title": "DOM-75031 chore(Admin): Rework user admin services to support keycloak-only",
+    "pr_author": "ddl-martin-currao",
+    "file_path": "server/app/domino/server/user/domain/UserKeycloakHelper.scala",
+    "line": 184,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-awroblicky",
+        "body": "is there a ticket for this TODO?"
+      },
+      {
+        "author": "ddl-martin-currao",
+        "body": "More than a ticket, it's part of:\r\nhttps://dominodatalab.atlassian.net/wiki/spaces/ENG/pages/4044029961/Deprecated+Sunsetted+Features\r\n\r\nAdded as a new entry. "
+      }
+    ]
+  },
+  {
+    "pr_number": 47178,
+    "pr_title": "DOM-75031 chore(Admin): Rework user admin services to support keycloak-only",
+    "pr_author": "ddl-martin-currao",
+    "file_path": "server/app/domino/server/user/InProcessPersonService.scala",
+    "line": 285,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-awroblicky",
+        "body": "I think targetUser is good but thoughts on renaming it to \"idpUser\"?"
+      },
+      {
+        "author": "ddl-martin-currao",
+        "body": "_Aha! You fell into `userKeycloakHelper`'s trap._ It's not actually an IDP user.\r\n\r\n`userKeycloakHelper.getDominoUserByKeycloakId` actually runs a `mergeUser` between the `maybeDominoUserId` and the actual `idpUser`, so the returned entity is none of them, but an updated version of any of them. "
+      },
+      {
+        "author": "ddl-awroblicky",
+        "body": "Can we call it mergedUser then?"
+      },
+      {
+        "author": "ddl-martin-currao",
+        "body": "Hmmm. The issue is that later on it is actually further \"merged\" (kind of) with the result from the upgrade. \r\nThus why it is called _target_, as it is whatever the target is, regardless of whether it's coming from a dominoUser or a keycloak user. Because if only the Keycloak user is present, it will be only an IDP user (without merging). "
+      },
+      {
+        "author": "ddl-awroblicky",
+        "body": "ah ok we can keep it as is then"
+      }
+    ]
+  },
+  {
+    "pr_number": 47189,
+    "pr_title": "[DOM-75323] Start and Stop Endpoints for App Versions",
+    "pr_author": "adrianrsy",
+    "file_path": "apps/monolith-adapter/src/main/scala/domino/apps/services/ModelProductManager.scala",
+    "line": 272,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "adrianrsy",
+        "body": "This method currently does not take input for imported git repositories/ imported projects.\nChanges around that will go into a separate PR since this one's already getting complicated."
+      }
+    ]
+  },
+  {
+    "pr_number": 47189,
+    "pr_title": "[DOM-75323] Start and Stop Endpoints for App Versions",
+    "pr_author": "adrianrsy",
+    "file_path": "projects/monolith-adapter/src/main/scala/domino/projects/monoadapter/ProjectForkerAndCopier.scala",
+    "line": 880,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "adrianrsy",
+        "body": "I'm not sure what the behavior should be here."
+      },
+      {
+        "author": "ddl-ryan-connor",
+        "body": "i guess if we're making some of these non-optional like i suggest elsewhere, then we need to resolve them first.\n\nif not, then we have to think through the implications of allowing `None` here for things like commitId"
+      }
+    ]
+  },
+  {
+    "pr_number": 47189,
+    "pr_title": "[DOM-75323] Start and Stop Endpoints for App Versions",
+    "pr_author": "adrianrsy",
+    "file_path": "apps/web/src/main/scala/domino/apps/web/controllers/AppController.scala",
+    "line": 1,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-bira-ignacio",
+        "body": "question: in various places here we're now deriving version and app from instance. What would happen in the case where we wouldn't have an instance? It would be unusual but possible (app created but never got to launch for some reason)"
+      },
+      {
+        "author": "adrianrsy",
+        "body": "I'll add a fallback to the previous behavior to get the latest numerical app version when there are no instances to be fetched for an app."
+      }
+    ]
+  },
+  {
+    "pr_number": 47189,
+    "pr_title": "[DOM-75323] Start and Stop Endpoints for App Versions",
+    "pr_author": "adrianrsy",
+    "file_path": "apps/web/src/main/scala/domino/apps/web/transformers/AppVersionTransformer.scala",
+    "line": 31,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-bira-ignacio",
+        "body": "question: these can now return empty for existing apps, I think. Do you expect this to be covered via migration or we should have some level of backwards compat here to avoid precise frontend syncing? "
+      },
+      {
+        "author": "adrianrsy",
+        "body": "Most of these are already in the app version, but we definitely want a migration to handle the git ref and dfs commit. "
+      }
+    ]
+  },
+  {
+    "pr_number": 47189,
+    "pr_title": "[DOM-75323] Start and Stop Endpoints for App Versions",
+    "pr_author": "adrianrsy",
+    "file_path": "apps/monolith-adapter/src/main/scala/domino/apps/services/InProcessModelProductService.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-bira-ignacio",
+        "body": "question: what is the idea for the behaviour for other types, non app types? Should we explicitly restrict if we want to instead of silently returning?"
+      },
+      {
+        "author": "adrianrsy",
+        "body": "This would never be called with anything that isn't an app (and even if it did, either the version call will fail or the check that the version belongs to the modelproduct will fail).\r\n\r\nI can simplify to remove the silent failure cases."
+      }
+    ]
+  },
+  {
+    "pr_number": 47189,
+    "pr_title": "[DOM-75323] Start and Stop Endpoints for App Versions",
+    "pr_author": "adrianrsy",
+    "file_path": "apps/web/src/main/scala/domino/apps/web/controllers/AppInstanceController.scala",
+    "line": 63,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-bira-ignacio",
+        "body": "note: it seems like instanceId was never really used. Could we take it out from the method signature all the way? "
+      },
+      {
+        "author": "adrianrsy",
+        "body": "Hm... taking a closer look at this, seems like the UI is using this as a generic stop app API endpoint.\n\nPreferably I would want to make this match the described behavior and only delete that app instance if it was running, but I'm not sure if it would break existing behavior."
+      }
+    ]
+  },
+  {
+    "pr_number": 47189,
+    "pr_title": "[DOM-75323] Start and Stop Endpoints for App Versions",
+    "pr_author": "adrianrsy",
+    "file_path": "apps/monolith-adapter/src/main/scala/domino/apps/services/ModelProductManager.scala",
+    "line": 270,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-bira-ignacio",
+        "body": "question: do we need to set the current version in the app object? or it's already happening and I missed it? :D "
+      },
+      {
+        "author": "adrianrsy",
+        "body": "`createAppVersion` already does it. `creationOrder` is the field storing the version number."
+      },
+      {
+        "author": "ddl-ryan-connor",
+        "body": "nit clarification: i believe `creationOrder` is a monotonic counter that isnt guaranteed to be what is in the UI: i believe the \"version number\" shown in the UI comes from the ordering."
+      },
+      {
+        "author": "adrianrsy",
+        "body": "We do in the controller."
+      }
+    ]
+  },
+  {
+    "pr_number": 47189,
+    "pr_title": "[DOM-75323] Start and Stop Endpoints for App Versions",
+    "pr_author": "adrianrsy",
+    "file_path": "apps/monolith-adapter/src/main/scala/domino/apps/services/ModelProductManager.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-bira-ignacio",
+        "body": "suggestion: maybe we need to make the error message a little more clear and/or user friendly if it's going to be shown in the UI\nit's possible users will try to stop a version already stopped so perhaps saying something like \"this app version is not running or is invalid\" or something of sorts, might be helpful"
+      }
+    ]
+  },
+  {
+    "pr_number": 47189,
+    "pr_title": "[DOM-75323] Start and Stop Endpoints for App Versions",
+    "pr_author": "adrianrsy",
+    "file_path": "apps/monolith-adapter/src/main/scala/domino/apps/services/ModelProductManager.scala",
+    "line": 135,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-bira-ignacio",
+        "body": "question: the existing `publishAppVersion` does a lot of other things before starting the app. I like how this is implemented here but just want to mention it in case some important step was missing. \nThe only thing I see is the usage of `hasIngress` but there's a comment suggestion we don't need that anymore, in fact.\nOtherwise it doesn't seem to me we've missed anything important"
+      },
+      {
+        "author": "adrianrsy",
+        "body": "Good catch, there's a guardrails check I'm missing in startVersion that is in start (in InProcessModelProductService). I can add that back in."
+      }
+    ]
+  },
+  {
+    "pr_number": 47189,
+    "pr_title": "[DOM-75323] Start and Stop Endpoints for App Versions",
+    "pr_author": "adrianrsy",
+    "file_path": "apps/implementation/src/main/scala/domino/apps/implementation/DefaultAppInstanceService.scala",
+    "line": 64,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-ryan-connor",
+        "body": "did you consider the performance implications of this?\n- this returns every single instance ever for the app\n- then we sort and take a single one\n\nand this method is going to execute once per app for some endpoints like `list apps`, right?\n\nis there some better query or pattern we can use further down the stack? like doing the sorting and \"take one\" on mongo side?\n\nor even a special-purpose `\"getLatestInstances(appIds: Seq[id])\"` on the instance persister (run persister) so we remove the N+1 query pattern worry?"
+      },
+      {
+        "author": "adrianrsy",
+        "body": "Makes sense to do the sort on the mongo side.\r\nBatching/ joining the persister queries is also fairly doable here."
+      },
+      {
+        "author": "ddl-ryan-connor",
+        "body": "i see we have another ticket to address -- cool"
+      }
+    ]
+  },
+  {
+    "pr_number": 47189,
+    "pr_title": "[DOM-75323] Start and Stop Endpoints for App Versions",
+    "pr_author": "adrianrsy",
+    "file_path": "apps/monolith-adapter/src/main/scala/domino/apps/services/ModelProductManager.scala",
+    "line": 105,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-ryan-connor",
+        "body": "many of these args are an `Option`. example: compute env revision.\n\ndid you think about making the now-non-optional fields of an app version -- like compute env revisions -- _actually_ non optional in the `createAppVersion` and also in the `case class AppVersion` itself? \n\nright now it's not clear to me what is actually optional. i would have thought we're making the non-optional things not optional (of course, we need a migration to put in \"resolved\" fields to past versions)"
+      },
+      {
+        "author": "adrianrsy",
+        "body": "I'm a bit hesitant to make fields not optional. We have a weird edge case with project templates that have apps where we create a dummy version with most of the fields intentionally empty (since we can't check the template itself/ new projects using the template may not necessarily have access to the environment/ hardware tier the original app does).\r\n\r\nWe do need some reasonable fallback behavior for starting an app with empty fields. I'm leaning towards preventing restarts of such versions (should be minimal after a migration), but let me know if you have other ideas."
+      },
+      {
+        "author": "ddl-ryan-connor",
+        "body": "\"leaning towards preventing restarts of such version\"\n\nmakes sense to me: `case class AppVersion()` can have some optional fields to work with weird edge cases, but such versions cannot actually be \"launched\"/ran.\n\nhow about the new `launchVersion()` method declares the actual non-optional fields (doesnt have to be within that method, could even be some method/set/list on the AppVersion companion object for example), and validates they are present, throwing if there is some missing required field?"
+      }
+    ]
+  }
+]

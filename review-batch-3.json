@@ -1,0 +1,342 @@
+[
+  {
+    "pr_number": 47212,
+    "pr_title": "DOM-75309 Add taxonomy tags to list apps public API",
+    "pr_author": "ddl-aj-rossman",
+    "file_path": "apps/web/src/main/scala/domino/apps/web/controllers/AppController.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-bira-ignacio",
+        "body": "suggestion (non-blocking): The flag check runs even when there are zero apps. \nMaybe move both the flag check and the taxonomy call inside the non-empty branch to avoid the flag lookup"
+      },
+      {
+        "author": "ddl-aj-rossman",
+        "body": "good call \ud83d\udc4d "
+      }
+    ]
+  },
+  {
+    "pr_number": 47212,
+    "pr_title": "DOM-75309 Add taxonomy tags to list apps public API",
+    "pr_author": "ddl-aj-rossman",
+    "file_path": "apps/web/src/main/scala/domino/apps/web/transformers/AppTransformer.scala",
+    "line": 123,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-bira-ignacio",
+        "body": "question: The schema says id, label, and namespaceId as required, but here None gets mapped to \"\". Could this be confusing to API consumers that could be expecting values given those are required fields?\nI assume that's for backwards compatibility of some kind?"
+      },
+      {
+        "author": "ddl-aj-rossman",
+        "body": "Good catch: it's just defensive handling of the generated client model which types these as Option[String]. In practice, all of these fields should be present"
+      }
+    ]
+  },
+  {
+    "pr_number": 47212,
+    "pr_title": "DOM-75309 Add taxonomy tags to list apps public API",
+    "pr_author": "ddl-aj-rossman",
+    "file_path": "apps/web/src/test/scala/domino/apps/AppControllerSpec.scala",
+    "line": 183,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-bira-ignacio",
+        "body": "suggestion: Nice coverage!!\nOne case might be missing, if I read things right. \nIn `getTagsForEntities`, it can throw but we handle it as `NonFatal`. \nMaybe it would be good to verify the controller still returns apps with `taxonomyTags = None` in such cases."
+      }
+    ]
+  },
+  {
+    "pr_number": 47216,
+    "pr_title": "[DOM-75531] Support reproducibility of imported projects and repos for app versions",
+    "pr_author": "adrianrsy",
+    "file_path": "apps/interface/src/main/scala/domino/apps/services/AppVersionService.scala",
+    "line": 72,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "adrianrsy",
+        "body": "Main relevant caller sets this value already."
+      }
+    ]
+  },
+  {
+    "pr_number": 47216,
+    "pr_title": "[DOM-75531] Support reproducibility of imported projects and repos for app versions",
+    "pr_author": "adrianrsy",
+    "file_path": "apps/interface/src/main/scala/domino/apps/services/CommitResolver.scala",
+    "line": 55,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "adrianrsy",
+        "body": "Done"
+      }
+    ]
+  },
+  {
+    "pr_number": 47216,
+    "pr_title": "[DOM-75531] Support reproducibility of imported projects and repos for app versions",
+    "pr_author": "adrianrsy",
+    "file_path": "projects/monolith-adapter/src/main/scala/domino/projects/monoadapter/ProjectForkerAndCopier.scala",
+    "line": 896,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "ddl-bira-ignacio",
+        "body": "question: If I read this right, setting these to None means any new app version will immediately fail.\nDo we need to keep the distinction `None = legacy` X `Some(empty) = \"no repos\"` here?\nOr make these `Some(Seq.empty)`, to be safe, and let the copier resolve it later.\n\n"
+      },
+      {
+        "author": "adrianrsy",
+        "body": "This app version created by ProjectForkerAndCopier is already non-fuctional due to the main commit fields being set to None.\r\nConsidering the migration which should handle the majority of legacy cases, None represents \"we don't have reproducibility information so we won't allow this to be reproduced\". "
+      }
+    ]
+  },
+  {
+    "pr_number": 47216,
+    "pr_title": "[DOM-75531] Support reproducibility of imported projects and repos for app versions",
+    "pr_author": "adrianrsy",
+    "file_path": "apps/monolith-adapter/src/main/scala/domino/apps/services/DefaultCommitResolver.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-bira-ignacio",
+        "body": "note: in a rare case where the branch/repo has no commits, this would return null. If easy, we should probably try to handle this, just in case this method gets used for other more general purpose"
+      }
+    ]
+  },
+  {
+    "pr_number": 47216,
+    "pr_title": "[DOM-75531] Support reproducibility of imported projects and repos for app versions",
+    "pr_author": "adrianrsy",
+    "file_path": "apps/monolith-adapter/src/main/scala/domino/apps/services/DefaultCommitResolver.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-bira-ignacio",
+        "body": "suggestion: Maybe log a warning when the project is archived? \nIt's probably impossible to happen in the context of apps but then, all the more reason for some logging. Especially if we use this for other reasons"
+      }
+    ]
+  },
+  {
+    "pr_number": 47216,
+    "pr_title": "[DOM-75531] Support reproducibility of imported projects and repos for app versions",
+    "pr_author": "adrianrsy",
+    "file_path": "apps/interface/src/main/scala/domino/apps/model/AppVersion.scala",
+    "line": 39,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-bira-ignacio",
+        "body": "question: These methods also served as the fallback for `startVersion` on older persisted versions that only have `commitId` set. I assume we're relying on the migration to account for this case?"
+      },
+      {
+        "author": "adrianrsy",
+        "body": "Yes, the migration should set these fields for legacy apps."
+      }
+    ]
+  },
+  {
+    "pr_number": 47216,
+    "pr_title": "[DOM-75531] Support reproducibility of imported projects and repos for app versions",
+    "pr_author": "adrianrsy",
+    "file_path": "apps/interface/src/main/scala/domino/apps/services/CommitResolver.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-ryan-connor",
+        "body": "a lot of this feels like the wrong place, talking about RunStarter and ProjectDependencyGetter in a docstring in the apps/interface directory"
+      },
+      {
+        "author": "adrianrsy",
+        "body": "Moving the edge case description to ImportedProjectSnapshot model instead and simplifying this scaladoc."
+      }
+    ]
+  },
+  {
+    "pr_number": 47216,
+    "pr_title": "[DOM-75531] Support reproducibility of imported projects and repos for app versions",
+    "pr_author": "adrianrsy",
+    "file_path": "apps/monolith-adapter/src/main/scala/domino/apps/services/DefaultCommitResolver.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-ryan-connor",
+        "body": "does this break the spirit of this feature? should we fail if an imported project is archived? or is this OK?"
+      },
+      {
+        "author": "adrianrsy",
+        "body": "Should be an impossible case, but will switch to throwing instead of skipping silently."
+      }
+    ]
+  },
+  {
+    "pr_number": 47216,
+    "pr_title": "[DOM-75531] Support reproducibility of imported projects and repos for app versions",
+    "pr_author": "adrianrsy",
+    "file_path": "apps/monolith-adapter/src/main/scala/domino/apps/services/DefaultCommitResolver.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-ryan-connor",
+        "body": "nit, hard to read -- else would typically be on the previous line"
+      }
+    ]
+  },
+  {
+    "pr_number": 47216,
+    "pr_title": "[DOM-75531] Support reproducibility of imported projects and repos for app versions",
+    "pr_author": "adrianrsy",
+    "file_path": "apps/monolith-adapter/src/main/scala/domino/apps/services/DefaultCommitResolver.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-ryan-connor",
+        "body": "what is a `release`? is this better/more correct than just do the `filesService.getHeadCommitIdForProject()` below? this feels weird that we're getting the resolved commit from a `run`"
+      },
+      {
+        "author": "adrianrsy",
+        "body": "Similar to a tag in git if I'm not mistaken but explicitly tied to a run. This should be the correct way to get the commit if the imported project settings specify a release rather than head or a commit."
+      },
+      {
+        "author": "ddl-ryan-connor",
+        "body": "still feels weird -- why is a \"run\" the source of truth for a release?\r\n\r\nbut i'll trust that this is the right way"
+      }
+    ]
+  },
+  {
+    "pr_number": 47216,
+    "pr_title": "[DOM-75531] Support reproducibility of imported projects and repos for app versions",
+    "pr_author": "adrianrsy",
+    "file_path": "apps/monolith-adapter/src/main/scala/domino/apps/services/ModelProductManager.scala",
+    "line": 343,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-bira-ignacio",
+        "body": "question: I assume we'll rely on migration to always have `resolvedCommitId` for existing apps?"
+      },
+      {
+        "author": "adrianrsy",
+        "body": "Yes."
+      }
+    ]
+  },
+  {
+    "pr_number": 47216,
+    "pr_title": "[DOM-75531] Support reproducibility of imported projects and repos for app versions",
+    "pr_author": "adrianrsy",
+    "file_path": "apps/interface/src/main/scala/domino/apps/model/AppVersion.scala",
+    "line": 24,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "ddl-bira-ignacio",
+        "body": "nice documentation!"
+      }
+    ]
+  },
+  {
+    "pr_number": 47216,
+    "pr_title": "[DOM-75531] Support reproducibility of imported projects and repos for app versions",
+    "pr_author": "adrianrsy",
+    "file_path": "apps/interface/src/main/scala/domino/apps/model/AppVersion.scala",
+    "line": 24,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "ddl-ryan-connor",
+        "body": "my other comment about the docs was more high level. in general i feel like docstrings on classes or methods in a `/PROJECT/INTERFACE` kind of directory -- like `/apps/interface` -- should not talk about low level implementation that depends on _other_ projects. `/apps/interface` technically has _no idea_ about runs etc. It's only the monolith-adapter that knows about things like `ExecutionSpecificationBuilder` etc.\n\nso im not convinced this is the best place for these docs, but im fine with it if you can't think of a better place that is closer to the point in the code where all this stuff comes together."
+      },
+      {
+        "author": "ddl-ryan-connor",
+        "body": "and i really do mean im fine with it! i just wanted to make the more general point clearer"
+      },
+      {
+        "author": "adrianrsy",
+        "body": "Closer to the execution layer of things would be nice, but the edge cases are only relevant to apps for now and I'm not sure we have a good enough reproducibility story for dependencies across all execution types to make any comments generic to all of them.\r\n\r\nI think I'll leave it in here for now.\r\n"
+      }
+    ]
+  },
+  {
+    "pr_number": 47224,
+    "pr_title": "DOM-75386 Preserve route and query params in extended identity propagation consent callback",
+    "pr_author": "ddl-ryan-connor",
+    "file_path": "server/src/test/domino/server/dispatcher/service/ExecutionResourceParamsMakerSpec.scala",
+    "line": null,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "ddl-eric-jin",
+        "body": "I think we should also check that the query parameters are added as expected."
+      },
+      {
+        "author": "ddl-ryan-connor",
+        "body": "that's not possible here. this is a unit test spec for the execution resource params maker. the query params and route come from an actual app request via `your browser => ... some hops ... => app nginx lua code`\r\n\r\ni already linked it to the e2e test ticket and the AC there, it's something we can and should test there. https://dominodatalab.atlassian.net/browse/DOM-75049"
+      },
+      {
+        "author": "ddl-ryan-connor",
+        "body": "oh, and if we had \"integration\" tests for apps, we could test it there -- so best we can do is an e2e test"
+      }
+    ]
+  },
+  {
+    "pr_number": 47229,
+    "pr_title": "[DOM-75403] Cleanup n+1 queries in Apps",
+    "pr_author": "adrianrsy",
+    "file_path": "apps/implementation/src/main/scala/domino/apps/implementation/DefaultAppUsageService.scala",
+    "line": 50,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "adrianrsy",
+        "body": "Does not need a fix. The canReadUsageStatistics gate only exists on the dedicated single-app usage statistics endpoint (getTotalViews), not on the summary view counts shown in the listing page. Our batch refactoring preserved this existing behavior exactly."
+      }
+    ]
+  },
+  {
+    "pr_number": 47233,
+    "pr_title": "DOM-75428 Add tag ID filtering to listApps API",
+    "pr_author": "ddl-aj-rossman",
+    "file_path": "apps/web/src/main/scala/domino/apps/web/controllers/AppController.scala",
+    "line": 160,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-bira-ignacio",
+        "body": "question: is it ok to just return empty here if none of the tags match? \nIt seems, functionally, correct to me, it's just that the warning log message suggests that might not be always expected."
+      },
+      {
+        "author": "ddl-aj-rossman",
+        "body": "IMO I think we should keep this log since this case happens when there is a taxonomy service failure, not if none of the tags match. If the call succeeds but returns an empty list of entityIds, then this error won't be logged"
+      }
+    ]
+  },
+  {
+    "pr_number": 47233,
+    "pr_title": "DOM-75428 Add tag ID filtering to listApps API",
+    "pr_author": "ddl-aj-rossman",
+    "file_path": "apps/implementation/src/main/scala/domino/apps/implementation/DefaultAppService.scala",
+    "line": 156,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-bira-ignacio",
+        "body": "question: any concerns with this being a large list of `allowedAppIds` that could make this problematic Unlike the other things in this filter, I assume a search coming from tags could return a number of ids.\n\nHonestly I wouldn't be too worried if this is in the dozens but I also don't know how large a list of params we can pass to mongo (I'm assuming that's what this does).\n\nCC: @ddl-ryan-connor "
+      },
+      {
+        "author": "ddl-aj-rossman",
+        "body": "Good question- a few points:\r\n- generally, Mongo's `$in` can handle large lists. There is a 16 MiB limit for the size of the query document, but even with thousands of AppIDs, we won't approach it\r\n- Performance wise, we should be ok since we're querying on the app's ID, which is indexed."
+      }
+    ]
+  }
+]

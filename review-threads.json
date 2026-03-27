@@ -1,0 +1,1392 @@
+[
+  {
+    "pr_number": 47170,
+    "pr_title": "DOM-74899 Integrate Apps into Elastic Search",
+    "pr_author": "ddl-aj-rossman",
+    "file_path": "server/app/domino/server/search/client/IndexFieldName.scala",
+    "line": 99,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "ddl-aj-rossman",
+        "body": "At the moment, taxonomyTagLabels and taxonomyTagDescriptions aren't used. But, in the next PR, I plan to integrate an Apps tags such that an App can be searched for based on it's tags labels/descriptions"
+      }
+    ]
+  },
+  {
+    "pr_number": 47170,
+    "pr_title": "DOM-74899 Integrate Apps into Elastic Search",
+    "pr_author": "ddl-aj-rossman",
+    "file_path": "server/app/domino/server/search/Results.scala",
+    "line": 283,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-bira-ignacio",
+        "body": "thought: for future us and posterity \ud83d\ude04 \n`override def project: Project = ???` follows the same pattern as other places in the code so this is consistent with the codebase but it could be problematic since `Project` is required.\nThe real fix would be making project optional in the `SearchResult` trait, but that's a larger refactor and out of scope here. \nAll good as-is!"
+      },
+      {
+        "author": "ddl-aj-rossman",
+        "body": "Good callout \u2014 agreed this is tech debt inherited from the trait. The optional refactor makes sense as a follow-up but is out of scope here. We've been throwing around the idea for a larger ES refactor, I will add a ticket for this"
+      }
+    ]
+  },
+  {
+    "pr_number": 47170,
+    "pr_title": "DOM-74899 Integrate Apps into Elastic Search",
+    "pr_author": "ddl-aj-rossman",
+    "file_path": "server/app/domino/server/search/types/app/AppIndexer.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-bira-ignacio",
+        "body": "question: I see we're indexing on archive as well. Will this return archived apps as well?\n\nIf there isn't a unit test for this case, maybe we could add one"
+      },
+      {
+        "author": "ddl-aj-rossman",
+        "body": "Good catch! `findById` in `MongoModelProductRepository` filters out archived apps `(isArchived == false),` so getApp returns None for archived apps. However, the previous `indexAppById` would throw an `IllegalArgumentException` in that case rather than cleaning up the index entry. I've fixed this so that when getApp returns None (archived/deleted), we now call `deleteDocument` to remove it from the ES index instead."
+      }
+    ]
+  },
+  {
+    "pr_number": 47170,
+    "pr_title": "DOM-74899 Integrate Apps into Elastic Search",
+    "pr_author": "ddl-aj-rossman",
+    "file_path": "server/app/domino/server/search/types/app/AppIndexer.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-bira-ignacio",
+        "body": "nit: maybe this and the log line below should be a debug level"
+      },
+      {
+        "author": "ddl-aj-rossman",
+        "body": "Fixed \ud83d\udc4d "
+      }
+    ]
+  },
+  {
+    "pr_number": 47170,
+    "pr_title": "DOM-74899 Integrate Apps into Elastic Search",
+    "pr_author": "ddl-aj-rossman",
+    "file_path": "server/app/domino/server/search/types/app/AppIndexer.scala",
+    "line": 98,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-bira-ignacio",
+        "body": "question: this loads all apps into memory at once. For deployments with a large number of apps, is this a concern?"
+      },
+      {
+        "author": "ddl-aj-rossman",
+        "body": "This is a reasonable concern- at the current scale of our cloud customers, I don't see this being an issue but definitely something we should consider for our customer managed deployments. They better way would be to \"stream\" apps, so we'd need listApps (or a new method) to return a lazy collection, which would be a change to the AppService interface. Is it ok if I tackle this in a subsequent PR?"
+      },
+      {
+        "author": "ddl-bira-ignacio",
+        "body": "sure thing"
+      }
+    ]
+  },
+  {
+    "pr_number": 47170,
+    "pr_title": "DOM-74899 Integrate Apps into Elastic Search",
+    "pr_author": "ddl-aj-rossman",
+    "file_path": "server/app/domino/server/search/client/ElasticSearchQueryBuilder.scala",
+    "line": 127,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-bira-ignacio",
+        "body": " question: It looks like it would match everything alongside the constrained query, is it intentional? I see some of the other search methods here don't do that."
+      },
+      {
+        "author": "ddl-aj-rossman",
+        "body": "Yes, this is intentional. The `matchAllQuery` is used as a filter subquery in `makeSearchSourceBuilder` \u2014 it's the same pattern used by `searchFeatureViewsQuery` and `searchDatasetRwQuery`. The actual search constraint comes from the `makeConstrainedQuery` call which builds the must clause with the user's search phrase. The `matchAllQuery` filter just means \"don't additionally restrict by project/environment/user\" \u2014 apps are globally searchable (with post-query authorization filtering in `canUserViewApp`)"
+      }
+    ]
+  },
+  {
+    "pr_number": 47178,
+    "pr_title": "DOM-75031 chore(Admin): Rework user admin services to support keycloak-only",
+    "pr_author": "ddl-martin-currao",
+    "file_path": "server/app/domino/server/admin/ui/views/users.scala.html",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-awroblicky",
+        "body": "Can we perhaps say \"User hasn't logged in yet\" or something like that just so it's clear to customers how they can resolve it themselves without coming to support"
+      },
+      {
+        "author": "ddl-martin-currao",
+        "body": "\"Can't update until user logs in for the first time\", perhaps? Or too long for a title? "
+      },
+      {
+        "author": "ddl-awroblicky",
+        "body": "that works for me"
+      }
+    ]
+  },
+  {
+    "pr_number": 47178,
+    "pr_title": "DOM-75031 chore(Admin): Rework user admin services to support keycloak-only",
+    "pr_author": "ddl-martin-currao",
+    "file_path": "server/app/domino/server/user/domain/UserKeycloakHelper.scala",
+    "line": 184,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-awroblicky",
+        "body": "is there a ticket for this TODO?"
+      },
+      {
+        "author": "ddl-martin-currao",
+        "body": "More than a ticket, it's part of:\r\nhttps://dominodatalab.atlassian.net/wiki/spaces/ENG/pages/4044029961/Deprecated+Sunsetted+Features\r\n\r\nAdded as a new entry. "
+      }
+    ]
+  },
+  {
+    "pr_number": 47178,
+    "pr_title": "DOM-75031 chore(Admin): Rework user admin services to support keycloak-only",
+    "pr_author": "ddl-martin-currao",
+    "file_path": "server/app/domino/server/user/InProcessPersonService.scala",
+    "line": 285,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-awroblicky",
+        "body": "I think targetUser is good but thoughts on renaming it to \"idpUser\"?"
+      },
+      {
+        "author": "ddl-martin-currao",
+        "body": "_Aha! You fell into `userKeycloakHelper`'s trap._ It's not actually an IDP user.\r\n\r\n`userKeycloakHelper.getDominoUserByKeycloakId` actually runs a `mergeUser` between the `maybeDominoUserId` and the actual `idpUser`, so the returned entity is none of them, but an updated version of any of them. "
+      },
+      {
+        "author": "ddl-awroblicky",
+        "body": "Can we call it mergedUser then?"
+      },
+      {
+        "author": "ddl-martin-currao",
+        "body": "Hmmm. The issue is that later on it is actually further \"merged\" (kind of) with the result from the upgrade. \r\nThus why it is called _target_, as it is whatever the target is, regardless of whether it's coming from a dominoUser or a keycloak user. Because if only the Keycloak user is present, it will be only an IDP user (without merging). "
+      },
+      {
+        "author": "ddl-awroblicky",
+        "body": "ah ok we can keep it as is then"
+      }
+    ]
+  },
+  {
+    "pr_number": 47189,
+    "pr_title": "[DOM-75323] Start and Stop Endpoints for App Versions",
+    "pr_author": "adrianrsy",
+    "file_path": "apps/monolith-adapter/src/main/scala/domino/apps/services/ModelProductManager.scala",
+    "line": 272,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "adrianrsy",
+        "body": "This method currently does not take input for imported git repositories/ imported projects.\nChanges around that will go into a separate PR since this one's already getting complicated."
+      }
+    ]
+  },
+  {
+    "pr_number": 47189,
+    "pr_title": "[DOM-75323] Start and Stop Endpoints for App Versions",
+    "pr_author": "adrianrsy",
+    "file_path": "projects/monolith-adapter/src/main/scala/domino/projects/monoadapter/ProjectForkerAndCopier.scala",
+    "line": 880,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "adrianrsy",
+        "body": "I'm not sure what the behavior should be here."
+      },
+      {
+        "author": "ddl-ryan-connor",
+        "body": "i guess if we're making some of these non-optional like i suggest elsewhere, then we need to resolve them first.\n\nif not, then we have to think through the implications of allowing `None` here for things like commitId"
+      }
+    ]
+  },
+  {
+    "pr_number": 47189,
+    "pr_title": "[DOM-75323] Start and Stop Endpoints for App Versions",
+    "pr_author": "adrianrsy",
+    "file_path": "apps/web/src/main/scala/domino/apps/web/controllers/AppController.scala",
+    "line": 1,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-bira-ignacio",
+        "body": "question: in various places here we're now deriving version and app from instance. What would happen in the case where we wouldn't have an instance? It would be unusual but possible (app created but never got to launch for some reason)"
+      },
+      {
+        "author": "adrianrsy",
+        "body": "I'll add a fallback to the previous behavior to get the latest numerical app version when there are no instances to be fetched for an app."
+      }
+    ]
+  },
+  {
+    "pr_number": 47189,
+    "pr_title": "[DOM-75323] Start and Stop Endpoints for App Versions",
+    "pr_author": "adrianrsy",
+    "file_path": "apps/web/src/main/scala/domino/apps/web/transformers/AppVersionTransformer.scala",
+    "line": 31,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-bira-ignacio",
+        "body": "question: these can now return empty for existing apps, I think. Do you expect this to be covered via migration or we should have some level of backwards compat here to avoid precise frontend syncing? "
+      },
+      {
+        "author": "adrianrsy",
+        "body": "Most of these are already in the app version, but we definitely want a migration to handle the git ref and dfs commit. "
+      }
+    ]
+  },
+  {
+    "pr_number": 47189,
+    "pr_title": "[DOM-75323] Start and Stop Endpoints for App Versions",
+    "pr_author": "adrianrsy",
+    "file_path": "apps/monolith-adapter/src/main/scala/domino/apps/services/InProcessModelProductService.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-bira-ignacio",
+        "body": "question: what is the idea for the behaviour for other types, non app types? Should we explicitly restrict if we want to instead of silently returning?"
+      },
+      {
+        "author": "adrianrsy",
+        "body": "This would never be called with anything that isn't an app (and even if it did, either the version call will fail or the check that the version belongs to the modelproduct will fail).\r\n\r\nI can simplify to remove the silent failure cases."
+      }
+    ]
+  },
+  {
+    "pr_number": 47189,
+    "pr_title": "[DOM-75323] Start and Stop Endpoints for App Versions",
+    "pr_author": "adrianrsy",
+    "file_path": "apps/web/src/main/scala/domino/apps/web/controllers/AppInstanceController.scala",
+    "line": 63,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-bira-ignacio",
+        "body": "note: it seems like instanceId was never really used. Could we take it out from the method signature all the way? "
+      },
+      {
+        "author": "adrianrsy",
+        "body": "Hm... taking a closer look at this, seems like the UI is using this as a generic stop app API endpoint.\n\nPreferably I would want to make this match the described behavior and only delete that app instance if it was running, but I'm not sure if it would break existing behavior."
+      }
+    ]
+  },
+  {
+    "pr_number": 47189,
+    "pr_title": "[DOM-75323] Start and Stop Endpoints for App Versions",
+    "pr_author": "adrianrsy",
+    "file_path": "apps/monolith-adapter/src/main/scala/domino/apps/services/ModelProductManager.scala",
+    "line": 270,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-bira-ignacio",
+        "body": "question: do we need to set the current version in the app object? or it's already happening and I missed it? :D "
+      },
+      {
+        "author": "adrianrsy",
+        "body": "`createAppVersion` already does it. `creationOrder` is the field storing the version number."
+      },
+      {
+        "author": "ddl-ryan-connor",
+        "body": "nit clarification: i believe `creationOrder` is a monotonic counter that isnt guaranteed to be what is in the UI: i believe the \"version number\" shown in the UI comes from the ordering."
+      },
+      {
+        "author": "adrianrsy",
+        "body": "We do in the controller."
+      }
+    ]
+  },
+  {
+    "pr_number": 47189,
+    "pr_title": "[DOM-75323] Start and Stop Endpoints for App Versions",
+    "pr_author": "adrianrsy",
+    "file_path": "apps/monolith-adapter/src/main/scala/domino/apps/services/ModelProductManager.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-bira-ignacio",
+        "body": "suggestion: maybe we need to make the error message a little more clear and/or user friendly if it's going to be shown in the UI\nit's possible users will try to stop a version already stopped so perhaps saying something like \"this app version is not running or is invalid\" or something of sorts, might be helpful"
+      }
+    ]
+  },
+  {
+    "pr_number": 47189,
+    "pr_title": "[DOM-75323] Start and Stop Endpoints for App Versions",
+    "pr_author": "adrianrsy",
+    "file_path": "apps/monolith-adapter/src/main/scala/domino/apps/services/ModelProductManager.scala",
+    "line": 135,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-bira-ignacio",
+        "body": "question: the existing `publishAppVersion` does a lot of other things before starting the app. I like how this is implemented here but just want to mention it in case some important step was missing. \nThe only thing I see is the usage of `hasIngress` but there's a comment suggestion we don't need that anymore, in fact.\nOtherwise it doesn't seem to me we've missed anything important"
+      },
+      {
+        "author": "adrianrsy",
+        "body": "Good catch, there's a guardrails check I'm missing in startVersion that is in start (in InProcessModelProductService). I can add that back in."
+      }
+    ]
+  },
+  {
+    "pr_number": 47189,
+    "pr_title": "[DOM-75323] Start and Stop Endpoints for App Versions",
+    "pr_author": "adrianrsy",
+    "file_path": "apps/implementation/src/main/scala/domino/apps/implementation/DefaultAppInstanceService.scala",
+    "line": 64,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-ryan-connor",
+        "body": "did you consider the performance implications of this?\n- this returns every single instance ever for the app\n- then we sort and take a single one\n\nand this method is going to execute once per app for some endpoints like `list apps`, right?\n\nis there some better query or pattern we can use further down the stack? like doing the sorting and \"take one\" on mongo side?\n\nor even a special-purpose `\"getLatestInstances(appIds: Seq[id])\"` on the instance persister (run persister) so we remove the N+1 query pattern worry?"
+      },
+      {
+        "author": "adrianrsy",
+        "body": "Makes sense to do the sort on the mongo side.\r\nBatching/ joining the persister queries is also fairly doable here."
+      },
+      {
+        "author": "ddl-ryan-connor",
+        "body": "i see we have another ticket to address -- cool"
+      }
+    ]
+  },
+  {
+    "pr_number": 47189,
+    "pr_title": "[DOM-75323] Start and Stop Endpoints for App Versions",
+    "pr_author": "adrianrsy",
+    "file_path": "apps/monolith-adapter/src/main/scala/domino/apps/services/ModelProductManager.scala",
+    "line": 105,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-ryan-connor",
+        "body": "many of these args are an `Option`. example: compute env revision.\n\ndid you think about making the now-non-optional fields of an app version -- like compute env revisions -- _actually_ non optional in the `createAppVersion` and also in the `case class AppVersion` itself? \n\nright now it's not clear to me what is actually optional. i would have thought we're making the non-optional things not optional (of course, we need a migration to put in \"resolved\" fields to past versions)"
+      },
+      {
+        "author": "adrianrsy",
+        "body": "I'm a bit hesitant to make fields not optional. We have a weird edge case with project templates that have apps where we create a dummy version with most of the fields intentionally empty (since we can't check the template itself/ new projects using the template may not necessarily have access to the environment/ hardware tier the original app does).\r\n\r\nWe do need some reasonable fallback behavior for starting an app with empty fields. I'm leaning towards preventing restarts of such versions (should be minimal after a migration), but let me know if you have other ideas."
+      },
+      {
+        "author": "ddl-ryan-connor",
+        "body": "\"leaning towards preventing restarts of such version\"\n\nmakes sense to me: `case class AppVersion()` can have some optional fields to work with weird edge cases, but such versions cannot actually be \"launched\"/ran.\n\nhow about the new `launchVersion()` method declares the actual non-optional fields (doesnt have to be within that method, could even be some method/set/list on the AppVersion companion object for example), and validates they are present, throwing if there is some missing required field?"
+      }
+    ]
+  },
+  {
+    "pr_number": 47189,
+    "pr_title": "[DOM-75323] Start and Stop Endpoints for App Versions",
+    "pr_author": "adrianrsy",
+    "file_path": "apps/monolith-adapter/src/main/scala/domino/apps/services/ModelProductManager.scala",
+    "line": 325,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-ryan-connor",
+        "body": "EDIT -- i misread"
+      },
+      {
+        "author": "ddl-ryan-connor",
+        "body": "oops, i misread -- this works, please disregard!"
+      }
+    ]
+  },
+  {
+    "pr_number": 47189,
+    "pr_title": "[DOM-75323] Start and Stop Endpoints for App Versions",
+    "pr_author": "adrianrsy",
+    "file_path": "apps/monolith-adapter/src/main/scala/domino/apps/services/ModelProductManager.scala",
+    "line": 325,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-ryan-connor",
+        "body": "can you put a comment. something like: `// this assumes there is only one running version of the app. will have to change if/when we relax this assumption` "
+      },
+      {
+        "author": "ddl-ryan-connor",
+        "body": "(when that time comes we could easily write a `findActiveAppVersionRun()` method and the case statement below is not needed)"
+      }
+    ]
+  },
+  {
+    "pr_number": 47189,
+    "pr_title": "[DOM-75323] Start and Stop Endpoints for App Versions",
+    "pr_author": "adrianrsy",
+    "file_path": "apps/monolith-adapter/src/main/scala/domino/apps/services/ModelProductManager.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-ryan-connor",
+        "body": "is a commit id always included here?"
+      },
+      {
+        "author": "ddl-ryan-connor",
+        "body": "looking at the tests... maybe it does? but would it be clearer to included if `dto.type != commitId then throw` or some other way to make this more clear that it is always \"commitId\"?"
+      },
+      {
+        "author": "adrianrsy",
+        "body": "There's a logger warn if we are unable to resolve a specific commit, but makes sense to just throw an error if we are unable to resolve the commit at while the app version is being created."
+      }
+    ]
+  },
+  {
+    "pr_number": 47189,
+    "pr_title": "[DOM-75323] Start and Stop Endpoints for App Versions",
+    "pr_author": "adrianrsy",
+    "file_path": "apps/web/src/main/scala/domino/apps/web/controllers/AppController.scala",
+    "line": 203,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-ryan-connor",
+        "body": "just a heads up, we have some performance issues with app endpoints. i think this `listApps()` endpoint in particular can get very slow if there are 100+ apps.\n\nas customers use apps more and more, this problem will only get worse, and be a big pain point.\n\nat some point -- hopefully before 6.3 -- we may need to do a serious refactor of at least this controller method's callstack.\n\ni believe right now we're basically querying for all apps, sorting and limiting/paging in scala memory, then doing these N+1 queries to get versions and instances.\n\nit will take some thought and effort on how to refactor this. example: push _all_ sorting/paging logic down into one persister method db query to do that db side instead of scala in-memory, and also do the lookups/joins app => app_version => app_instance in the same query pipeline to do _that_ db side instead of N+1 query pattern.\n\none step at a time though -- if for example sorting/paging db side takes care of a lot of performance issue, can defer this N+1 query problem."
+      },
+      {
+        "author": "ddl-ryan-connor",
+        "body": "cc @ddl-bira-ignacio so you are aware of this issue"
+      },
+      {
+        "author": "adrianrsy",
+        "body": "Addressing these in a follow-up PR here: https://github.com/cerebrotech/domino/pull/47229"
+      }
+    ]
+  },
+  {
+    "pr_number": 47189,
+    "pr_title": "[DOM-75323] Start and Stop Endpoints for App Versions",
+    "pr_author": "adrianrsy",
+    "file_path": "apps/web/src/main/scala/domino/apps/web/controllers/AppController.scala",
+    "line": 205,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-ryan-connor",
+        "body": "yea just re-iterating bira's point: if a version was created but no instance created from that (actually not a super unlikely scenario), then we'll get no version.\n\nim not sure what the best fallback is:\n- fallback to latest version\n- fallback to latest version that has an instance\n- fallback to latest version that has the latest-run instance\n\nall those could be different"
+      },
+      {
+        "author": "adrianrsy",
+        "body": "I'm currently using\r\n\r\nfallback to any version that has the latest-run instance\r\nfallback to latest (numerical) version if no instances exist\r\n\r\nwhich seems to make the most sense in this context."
+      },
+      {
+        "author": "ddl-ryan-connor",
+        "body": "sounds good"
+      }
+    ]
+  },
+  {
+    "pr_number": 47189,
+    "pr_title": "[DOM-75323] Start and Stop Endpoints for App Versions",
+    "pr_author": "adrianrsy",
+    "file_path": "apps/web/src/main/scala/domino/apps/web/transformers/AppVersionTransformer.scala",
+    "line": 26,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-ryan-connor",
+        "body": "this looks odd. `version.commitId` has a field `.name`?"
+      },
+      {
+        "author": "adrianrsy",
+        "body": "The field wants to return a string. \r\nIf I'm not mistaken, this should be the correct pattern for getting the commit hash from the commitId object."
+      },
+      {
+        "author": "ddl-ryan-connor",
+        "body": "gotcha, i didn't realize commitId was an object with child fields"
+      },
+      {
+        "author": "ddl-ryan-connor",
+        "body": "FYI https://archive.eclipse.org/jgit/docs/jgit-2.0.0.201206130900-r/apidocs/org/eclipse/jgit/lib/AnyObjectId.html#name()"
+      }
+    ]
+  },
+  {
+    "pr_number": 47189,
+    "pr_title": "[DOM-75323] Start and Stop Endpoints for App Versions",
+    "pr_author": "adrianrsy",
+    "file_path": "server/app/domino/server/dispatcher/service/ExecutionStarter.scala",
+    "line": 103,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-ryan-connor",
+        "body": "im glad we can get rid of this monstrosity!"
+      }
+    ]
+  },
+  {
+    "pr_number": 47189,
+    "pr_title": "[DOM-75323] Start and Stop Endpoints for App Versions",
+    "pr_author": "adrianrsy",
+    "file_path": "server/src/test/domino/server/dispatcher/service/ExecutionStarterSpec.scala",
+    "line": 156,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-ryan-connor",
+        "body": "can we add a test that starting an \"older\" version stops a running \"newer\" version?\n\nthat's new allowed behavior that i think is helpful to codify in a test"
+      }
+    ]
+  },
+  {
+    "pr_number": 47189,
+    "pr_title": "[DOM-75323] Start and Stop Endpoints for App Versions",
+    "pr_author": "adrianrsy",
+    "file_path": "apps/interface/src/main/scala/domino/apps/model/AppInstance.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-ryan-connor",
+        "body": "why add this to the instance (run)?"
+      },
+      {
+        "author": "adrianrsy",
+        "body": "This was accidental. Removing it."
+      }
+    ]
+  },
+  {
+    "pr_number": 47189,
+    "pr_title": "[DOM-75323] Start and Stop Endpoints for App Versions",
+    "pr_author": "adrianrsy",
+    "file_path": "apps/monolith-adapter/src/main/scala/domino/apps/services/ModelProductManager.scala",
+    "line": 228,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-ryan-connor",
+        "body": "this should throw for any part of the app version that is undefined but (previously, before this work) resolved at runtime. we took care of commit id, yes, but there are others: environment id, environment revision id can be None. these are resolved at runtime by looking at the project default, right? that could change over time.\r\n\r\nto ensure \"reproducible\" versions, all such fields like this must receive the same \"resolve\" treatment if allowed to be None at any point -- need to resolve and persist the resolved thing before launching.\r\n\r\n(and by the way, need to prevent \"update unmodifiable field foo like commitId/env rev id/etc\" while allowing \"update modifiable field like hwt\" -- we chatted about that before, to be taken care of in follow on work)"
+      },
+      {
+        "author": "ddl-ryan-connor",
+        "body": "im not sure what gaps there are here, but i think MDLC team should fully understand this point, and take care of it in a follow up PR is OK with me"
+      },
+      {
+        "author": "ddl-ryan-connor",
+        "body": "we have gaps that matt b is aware of that are harder to close. like \"mount no datasets\" vs \"mount all\" -- set of \"all\" can change over time.\n\nwe don't know what to do about that yet. for now, it is good enough that everyone is aware of these limitations."
+      },
+      {
+        "author": "ddl-ryan-connor",
+        "body": "related https://github.com/cerebrotech/domino/pull/47189#discussion_r2941815314"
+      },
+      {
+        "author": "adrianrsy",
+        "body": "I'll add guards for environmentId and environmentRevisionId for now. They generally should have those in the app version, but there's an edge-case where pre-2019 apps didn't have them defined, blocking restarts of those apps seems reasonable.\r\n"
+      }
+    ]
+  },
+  {
+    "pr_number": 47200,
+    "pr_title": "[DOM-75072][DOM-74981] Refactor patch Extensions API for persister to handle patch logic",
+    "pr_author": "ddl-eric-jin",
+    "file_path": "extensions/implementation/src/main/scala/domino/extensions/implementation/DefaultExtensionService.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-ryan-connor",
+        "body": "i dont think we need this check.\n\ncan you explain a bit about it's purpose?"
+      },
+      {
+        "author": "ddl-eric-jin",
+        "body": "This is to verify that resulting mount config from the patch does not include both allProjects=true and mount points. I add this to mainly to guard against client error as setting allProjects and having mount points is usually not intended. However, I can also see how it's convenient to just set allProjects to true without needing to turn off all the mount points. I can remove these checks for both create and patch."
+      },
+      {
+        "author": "ddl-ryan-connor",
+        "body": "ok yeah, i understand the concern but i think since it doesnt actually affect \"correctness\", best at this point to remove the code -- less to maintain, less complexity"
+      }
+    ]
+  },
+  {
+    "pr_number": 47200,
+    "pr_title": "[DOM-75072][DOM-74981] Refactor patch Extensions API for persister to handle patch logic",
+    "pr_author": "ddl-eric-jin",
+    "file_path": "extensions/implementation/src/main/scala/domino/extensions/implementation/DefaultExtensionService.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-ryan-connor",
+        "body": "i dont think we actually need to explicitly prevent this\n\neverything still works if there are mount points and allProjects=true"
+      }
+    ]
+  },
+  {
+    "pr_number": 47200,
+    "pr_title": "[DOM-75072][DOM-74981] Refactor patch Extensions API for persister to handle patch logic",
+    "pr_author": "ddl-eric-jin",
+    "file_path": "nucleus/api/public-api.json",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-ryan-connor",
+        "body": "can you take out \"by project id\"? its true the upsert key includes project id for the two types of mount points we have now, but may not be the case for all types soon"
+      }
+    ]
+  },
+  {
+    "pr_number": 47200,
+    "pr_title": "[DOM-75072][DOM-74981] Refactor patch Extensions API for persister to handle patch logic",
+    "pr_author": "ddl-eric-jin",
+    "file_path": "nucleus/api/public-api.json",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-ryan-connor",
+        "body": "can you take out \"by project id\"? its true the upsert key includes project id for the two types of mount points we have now, but may not be the case for all types soon"
+      },
+      {
+        "author": "ddl-eric-jin",
+        "body": "Good point \ud83d\udc4d"
+      },
+      {
+        "author": "ddl-ryan-connor",
+        "body": "i checked the query, and it really is a true patch -- that's great\n\nso i think this is a little bit confusing. calling out \"If `uiMountPointTypeConfigs` is provided, top-level config fields are updated\" makes it seems different, but really it is the same -- if fields in there are provided, they are patched, but if None, then nothing happens.\n\nso how about this:\n\"Partially update an Extension. Absent fields are left unchanged. Any mount points within any `uiMountPointTypeConfig` are upserted.\"\n\nsame comment for the other description in these docs"
+      },
+      {
+        "author": "ddl-eric-jin",
+        "body": "Yes I agree, I think that's more clear!"
+      }
+    ]
+  },
+  {
+    "pr_number": 47200,
+    "pr_title": "[DOM-75072][DOM-74981] Refactor patch Extensions API for persister to handle patch logic",
+    "pr_author": "ddl-eric-jin",
+    "file_path": "extensions/interface/src/main/scala/domino/extensions/infrastructure/ExtensionPersister.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-ryan-connor",
+        "body": "arg should start with lowercase"
+      },
+      {
+        "author": "ddl-eric-jin",
+        "body": "Good catch!"
+      }
+    ]
+  },
+  {
+    "pr_number": 47200,
+    "pr_title": "[DOM-75072][DOM-74981] Refactor patch Extensions API for persister to handle patch logic",
+    "pr_author": "ddl-eric-jin",
+    "file_path": "extensions/implementation/src/main/scala/domino/extensions/infrastructure/MongoExtensionPersister.scala",
+    "line": 67,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "ddl-ryan-connor",
+        "body": "query looks great!"
+      }
+    ]
+  },
+  {
+    "pr_number": 47202,
+    "pr_title": "DOM-74865 fetch projcollab with org and members",
+    "pr_author": "ddl-skale",
+    "file_path": "projects/monolith-adapter/src/main/scala/domino/projects/monoadapter/ProjectServiceAdapter.scala",
+    "line": null,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "ddl-amodi",
+        "body": "The logic here and in toOrgRows can be done inline since its only used once. It would be a smaller change and cleaner imo to keep it in getProjectSettingsCollaborators."
+      },
+      {
+        "author": "ddl-skale",
+        "body": "I keep it outside to maintain the code flow since it is easier to distinguish between them org vs individual.\r\n"
+      }
+    ]
+  },
+  {
+    "pr_number": 47202,
+    "pr_title": "DOM-74865 fetch projcollab with org and members",
+    "pr_author": "ddl-skale",
+    "file_path": "projects/interface/src/main/scala/domino/projects/api/dtos.scala",
+    "line": 515,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-amodi",
+        "body": "Was this so you don't have to pass this to FE for the new endpoint? Lets just make sure this doesn't break anything on the FE as this changes an existing value. Lets run the project e2e tests."
+      },
+      {
+        "author": "ddl-skale",
+        "body": "yes i just made it optional, so if it was passed in before it still works and if it was skipped it is skipped now.\r\n\r\nmaking it optional is 100% backward compatible (earlier if was guaranteed to have value so this will not fail\r\nbased on the [comment here](https://github.com/cerebrotech/domino/pull/47202#issuecomment-4042772947) you see the original payload is not changed"
+      }
+    ]
+  },
+  {
+    "pr_number": 47212,
+    "pr_title": "DOM-75309 Add taxonomy tags to list apps public API",
+    "pr_author": "ddl-aj-rossman",
+    "file_path": "taxonomy/implementation/src/main/scala/domino/taxonomy/implementation/TaxonomyApiImpl.scala",
+    "line": 28,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-bira-ignacio",
+        "body": "question (non-blocking): I'm not super familiar with the actor system but I noticed in [some places](https://github.com/cerebrotech/domino/blob/b702b1e35ba57a0941c1a3525eefbaac3121a416/guardrails/implementation/src/main/scala/domino/guardrails/GuardrailsApiImpl.scala#L20) we do have a shutdown hook.\n\nFrom my understanding, it would be needed only to allow clean and graceful shutdowns though we don't use it normally.\nSo my guess is it wouldn't be an issue but I thought I should mention it.\n"
+      },
+      {
+        "author": "ddl-aj-rossman",
+        "body": "Will add!"
+      }
+    ]
+  },
+  {
+    "pr_number": 47212,
+    "pr_title": "DOM-75309 Add taxonomy tags to list apps public API",
+    "pr_author": "ddl-aj-rossman",
+    "file_path": "taxonomy/implementation/src/main/scala/domino/taxonomy/implementation/TaxonomyApiImpl.scala",
+    "line": 34,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-bira-ignacio",
+        "body": "thought: maybe `apiInvoker` and `apiInstance` should be private"
+      }
+    ]
+  },
+  {
+    "pr_number": 47212,
+    "pr_title": "DOM-75309 Add taxonomy tags to list apps public API",
+    "pr_author": "ddl-aj-rossman",
+    "file_path": "apps/web/src/main/scala/domino/apps/web/controllers/AppController.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-bira-ignacio",
+        "body": "suggestion (non-blocking): The flag check runs even when there are zero apps. \nMaybe move both the flag check and the taxonomy call inside the non-empty branch to avoid the flag lookup"
+      },
+      {
+        "author": "ddl-aj-rossman",
+        "body": "good call \ud83d\udc4d "
+      }
+    ]
+  },
+  {
+    "pr_number": 47212,
+    "pr_title": "DOM-75309 Add taxonomy tags to list apps public API",
+    "pr_author": "ddl-aj-rossman",
+    "file_path": "apps/web/src/main/scala/domino/apps/web/transformers/AppTransformer.scala",
+    "line": 123,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-bira-ignacio",
+        "body": "question: The schema says id, label, and namespaceId as required, but here None gets mapped to \"\". Could this be confusing to API consumers that could be expecting values given those are required fields?\nI assume that's for backwards compatibility of some kind?"
+      },
+      {
+        "author": "ddl-aj-rossman",
+        "body": "Good catch: it's just defensive handling of the generated client model which types these as Option[String]. In practice, all of these fields should be present"
+      }
+    ]
+  },
+  {
+    "pr_number": 47212,
+    "pr_title": "DOM-75309 Add taxonomy tags to list apps public API",
+    "pr_author": "ddl-aj-rossman",
+    "file_path": "apps/web/src/test/scala/domino/apps/AppControllerSpec.scala",
+    "line": 183,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-bira-ignacio",
+        "body": "suggestion: Nice coverage!!\nOne case might be missing, if I read things right. \nIn `getTagsForEntities`, it can throw but we handle it as `NonFatal`. \nMaybe it would be good to verify the controller still returns apps with `taxonomyTags = None` in such cases."
+      }
+    ]
+  },
+  {
+    "pr_number": 47216,
+    "pr_title": "[DOM-75531] Support reproducibility of imported projects and repos for app versions",
+    "pr_author": "adrianrsy",
+    "file_path": "apps/interface/src/main/scala/domino/apps/services/AppVersionService.scala",
+    "line": 72,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "adrianrsy",
+        "body": "Main relevant caller sets this value already."
+      }
+    ]
+  },
+  {
+    "pr_number": 47216,
+    "pr_title": "[DOM-75531] Support reproducibility of imported projects and repos for app versions",
+    "pr_author": "adrianrsy",
+    "file_path": "apps/interface/src/main/scala/domino/apps/services/CommitResolver.scala",
+    "line": 55,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "adrianrsy",
+        "body": "Done"
+      }
+    ]
+  },
+  {
+    "pr_number": 47216,
+    "pr_title": "[DOM-75531] Support reproducibility of imported projects and repos for app versions",
+    "pr_author": "adrianrsy",
+    "file_path": "projects/monolith-adapter/src/main/scala/domino/projects/monoadapter/ProjectForkerAndCopier.scala",
+    "line": 896,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "ddl-bira-ignacio",
+        "body": "question: If I read this right, setting these to None means any new app version will immediately fail.\nDo we need to keep the distinction `None = legacy` X `Some(empty) = \"no repos\"` here?\nOr make these `Some(Seq.empty)`, to be safe, and let the copier resolve it later.\n\n"
+      },
+      {
+        "author": "adrianrsy",
+        "body": "This app version created by ProjectForkerAndCopier is already non-fuctional due to the main commit fields being set to None.\r\nConsidering the migration which should handle the majority of legacy cases, None represents \"we don't have reproducibility information so we won't allow this to be reproduced\". "
+      }
+    ]
+  },
+  {
+    "pr_number": 47216,
+    "pr_title": "[DOM-75531] Support reproducibility of imported projects and repos for app versions",
+    "pr_author": "adrianrsy",
+    "file_path": "apps/monolith-adapter/src/main/scala/domino/apps/services/DefaultCommitResolver.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-bira-ignacio",
+        "body": "note: in a rare case where the branch/repo has no commits, this would return null. If easy, we should probably try to handle this, just in case this method gets used for other more general purpose"
+      }
+    ]
+  },
+  {
+    "pr_number": 47216,
+    "pr_title": "[DOM-75531] Support reproducibility of imported projects and repos for app versions",
+    "pr_author": "adrianrsy",
+    "file_path": "apps/monolith-adapter/src/main/scala/domino/apps/services/DefaultCommitResolver.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-bira-ignacio",
+        "body": "suggestion: Maybe log a warning when the project is archived? \nIt's probably impossible to happen in the context of apps but then, all the more reason for some logging. Especially if we use this for other reasons"
+      }
+    ]
+  },
+  {
+    "pr_number": 47216,
+    "pr_title": "[DOM-75531] Support reproducibility of imported projects and repos for app versions",
+    "pr_author": "adrianrsy",
+    "file_path": "apps/interface/src/main/scala/domino/apps/model/AppVersion.scala",
+    "line": 39,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-bira-ignacio",
+        "body": "question: These methods also served as the fallback for `startVersion` on older persisted versions that only have `commitId` set. I assume we're relying on the migration to account for this case?"
+      },
+      {
+        "author": "adrianrsy",
+        "body": "Yes, the migration should set these fields for legacy apps."
+      }
+    ]
+  },
+  {
+    "pr_number": 47216,
+    "pr_title": "[DOM-75531] Support reproducibility of imported projects and repos for app versions",
+    "pr_author": "adrianrsy",
+    "file_path": "apps/interface/src/main/scala/domino/apps/services/CommitResolver.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-ryan-connor",
+        "body": "a lot of this feels like the wrong place, talking about RunStarter and ProjectDependencyGetter in a docstring in the apps/interface directory"
+      },
+      {
+        "author": "adrianrsy",
+        "body": "Moving the edge case description to ImportedProjectSnapshot model instead and simplifying this scaladoc."
+      }
+    ]
+  },
+  {
+    "pr_number": 47216,
+    "pr_title": "[DOM-75531] Support reproducibility of imported projects and repos for app versions",
+    "pr_author": "adrianrsy",
+    "file_path": "apps/monolith-adapter/src/main/scala/domino/apps/services/DefaultCommitResolver.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-ryan-connor",
+        "body": "does this break the spirit of this feature? should we fail if an imported project is archived? or is this OK?"
+      },
+      {
+        "author": "adrianrsy",
+        "body": "Should be an impossible case, but will switch to throwing instead of skipping silently."
+      }
+    ]
+  },
+  {
+    "pr_number": 47216,
+    "pr_title": "[DOM-75531] Support reproducibility of imported projects and repos for app versions",
+    "pr_author": "adrianrsy",
+    "file_path": "apps/monolith-adapter/src/main/scala/domino/apps/services/DefaultCommitResolver.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-ryan-connor",
+        "body": "nit, hard to read -- else would typically be on the previous line"
+      }
+    ]
+  },
+  {
+    "pr_number": 47216,
+    "pr_title": "[DOM-75531] Support reproducibility of imported projects and repos for app versions",
+    "pr_author": "adrianrsy",
+    "file_path": "apps/monolith-adapter/src/main/scala/domino/apps/services/DefaultCommitResolver.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-ryan-connor",
+        "body": "what is a `release`? is this better/more correct than just do the `filesService.getHeadCommitIdForProject()` below? this feels weird that we're getting the resolved commit from a `run`"
+      },
+      {
+        "author": "adrianrsy",
+        "body": "Similar to a tag in git if I'm not mistaken but explicitly tied to a run. This should be the correct way to get the commit if the imported project settings specify a release rather than head or a commit."
+      },
+      {
+        "author": "ddl-ryan-connor",
+        "body": "still feels weird -- why is a \"run\" the source of truth for a release?\r\n\r\nbut i'll trust that this is the right way"
+      }
+    ]
+  },
+  {
+    "pr_number": 47216,
+    "pr_title": "[DOM-75531] Support reproducibility of imported projects and repos for app versions",
+    "pr_author": "adrianrsy",
+    "file_path": "apps/monolith-adapter/src/main/scala/domino/apps/services/ModelProductManager.scala",
+    "line": 343,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-bira-ignacio",
+        "body": "question: I assume we'll rely on migration to always have `resolvedCommitId` for existing apps?"
+      },
+      {
+        "author": "adrianrsy",
+        "body": "Yes."
+      }
+    ]
+  },
+  {
+    "pr_number": 47216,
+    "pr_title": "[DOM-75531] Support reproducibility of imported projects and repos for app versions",
+    "pr_author": "adrianrsy",
+    "file_path": "apps/interface/src/main/scala/domino/apps/model/AppVersion.scala",
+    "line": 24,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "ddl-bira-ignacio",
+        "body": "nice documentation!"
+      }
+    ]
+  },
+  {
+    "pr_number": 47216,
+    "pr_title": "[DOM-75531] Support reproducibility of imported projects and repos for app versions",
+    "pr_author": "adrianrsy",
+    "file_path": "apps/interface/src/main/scala/domino/apps/model/AppVersion.scala",
+    "line": 24,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "ddl-ryan-connor",
+        "body": "my other comment about the docs was more high level. in general i feel like docstrings on classes or methods in a `/PROJECT/INTERFACE` kind of directory -- like `/apps/interface` -- should not talk about low level implementation that depends on _other_ projects. `/apps/interface` technically has _no idea_ about runs etc. It's only the monolith-adapter that knows about things like `ExecutionSpecificationBuilder` etc.\n\nso im not convinced this is the best place for these docs, but im fine with it if you can't think of a better place that is closer to the point in the code where all this stuff comes together."
+      },
+      {
+        "author": "ddl-ryan-connor",
+        "body": "and i really do mean im fine with it! i just wanted to make the more general point clearer"
+      },
+      {
+        "author": "adrianrsy",
+        "body": "Closer to the execution layer of things would be nice, but the edge cases are only relevant to apps for now and I'm not sure we have a good enough reproducibility story for dependencies across all execution types to make any comments generic to all of them.\r\n\r\nI think I'll leave it in here for now.\r\n"
+      }
+    ]
+  },
+  {
+    "pr_number": 47224,
+    "pr_title": "DOM-75386 Preserve route and query params in extended identity propagation consent callback",
+    "pr_author": "ddl-ryan-connor",
+    "file_path": "server/src/test/domino/server/dispatcher/service/ExecutionResourceParamsMakerSpec.scala",
+    "line": null,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "ddl-eric-jin",
+        "body": "I think we should also check that the query parameters are added as expected."
+      },
+      {
+        "author": "ddl-ryan-connor",
+        "body": "that's not possible here. this is a unit test spec for the execution resource params maker. the query params and route come from an actual app request via `your browser => ... some hops ... => app nginx lua code`\r\n\r\ni already linked it to the e2e test ticket and the AC there, it's something we can and should test there. https://dominodatalab.atlassian.net/browse/DOM-75049"
+      },
+      {
+        "author": "ddl-ryan-connor",
+        "body": "oh, and if we had \"integration\" tests for apps, we could test it there -- so best we can do is an e2e test"
+      }
+    ]
+  },
+  {
+    "pr_number": 47229,
+    "pr_title": "[DOM-75403] Cleanup n+1 queries in Apps",
+    "pr_author": "adrianrsy",
+    "file_path": "apps/implementation/src/main/scala/domino/apps/implementation/DefaultAppUsageService.scala",
+    "line": 50,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "adrianrsy",
+        "body": "Does not need a fix. The canReadUsageStatistics gate only exists on the dedicated single-app usage statistics endpoint (getTotalViews), not on the summary view counts shown in the listing page. Our batch refactoring preserved this existing behavior exactly."
+      }
+    ]
+  },
+  {
+    "pr_number": 47233,
+    "pr_title": "DOM-75428 Add tag ID filtering to listApps API",
+    "pr_author": "ddl-aj-rossman",
+    "file_path": "apps/web/src/main/scala/domino/apps/web/controllers/AppController.scala",
+    "line": 160,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-bira-ignacio",
+        "body": "question: is it ok to just return empty here if none of the tags match? \nIt seems, functionally, correct to me, it's just that the warning log message suggests that might not be always expected."
+      },
+      {
+        "author": "ddl-aj-rossman",
+        "body": "IMO I think we should keep this log since this case happens when there is a taxonomy service failure, not if none of the tags match. If the call succeeds but returns an empty list of entityIds, then this error won't be logged"
+      }
+    ]
+  },
+  {
+    "pr_number": 47233,
+    "pr_title": "DOM-75428 Add tag ID filtering to listApps API",
+    "pr_author": "ddl-aj-rossman",
+    "file_path": "apps/implementation/src/main/scala/domino/apps/implementation/DefaultAppService.scala",
+    "line": 156,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-bira-ignacio",
+        "body": "question: any concerns with this being a large list of `allowedAppIds` that could make this problematic Unlike the other things in this filter, I assume a search coming from tags could return a number of ids.\n\nHonestly I wouldn't be too worried if this is in the dozens but I also don't know how large a list of params we can pass to mongo (I'm assuming that's what this does).\n\nCC: @ddl-ryan-connor "
+      },
+      {
+        "author": "ddl-aj-rossman",
+        "body": "Good question- a few points:\r\n- generally, Mongo's `$in` can handle large lists. There is a 16 MiB limit for the size of the query document, but even with thousands of AppIDs, we won't approach it\r\n- Performance wise, we should be ok since we're querying on the app's ID, which is indexed."
+      }
+    ]
+  },
+  {
+    "pr_number": 47240,
+    "pr_title": "DOM-74899 Populate taxonomy tag labels and descriptions in App search index",
+    "pr_author": "ddl-aj-rossman",
+    "file_path": "server/app/domino/server/search/types/app/AppIndexer.scala",
+    "line": 161,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-ryan-connor",
+        "body": "how are tags added to apps?"
+      },
+      {
+        "author": "ddl-ryan-connor",
+        "body": "a little more color: i think maybe \"tagging apps\" used to be a sort of broken functionality before the apps refresh for domino 6.1.0, and during that i believe we did not refactor/modernize the app tagging functionality, so im not aware of a way to tag apps in the UI today"
+      },
+      {
+        "author": "ddl-aj-rossman",
+        "body": "Ah, sorry, should have given more context. For the new tagging microservice we've created, users can add tags to apps. This will call our microservice to fetch the tags for given apps"
+      }
+    ]
+  },
+  {
+    "pr_number": 47250,
+    "pr_title": "[DOM-75231|DOM-75232] Filters, sorting and pagination info for PAT's GET endpoints",
+    "pr_author": "ddl-juan-cistaro",
+    "file_path": "personalaccesstoken/repositories/src/scala/domino/personalaccesstoken/repositories/PersonalAccessTokenMetadataPersisterImpl.scala",
+    "line": 50,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "ddl-martin-currao",
+        "body": "By default it will sort by Mongo ID, which is equivalent to creation date, right? "
+      },
+      {
+        "author": "ddl-juan-cistaro",
+        "body": "Yes, that's right"
+      }
+    ]
+  },
+  {
+    "pr_number": 47250,
+    "pr_title": "[DOM-75231|DOM-75232] Filters, sorting and pagination info for PAT's GET endpoints",
+    "pr_author": "ddl-juan-cistaro",
+    "file_path": "personalaccesstoken/public/public-api.yaml",
+    "line": null,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "ddl-martin-currao",
+        "body": "Personally I like more the `sortBy` naming than the `sortField`, but that is as opinionated as it comes."
+      }
+    ]
+  },
+  {
+    "pr_number": 47250,
+    "pr_title": "[DOM-75231|DOM-75232] Filters, sorting and pagination info for PAT's GET endpoints",
+    "pr_author": "ddl-juan-cistaro",
+    "file_path": "personalaccesstoken/domain/src/scala/domino/personalaccesstoken/domain/services/PatStatus.scala",
+    "line": 6,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "ddl-martin-currao",
+        "body": "To be honest, I'm completely against handling expiringSoon as a status. \r\n\r\nI expect the API to return `active` if the token is active, and when I filter tokens (once we have filters) I expect `?status=active` to include those expiring soon. Considering that \"soon\" is a criteria defined by my  administrator, so it may be a month, I want to still be able to interact with that token as if it is functional. \r\n\r\nInstead, I would add another field on the response, so that it is:\r\n\r\n```json\r\n{\r\n  \"name\": \"my-token\",\r\n  // ...\r\n  \"status\": \"active\",\r\n  \"expiringSoon\": true\r\n} \r\n```\r\n\r\n----\r\n\r\nComment update: Realized my comment does not apply, as we are not even including it in the response.\r\n\r\nThe status enum apparently only applies to the filter, which ends up relating to this:\r\n\r\n```\r\n      case PatStatus.Active => BsonDocument(\"isValid\" -> true)\r\n      case PatStatus.ExpiringSoon => BsonDocument(\"isValid\" -> true, \"expiresAt\" -> BsonDocument(\"$gt\" -> nowBson, \"$lte\" -> expiringSoonLimit))\r\n```\r\n\r\nMy bad. I see now that you mapped `active` to `isValid` and `expiringSoon` also to valid. \r\nWe definitively will need to document it, but as the actual field in the response is called `isActive` and not status, it is not _that_ conflicting. "
+      },
+      {
+        "author": "ddl-juan-cistaro",
+        "body": "Yes, I know this is kinda confusing, but this Statuses are the combination of both fields that are required by the UI. This will be part of the docs that we are going to create for PATs, but I haven't added this as a comment because I thought that the conditions were self-explained and if I added this as a comment in a different part of the code where the enum is define and then the conditions are changed because a future requirement the one doing that was never going to remember to change the comment in the other place and that's where everything starts falling down haha. But as for now the status align with these conditions:\r\n  `active` - Valid token to be used.\r\n  `expiringSoon` - Valid token to be used but its expiration time is in less than 7 days.\r\n  `expired` - Already expired token.\r\n  `revoked` - Token that has been revoked and is no longer valid, despite its expiration time."
+      }
+    ]
+  },
+  {
+    "pr_number": 47250,
+    "pr_title": "[DOM-75231|DOM-75232] Filters, sorting and pagination info for PAT's GET endpoints",
+    "pr_author": "ddl-juan-cistaro",
+    "file_path": "model-serving/web/main/domino/modelserving/web/loading/NoOpPersonalAccessTokenService.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-martin-currao",
+        "body": "I think these two may be leftover from the old name. \n"
+      },
+      {
+        "author": "ddl-martin-currao",
+        "body": "ModelServing strikes again. \ud83d\ude05 "
+      },
+      {
+        "author": "ddl-juan-cistaro",
+        "body": "I love ModelServing <3\r\n"
+      }
+    ]
+  },
+  {
+    "pr_number": 47250,
+    "pr_title": "[DOM-75231|DOM-75232] Filters, sorting and pagination info for PAT's GET endpoints",
+    "pr_author": "ddl-juan-cistaro",
+    "file_path": "personalaccesstoken/repositories/src/scala/domino/personalaccesstoken/repositories/PersonalAccessTokenMetadataPersisterImpl.scala",
+    "line": 101,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-juan-cistaro",
+        "body": "This is expected due to how the \"status\" works in the UI and has been discussed."
+      }
+    ]
+  },
+  {
+    "pr_number": 47255,
+    "pr_title": "[DOM-74661] Add create, patch, and delete Extension audit events ",
+    "pr_author": "ddl-eric-jin",
+    "file_path": "dependencies.yaml",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-eric-jin",
+        "body": "Will update before merging this PR once https://github.com/cerebrotech/idsm-audit-trail-openapi-library/pull/119 is merged."
+      },
+      {
+        "author": "ddl-eric-jin",
+        "body": "Updated!"
+      }
+    ]
+  },
+  {
+    "pr_number": 47255,
+    "pr_title": "[DOM-74661] Add create, patch, and delete Extension audit events ",
+    "pr_author": "ddl-eric-jin",
+    "file_path": "extensions/implementation/src/main/scala/domino/extensions/implementation/ExtensionEventTracker.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-awroblicky",
+        "body": "any concerns with including `appName` like in other places\n\nhttps://github.com/cerebrotech/domino/blob/827ab1408055847e96c312f0cc62af599adf4888/server/app/domino/server/user/domain/UserConsentEventFactory.scala#L32"
+      },
+      {
+        "author": "ddl-eric-jin",
+        "body": "My main concern with including it would be the additional performance overhead of an additional DB query to retrieve `appName` so I decided to only include the ID. But if it is important for auditing, I can make the changes."
+      },
+      {
+        "author": "ddl-awroblicky",
+        "body": "yeah that's a reasonable concern but unfortunately the guidance from Matt was that we should always include a name for readability"
+      },
+      {
+        "author": "ddl-eric-jin",
+        "body": "I see, that makes sense. I'll make the changes, thanks!"
+      },
+      {
+        "author": "ddl-eric-jin",
+        "body": "Now updated to include app name."
+      }
+    ]
+  },
+  {
+    "pr_number": 47258,
+    "pr_title": "DOM-75511 Add appInfo to app search results",
+    "pr_author": "ddl-aj-rossman",
+    "file_path": "server/app/domino/server/search/Results.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-aj-rossman",
+        "body": "Fixed \ud83d\udc4d "
+      }
+    ]
+  },
+  {
+    "pr_number": 47260,
+    "pr_title": "DOM-75558 fix: fix error when deleting project tags [DOM-75558]",
+    "pr_author": "ddl-bira-ignacio",
+    "file_path": "server/app/domino/server/projecttags/ProjectTagController.scala",
+    "line": 100,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-bira-ignacio",
+        "body": "Not necessary to change the error handling method for now"
+      }
+    ]
+  },
+  {
+    "pr_number": 47265,
+    "pr_title": "[DOM-75573] Fix bug in endpoints-apps interaction PR",
+    "pr_author": "adrianrsy",
+    "file_path": "apps/monolith-adapter/src/test/scala/domino/apps/services/DefaultCommitResolverSpec.scala",
+    "line": 79,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "adrianrsy",
+        "body": "Done."
+      }
+    ]
+  },
+  {
+    "pr_number": 47265,
+    "pr_title": "[DOM-75573] Fix bug in endpoints-apps interaction PR",
+    "pr_author": "adrianrsy",
+    "file_path": "apps/monolith-adapter/src/main/scala/domino/apps/services/DefaultCommitResolver.scala",
+    "line": 37,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-bira-ignacio",
+        "body": "this assumes defaultRef is always present on a repo and if not, this would throw. Would that be a problem here?"
+      },
+      {
+        "author": "adrianrsy",
+        "body": "defaultRef is a required field and should always be present. Should be defaulting to the head ref."
+      }
+    ]
+  },
+  {
+    "pr_number": 47266,
+    "pr_title": "PLAT-9854: Update repo-standards-orb and use the new catalog v2 commands",
+    "pr_author": "urianchang",
+    "file_path": ".circleci/static-build.yml",
+    "line": 947,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "urianchang",
+        "body": "This has been a no-op because the `build-test-and-sonar` job isn't a required job when creating catalogs, so the results haven't been used. "
+      }
+    ]
+  },
+  {
+    "pr_number": 47266,
+    "pr_title": "PLAT-9854: Update repo-standards-orb and use the new catalog v2 commands",
+    "pr_author": "urianchang",
+    "file_path": ".circleci/static-build.yml",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "urianchang",
+        "body": "```suggestion\n  repo-standards: cerebrotech/repo-standards@1.2.0\n```"
+      }
+    ]
+  },
+  {
+    "pr_number": 47277,
+    "pr_title": "PLAT-9854: Update repo-standards-orb and use the new catalog v2 commands",
+    "pr_author": "urianchang",
+    "file_path": ".circleci/static-build.yml",
+    "line": 977,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "urianchang",
+        "body": "@coderabbitai, This is inaccurate. The orb code is located in https://github.com/cerebrotech/repo-standards-orb. The `store_catalog_check` command from the orb copies XML files from `results_path` into `/tmp/catalog/checks/junit/build-test-and-publish/...` and persists to workspace with root set to `/tmp/catalog`. When the `create_catalog_check_v2` command from the orb runs, it attaches the workspace root path at `/tmp/catalog`, so the files should be in `/tmp/catalog/checks/junit/build-test-and-publish/`."
+      }
+    ]
+  },
+  {
+    "pr_number": 47278,
+    "pr_title": "[DOM-75659] Hotfix: revert dfsCommitId source to instance for backwards compatibility",
+    "pr_author": "adrianrsy",
+    "file_path": "apps/web/src/main/scala/domino/apps/web/transformers/AppVersionTransformer.scala",
+    "line": 30,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "adrianrsy",
+        "body": "This is just a partial revert of https://github.com/cerebrotech/domino/commit/04b3d58db2dcc2c4a4014242bb367c65b509aa74\r\nNo need to handle that edge case"
+      }
+    ]
+  },
+  {
+    "pr_number": 47285,
+    "pr_title": "PLAT-9854: Update repo-standards-orb and use the new catalog v2 commands",
+    "pr_author": "urianchang",
+    "file_path": ".circleci/static-build.yml",
+    "line": 917,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "urianchang",
+        "body": "@coderabbitai This is not a concern for this PR and target branch."
+      }
+    ]
+  }
+]
