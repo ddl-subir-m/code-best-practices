@@ -376,16 +376,28 @@ def patterns_match(existing: dict, new: dict) -> bool:
 
 
 def determine_mode(category: str, rule: str) -> str:
-    """Determine if a pattern should be ambient or active.
+    """Determine if a pattern should be ambient (rule) or active (skill).
 
-    Coding conventions/style/naming -> ambient
-    Multi-step procedures/workflows/setup guides -> active
+    Ambient — short, universal constraints always loaded in context.
+    Active  — contextual patterns with trigger conditions or detailed
+              guidance better surfaced on demand as skills.
     """
-    active_keywords = {"workflow", "step-by-step", "procedure", "setup", "guide",
-                       "how to", "checklist", "process"}
     rule_lower = rule.lower()
-    if any(kw in rule_lower for kw in active_keywords):
+    length = len(rule)
+
+    # Contextual/triggered patterns -> active (skills)
+    if rule_lower.startswith(("when ", "before ", "after ", "if ")):
         return "active"
+
+    # Long multi-clause rules are too detailed for ambient context
+    if length > 150 and ";" in rule:
+        return "active"
+
+    # Detailed architecture/api-design patterns -> active
+    if category in ("architecture", "api-design") and length > 120:
+        return "active"
+
+    # Short, universal constraints -> ambient (rules)
     return "ambient"
 
 
@@ -679,6 +691,31 @@ def cmd_report(args):
 # CLI
 # ---------------------------------------------------------------------------
 
+def cmd_reclass(args):
+    """Reclassify mode (ambient/active) for all patterns in patterns.json."""
+    input_file = args.input
+
+    with open(input_file) as f:
+        patterns = json.load(f)
+
+    before = defaultdict(int)
+    after = defaultdict(int)
+
+    for p in patterns:
+        old_mode = p.get("mode", "ambient")
+        before[old_mode] += 1
+        new_mode = determine_mode(p.get("scope", ""), p.get("rule", ""))
+        after[new_mode] += 1
+        p["mode"] = new_mode
+
+    with open(input_file, "w") as f:
+        json.dump(patterns, f, indent=2)
+
+    print(f"Reclassified {len(patterns)} patterns in {input_file}")
+    print(f"  Before: { {k: v for k, v in sorted(before.items())} }")
+    print(f"  After:  { {k: v for k, v in sorted(after.items())} }")
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Extract engineering best practices from PR review threads"
@@ -712,6 +749,10 @@ def main():
     p_report.add_argument("--input", required=True, help="Patterns JSON file")
     p_report.add_argument("--output", default="validation-report.md", help="Output report file")
 
+    # reclass
+    p_reclass = subparsers.add_parser("reclass", help="Reclassify pattern modes (ambient/active)")
+    p_reclass.add_argument("--input", default="patterns.json", help="Patterns JSON file to reclassify in-place")
+
     args = parser.parse_args()
 
     commands = {
@@ -720,6 +761,7 @@ def main():
         "merge": cmd_merge,
         "modules": cmd_modules,
         "report": cmd_report,
+        "reclass": cmd_reclass,
     }
     commands[args.command](args)
 
