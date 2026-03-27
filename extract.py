@@ -137,12 +137,17 @@ def cmd_fetch(args):
     """Fetch merged PR review threads from GitHub."""
     repo = args.repo
     since = args.since
+    until = getattr(args, 'until', None)
     batch_size = min(args.batch_size, 100)  # GitHub max is 100
     output_dir = Path("raw-reviews")
     output_dir.mkdir(exist_ok=True)
 
     owner, name = repo.split("/")
-    search_query = f"repo:{repo} is:pr is:merged merged:>={since} sort:updated-desc"
+    if until:
+        date_filter = f"merged:{since}..{until}"
+    else:
+        date_filter = f"merged:>={since}"
+    search_query = f"repo:{repo} is:pr is:merged {date_filter} sort:updated-desc"
 
     state = load_state()
     cursor = None
@@ -682,6 +687,7 @@ def main():
     p_fetch = subparsers.add_parser("fetch", help="Fetch merged PR review threads")
     p_fetch.add_argument("--repo", required=True, help="GitHub repo (owner/name)")
     p_fetch.add_argument("--since", required=True, help="Fetch PRs merged since (YYYY-MM-DD)")
+    p_fetch.add_argument("--until", default=None, help="Fetch PRs merged before (YYYY-MM-DD)")
     p_fetch.add_argument("--batch-size", type=int, default=100, help="PRs per page (max 100)")
 
     # analyze

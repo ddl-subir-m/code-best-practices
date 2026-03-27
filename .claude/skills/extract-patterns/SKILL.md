@@ -20,106 +20,185 @@ compile into Claude rules and Cursor rules.
 
 The user invokes this with `/extract` and optionally provides arguments:
 
-- `/extract` — incremental run (uses last_extraction_date from state.json)
-- `/extract --full --since 2024-01-01` — full historical extraction
+- `/extract` — **smart resume**: if a historical run is in progress, picks up the next month. If historical is complete, does an incremental run (new PRs since last run).
+- `/extract --full --since 2024-01-01` — start a historical month-by-month extraction
 - `/extract --compile-only` — skip extraction, just recompile from existing patterns.json
 
-## Step 1: Parse Arguments
+## Step 0: Read State and Determine Mode
 
-Read the user's message for arguments:
-- `--repo REPO` — GitHub repo (default: read from state.json, fallback: cerebrotech/domino)
-- `--since DATE` — start date for PR fetch (default: read last_extraction_date from state.json)
-- `--full` — ignore state.json, fetch from --since date
-- `--compile-only` — skip to Step 5
-- `--batch-size N` — threads per analysis batch (default: 20)
+Read `state.json` to determine what to do:
 
-If `--compile-only`, skip to Step 5.
+```bash
+cat state.json 2>/dev/null || echo "NO_STATE"
+```
 
-## Step 2: Fetch PR Review Threads
+**Mode determination:**
+
+1. If user passed `--compile-only` → skip to Step 5.
+
+2. If user passed `--full --since DATE` → **initialize historical run**:
+   - Calculate all months from `--since` date to today
+   - Write to state.json:
+     ```json
+     {
+       "historical_run": {
+         "start_date": "2024-01-01",
+         "end_date": "2026-03-26",
+         "months": ["2024-01", "2024-02", ..., "2026-03"],
+         "current_month_index": 0,
+         "status": "in_progress"
+       }
+     }
+     ```
+   - Proceed to Step 1 with the first month.
+
+3. If `state.json` has `historical_run.status == "in_progress"` → **resume historical run**:
+   - Read `current_month_index` to find the next month to process
+   - If `current_month_index >= len(months)` → mark `status: "complete"`, skip to Step 5
+   - Otherwise proceed to Step 1 with that month
+
+4. If `state.json` has `historical_run.status == "complete"` (or no historical_run) → **incremental run**:
+   - Use `last_extraction_date` from state.json as the since date
+   - Use today as the until date
+   - Proceed to Step 1
+
+**Display progress for historical runs:**
+```
+HISTORICAL EXTRACTION: Month {current+1}/{total} ({month_name})
+Progress: [████████░░░░░░░░░░░░] 40%
+Patterns so far: {N}
+```
+
+## Step 1: Fetch PR Review Threads for Current Window
+
+Determine the date window:
+- **Historical run**: fetch only the current month (e.g., `--since 2024-04-01 --until 2024-04-30`)
+- **Incremental run**: fetch from `last_extraction_date` to today
 
 Run:
 ```bash
-source .venv/bin/activate && python extract.py fetch --repo {REPO} --since {SINCE_DATE} --batch-size 100
+source .venv/bin/activate && python extract.py fetch --repo {REPO} --since {WINDOW_START} --until {WINDOW_END} --batch-size 100
 ```
 
-This fetches merged PRs with review comments via `gh api graphql` and saves
-them to `raw-reviews/`. It updates `state.json` with progress.
+If the fetch subcommand doesn't support `--until`, filter the results after fetching:
+only process PRs with `mergedAt` within the current window.
 
-Report: "Fetched N PRs with M review threads."
+Report: "Fetched N PRs for {month} with M review threads."
 
-If fetch fails (auth error, rate limit), stop and report the error.
+If fetch fails with rate limiting, report: "GitHub API rate limit hit. Wait 1 hour and
+run `/extract` again — it will resume from this month."
 
-## Step 3: Analyze Batches
+## Step 2: Prepare Analysis Batches
 
-This is where YOU (Claude) are the LLM. Do NOT shell out to an API.
-
-1. Run to prepare batches:
+Run:
 ```bash
 source .venv/bin/activate && python extract.py analyze --input raw-reviews/ --output patterns.json
 ```
-This writes batch files (`review-batch-*.json`) and prompt files, but does NOT
-call an LLM. That's your job.
 
-2. Read `prompts/extract-patterns-v1.md` to get the extraction instructions.
+This writes batch files and prompt files but does NOT call an LLM.
 
-3. For each batch file (`review-batch-*.json`):
+**Check for already-processed batches** (resumability):
+```bash
+ls tmp/batch-*-results.json 2>/dev/null | wc -l
+```
+Skip any batch that already has a results file in tmp/.
 
-   **For small runs (≤4 batches):** Process sequentially.
-   Read each batch file, analyze the review threads following the extraction prompt
-   instructions, and write results to `tmp/batch-N-results.json` as a JSON array of:
-   ```json
-   [
-     {
-       "pattern_name": "descriptive name",
-       "rule": "one sentence rule",
-       "category": "error-handling",
-       "evidence": "reviewer's exact words",
-       "pr_number": 47189,
-       "file_path": "apps/impl/src/.../Service.scala"
-     }
-   ]
-   ```
+## Step 3: Analyze Batches (YOU are the LLM)
 
-   **For large runs (>4 batches):** Use the Agent tool to process 4 batches in
-   parallel. Launch 4 agents at a time, each with:
-   - The extraction prompt from prompts/extract-patterns-v1.md
-   - The batch file path to read
-   - Instructions to write results to tmp/batch-N-results.json
+Read `prompts/extract-patterns-v1.md` for the extraction instructions.
 
-   Wait for each wave of 4 to complete before launching the next wave.
+For each batch file (`review-batch-*.json`) that does NOT have a corresponding
+`tmp/batch-N-results.json`:
 
-   **Important analysis rules:**
-   - Skip threads that are just acknowledgments ("LGTM", "Fixed", "Done")
-   - Skip threads where only the PR author is talking (no reviewer feedback)
-   - Only extract genuinely generalizable patterns, not PR-specific comments
-   - Quote the reviewer's actual words in the evidence field
-   - Use the exact categories: error-handling, naming, architecture, testing,
-     performance, logging, security, api-design, code-organization, documentation
+**For small runs (≤4 batches):** Process sequentially.
+Read each batch file, analyze the review threads following the extraction prompt
+instructions, and write results to `tmp/batch-N-results.json` as a JSON array of:
+```json
+[
+  {
+    "pattern_name": "descriptive name",
+    "rule": "one sentence rule",
+    "category": "error-handling",
+    "evidence": "reviewer's exact words",
+    "pr_number": 47189,
+    "file_path": "apps/impl/src/.../Service.scala"
+  }
+]
+```
 
-4. After all batches are analyzed, ensure `tmp/` contains all result files.
+**For large runs (>4 batches):** Use the Agent tool to process 4 batches in
+parallel. Launch 4 agents at a time, each with:
+- The extraction prompt from prompts/extract-patterns-v1.md
+- The batch file path to read
+- Instructions to write results to tmp/batch-N-results.json
 
-## Step 4: Merge Results
+Wait for each wave of 4 to complete before launching the next wave.
+
+**Important analysis rules:**
+- Skip threads that are just acknowledgments ("LGTM", "Fixed", "Done")
+- Skip threads where only the PR author is talking (no reviewer feedback)
+- Only extract genuinely generalizable patterns, not PR-specific comments
+- Quote the reviewer's actual words in the evidence field
+- Use the exact categories: error-handling, naming, architecture, testing,
+  performance, logging, security, api-design, code-organization, documentation
+
+## Step 4: Merge Results and Update State
 
 Run:
 ```bash
 source .venv/bin/activate && python extract.py merge --input tmp/ --output patterns.json
 ```
 
-This merges new raw patterns into existing patterns.json:
-- Matching patterns get review_count incremented and source_prs appended
-- New patterns are added with review_count=1
-
 Then auto-detect modules:
 ```bash
 source .venv/bin/activate && python extract.py modules --input patterns.json --output modules.yaml
 ```
 
-Then regenerate the human-readable report:
+Then regenerate the report:
 ```bash
 source .venv/bin/activate && python extract.py report --input patterns.json --output validation-report.md
 ```
 
-Report: "Merged N new patterns, M matched existing. Total: X patterns across Y modules."
+**Update state.json:**
+
+For historical runs, advance to the next month:
+- Read state.json
+- Increment `historical_run.current_month_index` by 1
+- Update `last_extraction_date` to the end of the current month
+- Add an entry to `extraction_runs`
+- Write state.json back
+
+```bash
+# Use python to update state.json atomically
+source .venv/bin/activate && python3 -c "
+import json
+from datetime import datetime
+
+with open('state.json') as f:
+    state = json.load(f)
+
+hr = state.get('historical_run', {})
+if hr.get('status') == 'in_progress':
+    idx = hr['current_month_index']
+    month = hr['months'][idx]
+    hr['current_month_index'] = idx + 1
+    if hr['current_month_index'] >= len(hr['months']):
+        hr['status'] = 'complete'
+    state['last_extraction_date'] = datetime.now().strftime('%Y-%m-%d')
+
+with open('state.json', 'w') as f:
+    json.dump(state, f, indent=2)
+
+print(json.dumps(state, indent=2))
+"
+```
+
+**Clean up tmp/ for next month:**
+```bash
+rm -f tmp/batch-*-results.json review-batch-*.json
+```
+
+Report: "Month {N}/{total} complete. Merged X new patterns, Y matched existing. Total: Z patterns."
 
 ## Step 5: Compile Rules
 
@@ -128,47 +207,72 @@ Run:
 source .venv/bin/activate && python compile.py --input patterns.json --output output/
 ```
 
-Report what was generated:
-- Number of Claude rule files and which modules
-- Number of Claude skills (if any active-mode patterns)
-- Cursor rules file
+## Step 6: Summary and Next Action
 
-## Step 6: Summary
-
-Display a summary:
-
+**If historical run still in progress:**
 ```
-EXTRACTION COMPLETE
-═══════════════════
-PRs fetched:      {N}
-Review threads:   {M}
+MONTH {N}/{TOTAL} COMPLETE ({month_name})
+══════════════════════════════════════════
+PRs this month:   {N}
 Batches analyzed: {B}
-Patterns found:   {new} new, {merged} merged with existing
-Total patterns:   {total}
-Modules:          {list of modules}
+New patterns:     {new} new, {merged} merged
+Total patterns:   {total} across {modules} modules
+Progress:         [████████████░░░░░░░░] {pct}%
+
+Rules updated in output/
+
+Next month: {next_month}
+Run /extract to continue, or wait and resume later.
+```
+
+**If historical run just completed:**
+```
+HISTORICAL EXTRACTION COMPLETE
+═══════════════════════════════
+Months processed: {total_months}
+Total PRs:        {total_prs}
+Total patterns:   {total_patterns}
+Modules:          {module_list}
 
 Output files:
-  output/.claude/rules/global-practices.md    ({N} rules)
-  output/.claude/rules/apps-practices.md      ({N} rules)
+  output/.claude/rules/mined-global-practices.md
+  output/.claude/rules/mined-apps-practices.md
   ...
-  output/.cursorrules                         ({N} rules)
+  output/.cursorrules
 
-Next: copy output/ to your target repo, or review patterns.json
+All future /extract runs will be incremental (new PRs only).
+Copy output/ to your target repo to deploy.
+```
+
+**If incremental run:**
+```
+INCREMENTAL EXTRACTION COMPLETE
+════════════════════════════════
+PRs since last run: {N}
+New patterns:       {new}
+Updated patterns:   {merged}
+Total patterns:     {total}
+
+Next: copy output/ to your target repo
 ```
 
 ## Error Handling
 
 - If `gh` is not authenticated: tell user to run `gh auth login`
-- If fetch returns 0 PRs: "No new PRs since {date}. Nothing to extract."
-- If a batch analysis produces no patterns: that's normal (not all batches have patterns)
-- If merge finds 0 new patterns: "All patterns already captured. No changes to patterns.json."
-- If compile finds 0 active patterns: "No active patterns found. Check patterns.json."
+- If GitHub rate limit hit during fetch: stop gracefully, state is saved, tell user to run `/extract` again after the rate limit resets (~1 hour)
+- If fetch returns 0 PRs for a month: skip to next month, log "No PRs in {month}"
+- If context is getting large (you notice slowness): stop after the current batch, save state, tell user to run `/extract` in a new session
+- If a batch analysis produces no patterns: normal, continue
+- If merge finds 0 new patterns: "All patterns already captured for this month."
 
 ## Resumability
 
-The pipeline is resumable at every step:
-- Step 2: state.json tracks which PRs were fetched
-- Step 3: batch files persist in tmp/ — if interrupted, re-run analyze and only
-  process batches that don't have a corresponding results file in tmp/
-- Step 4: merge is idempotent — running it twice with the same input produces the same output
-- Step 5: compile always regenerates from patterns.json (stateless)
+Every step is resumable:
+- **Fetch**: state.json tracks which month we're on
+- **Analyze**: tmp/ batch results persist — skip batches that already have results
+- **Merge**: idempotent — same input produces same output
+- **Compile**: stateless — always regenerates from patterns.json
+- **Monthly progress**: state.json.historical_run.current_month_index tracks exactly where we are
+
+If Claude Code crashes, context resets, or you close the terminal — just type `/extract`
+and it picks up exactly where it left off.
