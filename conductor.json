@@ -1,0 +1,6 @@
+{
+  "scripts": {
+    "setup": "pip install pytest pyyaml",
+    "run": "pytest tests/ -v"
+  }
+}
