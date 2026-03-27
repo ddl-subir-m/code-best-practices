@@ -11,3 +11,5 @@ review-batch-*.json
 prompts/batch-*-prompt.md
 tmp/batch-*-results.json
 raw-reviews/
+logs/
+extraction.log

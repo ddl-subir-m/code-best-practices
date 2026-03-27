@@ -159,21 +159,33 @@ def generate_claude_skills(patterns: list[dict], output_dir: str) -> list[str]:
             "---",
             f"# {name}",
             "",
-            p.get("rationale", ""),
-            "",
-            "## When to apply",
-            p.get("trigger", ""),
-            "",
-            "## Steps",
-            p["rule"],
-            "",
-            "## Examples",
         ]
 
-        if p.get("good_example"):
-            lines.append(f"Good: {p['good_example']}")
+        if p.get("rationale"):
+            lines.append(p["rationale"])
+            lines.append("")
+
+        if p.get("trigger"):
+            lines.append("## When to apply")
+            lines.append(p["trigger"])
+            lines.append("")
+
+        lines.append("## Steps")
+        if p.get("steps"):
+            for step in p["steps"]:
+                lines.append(f"- {step}")
+        else:
+            lines.append(p["rule"])
+        lines.append("")
+
+        if p.get("good_example") or p.get("bad_example"):
+            lines.append("## Examples")
+
         if p.get("bad_example"):
-            lines.append(f"Bad: {p['bad_example']}")
+            lines.append(f"**Bad:** {p['bad_example']}")
+            lines.append("")
+        if p.get("good_example"):
+            lines.append(f"**Good:** {p['good_example']}")
 
         lines.append("")
         if sources:

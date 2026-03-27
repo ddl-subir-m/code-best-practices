@@ -4,6 +4,7 @@ modules:
   activity:
   - /activity/
   admin:
+  - /admin-cloud-self-serve-portal/
   - /admin/
   aigateway:
   - /aigateway/
@@ -11,10 +12,14 @@ modules:
   - /apps/
   audit_trail:
   - /audit_trail/
-  aws-common:
-  - /aws-common/
+  authz:
+  - /authz-service/
+  - /authz/
   build:
   - /build/
+  client:
+  - /client-api/
+  - /client/
   common:
   - /common-core/
   - /common/
@@ -22,8 +27,11 @@ modules:
   - /compute-grid/
   compute-providers:
   - /compute-providers/
-  dataset-rw:
+  data-plane:
+  - /data-plane/
+  dataset:
   - /dataset-rw/
+  - /dataset/
   datasource:
   - /datasource/
   dependencies.yaml:
@@ -32,34 +40,61 @@ modules:
   - /dino/
   domino-cost:
   - /domino-cost/
+  domino-kubernetes:
+  - /domino-kubernetes/
   e2e-tests:
   - /e2e-tests/
+  environments:
+  - /environments/
   executor:
   - /executor/
+  extensions:
+  - /extensions/
   filesync:
   - /filesync/
   frontend:
   - /frontend/
+  gates:
+  - /gates/
+  gen-ai:
+  - /gen-ai/
+  guardrails:
+  - /guardrails/
+  homepage-tasks:
+  - /homepage-tasks/
   jobs:
   - /jobs/
+  mlflow:
+  - /mlflow-client/
+  - /mlflow/
   model-api-sagas:
   - /model-api-sagas/
   model-serving:
   - /model-serving/
   nucleus:
   - /nucleus/
+  personalaccesstoken:
+  - /personalaccesstoken/
+  ppm:
+  - /ppm/
   project-management:
   - /project-management/
   projects:
   - /projects/
   registered-models:
   - /registered-models/
+  remote-file-system:
+  - /remote-file-system/
   repoman:
   - /repoman/
   run:
   - /run/
+  runprep:
+  - /runprep/
   scheduler:
   - /scheduler/
+  secretstore:
+  - /secretstore/
   server:
   - /server/
   service-health:
@@ -68,6 +103,8 @@ modules:
   - /skeletons/
   system-tests:
   - /system-tests/
+  taxonomy:
+  - /taxonomy/
   workspace-all:
   - /workspace-all/
   workspace-classic:
@@ -76,4 +113,4 @@ modules:
   - '*'
 threshold: 5
 auto_generated: true
-last_updated: '2026-03-26'
+last_updated: '2026-03-27'

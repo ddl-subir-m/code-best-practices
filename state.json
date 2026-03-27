@@ -1,7 +1,7 @@
 {
-  "last_extraction_date": "2026-03-26",
+  "last_extraction_date": "2026-03-27",
   "last_pr_number": 47285,
-  "total_prs_processed": 2147,
+  "total_prs_processed": 3489,
   "extraction_runs": [
     {
       "date": "2026-03-26",
@@ -97,6 +97,106 @@
     {
       "date": "2026-03-26",
       "prs": 127,
+      "patterns_found": null
+    },
+    {
+      "date": "2026-03-27",
+      "prs": 127,
+      "patterns_found": null
+    },
+    {
+      "date": "2026-03-27",
+      "prs": 129,
+      "patterns_found": null
+    },
+    {
+      "date": "2026-03-27",
+      "prs": 80,
+      "patterns_found": null
+    },
+    {
+      "date": "2026-03-27",
+      "prs": 92,
+      "patterns_found": null
+    },
+    {
+      "date": "2026-03-27",
+      "prs": 51,
+      "patterns_found": null
+    },
+    {
+      "date": "2026-03-27",
+      "prs": 78,
+      "patterns_found": null
+    },
+    {
+      "date": "2026-03-27",
+      "prs": 89,
+      "patterns_found": null
+    },
+    {
+      "date": "2026-03-27",
+      "prs": 92,
+      "patterns_found": null
+    },
+    {
+      "date": "2026-03-27",
+      "prs": 161,
+      "patterns_found": null
+    },
+    {
+      "date": "2026-03-27",
+      "prs": 93,
+      "patterns_found": null
+    },
+    {
+      "date": "2026-03-27",
+      "prs": 26,
+      "patterns_found": null
+    },
+    {
+      "date": "2026-03-27",
+      "prs": 32,
+      "patterns_found": null
+    },
+    {
+      "date": "2026-03-27",
+      "prs": 30,
+      "patterns_found": null
+    },
+    {
+      "date": "2026-03-27",
+      "prs": 61,
+      "patterns_found": null
+    },
+    {
+      "date": "2026-03-27",
+      "prs": 61,
+      "patterns_found": null
+    },
+    {
+      "date": "2026-03-27",
+      "prs": 32,
+      "patterns_found": null
+    },
+    {
+      "date": "2026-03-27",
+      "prs": 21,
+      "patterns_found": null
+    },
+    {
+      "date": "2026-03-27",
+      "prs": 25,
+      "patterns_found": null
+    },
+    {
+      "date": "2026-03-27",
+      "prs": 18,
+      "patterns_found": null
+    },
+    {
+      "date": "2026-03-27",
+      "prs": 44,
       "patterns_found": null
     }
   ],

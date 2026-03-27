@@ -231,18 +231,29 @@ classify_batch() {
 
   local prompt="You are classifying engineering patterns mined from PR reviews into two modes:
 
-- **ambient**: A passive coding convention, style rule, or best practice that should always be followed.
-  These are simple, single-sentence guidelines. Examples: \"Always validate error responses before unwrapping\",
-  \"Use descriptive variable names for database query results\", \"Log the original error when wrapping exceptions\".
+- **ambient** (rule): A coding convention, style rule, or best practice expressible as a single sentence.
+  The engineer should follow this passively at all times. If you can state the pattern as \"Always do X\"
+  or \"Never do Y\" — it is ambient.
 
-- **active**: A multi-step procedure, workflow, or checklist that an engineer would invoke on-demand.
-  These involve sequential steps or decision trees. Examples: \"When adding a new API endpoint, follow these steps...\",
-  \"Migration checklist for renaming a database column\", \"How to set up integration tests for a new service\".
+- **active** (skill): A multi-step procedure with 3+ distinct sequential steps that an engineer would
+  invoke on-demand in specific situations. The value is in the sequence of steps, not a single guideline.
 
-Most patterns (roughly 80-90%) should be **ambient**. Only classify as **active** if the pattern genuinely
-describes a procedure with multiple steps that would be lost if reduced to a single sentence.
+**The bar for active is HIGH.** Ask: does this pattern require a checklist or walkthrough with multiple
+ordered steps? If the answer is no, it is ambient. When in doubt, classify as ambient.
 
-For each pattern, return the same id with your classification and a one-line rationale.
+Expected distribution: ~95-98% ambient, ~2-5% active. A batch of 50 patterns should have 0-3 active at most.
+
+Examples of AMBIENT (even though they mention processes):
+- \"Do not add audit events at intermediate steps if the final step already logs it\" → ambient
+- \"Extract common test setup into shared fixtures\" → ambient
+- \"Cache repeated lookups in event processing pipelines\" → ambient
+- \"Services should return Optional and let callers decide error handling\" → ambient
+
+Examples of ACTIVE (genuine multi-step procedures):
+- \"When adding a new Scala microservice: 1) scaffold from template, 2) register in service mesh, 3) add health check endpoint, 4) configure CI pipeline, 5) add to deployment manifest\" → active
+- \"Database migration checklist: 1) write backward-compatible migration, 2) deploy migration, 3) update code, 4) deploy code, 5) clean up old column\" → active
+
+For each pattern, return the same id with your classification.
 
 Input patterns:
 $(cat "$batch_file")
@@ -250,8 +261,8 @@ $(cat "$batch_file")
 Return a JSON array:
 \`\`\`json
 [
-  {\"id\": \"pattern-id\", \"mode\": \"ambient\", \"rationale\": \"Simple convention about X\"},
-  {\"id\": \"other-id\", \"mode\": \"active\", \"rationale\": \"Multi-step workflow for Y\"}
+  {\"id\": \"pattern-id\", \"mode\": \"ambient\"},
+  {\"id\": \"other-id\", \"mode\": \"active\"}
 ]
 \`\`\`
 
@@ -317,6 +328,108 @@ python3 "$PROJECT_DIR/classify_patterns.py" apply \
   2>&1 | tee "$LOG_DIR/classify-apply.log"
 
 rm -rf "$PROJECT_DIR/tmp/classify"
+
+# ── Enrich skills (LLM fills in trigger, rationale, examples) ────────────────
+active_count=$(python3 -c "import json; ps=json.load(open('patterns.json')); print(sum(1 for p in ps if p.get('mode')=='active'))" 2>/dev/null || echo "0")
+
+if [[ "$active_count" -gt 0 ]]; then
+  echo "=== Enriching $active_count skills with trigger, rationale, and examples... ==="
+
+  python3 "$PROJECT_DIR/classify_patterns.py" prepare-enrich --input patterns.json --output-dir "$PROJECT_DIR/tmp/enrich"
+
+  enrich_batch() {
+    local batch_file="$1"
+    local batch_num="$2"
+    local result_file="$PROJECT_DIR/tmp/enrich/batch-${batch_num}-results.json"
+
+    local prompt="You are enriching engineering skills (multi-step procedures) mined from PR reviews.
+Each skill needs:
+- **trigger**: A one-sentence description of WHEN to apply this skill (e.g., \"When adding a new API endpoint to the platform\")
+- **rationale**: WHY this procedure matters — what goes wrong without it (1-2 sentences)
+- **steps**: The ordered steps of the procedure (array of strings, 3-8 steps)
+- **good_example**: A brief code snippet or description showing the correct approach
+- **bad_example**: A brief code snippet or description showing the wrong approach
+
+Input skills:
+$(cat "$batch_file")
+
+Return a JSON array with enriched fields for each skill:
+\`\`\`json
+[
+  {
+    \"id\": \"pattern-id\",
+    \"trigger\": \"When ...\",
+    \"rationale\": \"Without this ...\",
+    \"steps\": [\"Step 1: ...\", \"Step 2: ...\", \"Step 3: ...\"],
+    \"good_example\": \"...\",
+    \"bad_example\": \"...\"
+  }
+]
+\`\`\`
+
+Return ONLY the JSON array, no other text."
+
+    claude -p "$prompt" \
+      --output-format text \
+      --max-turns 1 \
+      > "$result_file" \
+      2>> "$LOG_DIR/enrich.log" || {
+        echo "    ⚠ Enrichment failed for batch $batch_num"
+        rm -f "$result_file"
+        return 1
+      }
+
+    python3 -c "
+import json, sys, re
+with open('$result_file') as f:
+    text = f.read().strip()
+text = re.sub(r'^\`\`\`json?\s*', '', text)
+text = re.sub(r'\s*\`\`\`$', '', text)
+data = json.loads(text)
+if not isinstance(data, list):
+    sys.exit(1)
+with open('$result_file', 'w') as f:
+    json.dump(data, f, indent=2)
+print(f'    Enrich batch $batch_num: {len(data)} skills enriched')
+" 2>&1 || {
+      echo "    ⚠ Invalid JSON from enrich batch $batch_num, removing."
+      rm -f "$result_file"
+      return 1
+    }
+  }
+
+  running=0
+  pids=()
+
+  for batch_file in "$PROJECT_DIR/tmp/enrich/"batch-*.json; do
+    [[ "$batch_file" == *"-results.json" ]] && continue
+    batch_name=$(basename "$batch_file" .json)
+    batch_num="${batch_name#batch-}"
+    result_file="$PROJECT_DIR/tmp/enrich/batch-${batch_num}-results.json"
+
+    [[ -f "$result_file" ]] && continue
+
+    enrich_batch "$batch_file" "$batch_num" &
+    pids+=($!)
+    running=$((running + 1))
+
+    if [[ $running -ge $MAX_PARALLEL ]]; then
+      for pid in "${pids[@]}"; do wait "$pid" 2>/dev/null || true; done
+      pids=()
+      running=0
+    fi
+  done
+  for pid in "${pids[@]}"; do wait "$pid" 2>/dev/null || true; done
+
+  python3 "$PROJECT_DIR/classify_patterns.py" apply-enrich \
+    --input patterns.json \
+    --enrichments "$PROJECT_DIR/tmp/enrich" \
+    2>&1 | tee "$LOG_DIR/enrich-apply.log"
+
+  rm -rf "$PROJECT_DIR/tmp/enrich"
+else
+  echo "=== No active skills to enrich, skipping. ==="
+fi
 
 # ── Final compile ────────────────────────────────────────────────────────────
 echo "=== Compiling rules... ==="
