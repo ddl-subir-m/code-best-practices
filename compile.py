@@ -131,6 +131,10 @@ def generate_claude_rules(
     rules_dir = os.path.join(output_dir, ".claude", "rules")
     os.makedirs(rules_dir, exist_ok=True)
 
+    # Clean up stale mined-* rule files from previous runs
+    for old in Path(rules_dir).glob("mined-*-practices.md"):
+        old.unlink()
+
     created = []
     today = date.today().isoformat()
 
@@ -183,6 +187,14 @@ def generate_claude_skills(patterns: list[dict], output_dir: str) -> list[str]:
     active = [p for p in patterns if p["mode"] in ("active", "both")
               and p.get("review_count", 1) >= MIN_REVIEW_COUNT]
     skills_dir = os.path.join(output_dir, ".claude", "skills")
+
+    # Clean up stale mined-* skill dirs from previous runs
+    if os.path.exists(skills_dir):
+        import shutil
+        for old in Path(skills_dir).iterdir():
+            if old.is_dir() and old.name.startswith("mined-"):
+                shutil.rmtree(old)
+
     created = []
 
     for p in active:
