@@ -1,0 +1,326 @@
+[
+  {
+    "pr_number": 39503,
+    "pr_title": "[DOM-53349] Automate PVC test in system-tests",
+    "pr_author": "ddl-rliu",
+    "file_path": "system-tests/tests/test_job_pvc_mounts.py",
+    "line": 138,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "ddl-xin",
+        "body": "nit: personally I think changing the names of these functions to `assert_` would read better"
+      }
+    ]
+  },
+  {
+    "pr_number": 39503,
+    "pr_title": "[DOM-53349] Automate PVC test in system-tests",
+    "pr_author": "ddl-rliu",
+    "file_path": "system-tests/tests/test_job_pvc_mounts.py",
+    "line": 127,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "ddl-xin",
+        "body": "Is it possible to refactor the creating part out of that test function into a separate helper function?"
+      }
+    ]
+  },
+  {
+    "pr_number": 39553,
+    "pr_title": "[DOM-55102] - Create scaffolding for bootstrapping model-serving microservice",
+    "pr_author": "ddl-tnguyen",
+    "file_path": "model-serving/web/conf/application.conf",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "fernandoacorreia",
+        "body": "These settings come from nucleus and their default values are defined there. They must not be defined on this file.\r\n\r\nHere we will only add settings that are specific to the model-serving service and are not being inherited from nucleus.\r\n\r\nThose settings will start with the `modelServing.` prefix instead of `com.cerebro.domino.`"
+      },
+      {
+        "author": "fernandoacorreia",
+        "body": "@ddl-tnguyen unless I'm missing something I still think that settings that are retrieved from nucleus shouldn't be defined on the model-serving configuration file."
+      },
+      {
+        "author": "ddl-tnguyen",
+        "body": "If those settings are not explicitly set by an admin in central config, they actually do not end up in the `Configuration` object we get from nucleus and will throw an error if you try to `.get` those values. \r\n\r\nIn [these lines in Settings.scala](https://github.com/cerebrotech/domino/blob/76ce145a07888e82633931e4ab3eca3c3de3c081/server/app/domino/server/lib/config/Settings.scala#L569C7-L574C8) nucleus checks `Configuration` for those optional values and otherwise sets them to the default.\r\n\r\nMy logic was that we should store those default values in the model-serving `application.conf` file, so that we can try to get the central config from the nucleus `Configuration` and otherwise fall back on the defaults defined in the model-serving `Configuration`. If an admin sets any of those values in central config, it will override the default. This is what `ModelServingConfigLoader.scala` ends up doing."
+      }
+    ]
+  },
+  {
+    "pr_number": 39553,
+    "pr_title": "[DOM-55102] - Create scaffolding for bootstrapping model-serving microservice",
+    "pr_author": "ddl-tnguyen",
+    "file_path": "model-serving/web/main/domino/modelserving/controllers/ModelServingWebServerController.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "fernandoacorreia",
+        "body": "Change message to indicate that a `MongoCommandException` happened so that we can differentiate from the response on line 42."
+      }
+    ]
+  },
+  {
+    "pr_number": 39553,
+    "pr_title": "[DOM-55102] - Create scaffolding for bootstrapping model-serving microservice",
+    "pr_author": "ddl-tnguyen",
+    "file_path": "model-serving/web/main/domino/modelserving/loading/ModelServingSettings.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "fernandoacorreia",
+        "body": "Let's rename these last 4 settings to indicate that they are for model APIs. E.g. `defaultModelApihealthCheckPeriodSeconds`"
+      }
+    ]
+  },
+  {
+    "pr_number": 39553,
+    "pr_title": "[DOM-55102] - Create scaffolding for bootstrapping model-serving microservice",
+    "pr_author": "ddl-tnguyen",
+    "file_path": "model-serving/web/main/domino/modelserving/loading/ModelServingSettings.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "fernandoacorreia",
+        "body": "This pattern for detecting missing keys is too verbose. I believe that `config.get[]()` will throw an exception that includes the missing key if not found."
+      }
+    ]
+  },
+  {
+    "pr_number": 39553,
+    "pr_title": "[DOM-55102] - Create scaffolding for bootstrapping model-serving microservice",
+    "pr_author": "ddl-tnguyen",
+    "file_path": "model-serving/web/conf/application.conf",
+    "line": 10,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "fernandoacorreia",
+        "body": "These settings are OK to be in this file. They are needed to be able to get the configuration from nucleus."
+      }
+    ]
+  },
+  {
+    "pr_number": 39553,
+    "pr_title": "[DOM-55102] - Create scaffolding for bootstrapping model-serving microservice",
+    "pr_author": "ddl-tnguyen",
+    "file_path": "model-serving/web/main/domino/modelserving/loading/ApplicationObjects.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "fernandoacorreia",
+        "body": "Rename to `defaultModelApiHealthCheck` so that it's clearer that these are default values for the Model API entity, and not some generic health check settings. E.g. someone might thing that these are health check settings for the model-serving service."
+      }
+    ]
+  },
+  {
+    "pr_number": 39553,
+    "pr_title": "[DOM-55102] - Create scaffolding for bootstrapping model-serving microservice",
+    "pr_author": "ddl-tnguyen",
+    "file_path": "model-serving/web/main/domino/modelserving/loading/ApplicationObjects.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "fernandoacorreia",
+        "body": "We'll want to create settings for these 2 values instead of hardcoding them."
+      }
+    ]
+  },
+  {
+    "pr_number": 39553,
+    "pr_title": "[DOM-55102] - Create scaffolding for bootstrapping model-serving microservice",
+    "pr_author": "ddl-tnguyen",
+    "file_path": "model-serving/web/main/domino/modelserving/loading/ModelServingSettings.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "fernandoacorreia",
+        "body": "These keys must be retrieved from nucleus otherwise they can't be overridden via central config."
+      }
+    ]
+  },
+  {
+    "pr_number": 39553,
+    "pr_title": "[DOM-55102] - Create scaffolding for bootstrapping model-serving microservice",
+    "pr_author": "ddl-tnguyen",
+    "file_path": "model-serving/web/conf/application.conf",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "fernandoacorreia",
+        "body": "Configuration settings must be defined in nucleus otherwise they can't be overridden via central config.\r\nThe only settings on this file are the ones required to start the application so that it can get the configuration values from nucleus."
+      }
+    ]
+  },
+  {
+    "pr_number": 39553,
+    "pr_title": "[DOM-55102] - Create scaffolding for bootstrapping model-serving microservice",
+    "pr_author": "ddl-tnguyen",
+    "file_path": "model-serving/web/conf/application.conf",
+    "line": null,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "fernandoacorreia",
+        "body": "You forgot to remove these settings from this file, now that they've been added to `server/conf/application.conf`"
+      }
+    ]
+  },
+  {
+    "pr_number": 39571,
+    "pr_title": "[DOM-54217] move develop scheduled / periodic tasks into nucleus-develop deployment",
+    "pr_author": "ddl-mhito",
+    "file_path": "server/app/domino/server/search/service/ElasticSearchService.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-ryan-connor",
+        "body": "i dont think we should call it `isInScope`, i think we should keep it more general like `isEnabled`"
+      },
+      {
+        "author": "ddl-mhito",
+        "body": "Changed"
+      }
+    ]
+  },
+  {
+    "pr_number": 39571,
+    "pr_title": "[DOM-54217] move develop scheduled / periodic tasks into nucleus-develop deployment",
+    "pr_author": "ddl-mhito",
+    "file_path": "workspace-all/workspace-adapter/src/main/scala/domino/workspace/adapter/WorkspaceAdapterInjectionModule.scala",
+    "line": 60,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-ryan-connor",
+        "body": "same comment about `isInScope`"
+      },
+      {
+        "author": "ddl-mhito",
+        "body": "Changed to isEnabled"
+      }
+    ]
+  },
+  {
+    "pr_number": 39571,
+    "pr_title": "[DOM-54217] move develop scheduled / periodic tasks into nucleus-develop deployment",
+    "pr_author": "ddl-mhito",
+    "file_path": "workspace-all/workspace-adapter/src/main/scala/domino/workspace/adapter/WorkspaceAdapterInjectionModule.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-ryan-connor",
+        "body": "i think we should leave it as `enableSnapshotCleanup`, it is pretty clear and general and \"scopes\" dont always applies (needs to be \"scoped\" nucleus mode)"
+      },
+      {
+        "author": "ddl-mhito",
+        "body": "I was wanting to make it clear that this boolean has to do with the deployment's tags. `enableSnapshotCleanup` definitely is more clear, but it sounds like a boolean that would be set via central config rather than something to do with the k8s deployment (if that makes sense). I'd rather keep this boolean as `isEnabled`. Thoughts?"
+      }
+    ]
+  },
+  {
+    "pr_number": 39571,
+    "pr_title": "[DOM-54217] move develop scheduled / periodic tasks into nucleus-develop deployment",
+    "pr_author": "ddl-mhito",
+    "file_path": "workspace-all/workspace-api/src/main/scala/domino/workspace/api/WorkspaceSettings.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-ryan-connor",
+        "body": "same about `isInScope`"
+      },
+      {
+        "author": "ddl-mhito",
+        "body": "Changed to `isEnabled`"
+      }
+    ]
+  },
+  {
+    "pr_number": 39571,
+    "pr_title": "[DOM-54217] move develop scheduled / periodic tasks into nucleus-develop deployment",
+    "pr_author": "ddl-mhito",
+    "file_path": "workspace-all/workspace-impl/src/main/scala/domino/workspace/impl/WorkspaceVolumeSnapshotSettings.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-ryan-connor",
+        "body": "same about `isInScope`"
+      },
+      {
+        "author": "ddl-mhito",
+        "body": "Changed to `isEnabled`"
+      }
+    ]
+  },
+  {
+    "pr_number": 39571,
+    "pr_title": "[DOM-54217] move develop scheduled / periodic tasks into nucleus-develop deployment",
+    "pr_author": "ddl-mhito",
+    "file_path": "dev/setup/ansible/roles/full-stack/tasks/helm/nucleus.yaml",
+    "line": 90,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-ryan-connor",
+        "body": "here's another place to change https://github.com/cerebrotech/domino/blob/18c902d1c94d26b25c90f70ff34630524525ea0d/dev/nucleus-heap-dump.sh#L169"
+      },
+      {
+        "author": "ddl-mhito",
+        "body": "Good catch, changed. "
+      }
+    ]
+  },
+  {
+    "pr_number": 39571,
+    "pr_title": "[DOM-54217] move develop scheduled / periodic tasks into nucleus-develop deployment",
+    "pr_author": "ddl-mhito",
+    "file_path": "server/src/tests-lib/scala/domino/server/search/service/TestElasticSearchService.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-ryan-connor",
+        "body": "same comment"
+      },
+      {
+        "author": "ddl-mhito",
+        "body": "Changed to `isEnabled`"
+      }
+    ]
+  },
+  {
+    "pr_number": 39571,
+    "pr_title": "[DOM-54217] move develop scheduled / periodic tasks into nucleus-develop deployment",
+    "pr_author": "ddl-mhito",
+    "file_path": "workspace-all/workspace-api/src/main/scala/domino/workspace/api/WorkspaceSettings.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-ryan-connor",
+        "body": "where is this used?"
+      },
+      {
+        "author": "ddl-mhito",
+        "body": "This is used in the workspace volume cleaner, which takes in injected workspace settings from here:\r\n\r\n```\r\n    WorkspaceSettings(\r\n      stateTransitionRequestValidityDuration = settings.Workbench.Workspace.stateTransitionRequestValidityDuration,\r\n      dependencyRetrievalCacheTimeout = settings.Workbench.Workspace.dependencyRetrievalCacheTimeout,\r\n      quotaSettings = quotaSettings,\r\n      notifierSettings = WorkspaceNotifierSettings(\r\n        isDispatcher = settings.Dispatcher.isEnabled,\r\n        messagePrefetchCount = settings.Workbench.Workspace.Notifier.messagePrefetchCount,\r\n        maxMessageCount = settings.Workbench.Workspace.Notifier.maxMessageCount\r\n      ),\r\n      stopToDeleteDelayDuration = settings.Workbench.Workspace.stopToDeleteDelayDuration,\r\n      workspaceLogFetchLimit = settings.logRetriever.runLogFetchSize,\r\n      userHost = settings.userHost,\r\n      idlePeriodThresholdDays = settings.Workbench.Workspace.idlePeriodThresholdDays,\r\n      idlePeriodThresholdMinutes = settings.Workbench.Workspace.idlePeriodThresholdMinutes,\r\n      highDiskUsageThresholdPercent = settings.Workbench.Workspace.Volume.highDiskUsageThresholdPercent,\r\n      enabledPVCleanup = settings.Workbench.Workspace.enabledPVCleanup,\r\n      unusedGracePeriodDays = settings.Workbench.Workspace.unusedGracePeriodDays,\r\n      unusedGracePeriodMinutes = settings.Workbench.Workspace.unusedGracePeriodMinutes,\r\n      cleanupFrequencyDays = settings.Workbench.Workspace.cleanupFrequencyDays,\r\n      globalSettingsAnonymousAccessEnabled = settings.endpointsWithAnonymousUsersEnabled.workspaceGlobalSettings,\r\n      isInScope = settings.nucleusScopes match {\r\n          case Some(scopes) => scopes.contains(NucleusScopes.Develop)\r\n          case None => settings.Spof.isEnabled\r\n        },\r\n    )\r\n```\r\n\r\nI made this separate from `enaledPVCleanup` to make it clear it has to do with deployment tags rather than central config values. "
+      },
+      {
+        "author": "ddl-mhito",
+        "body": "edit: I forgot to add the new one to the check in WorkspaceVolumeCleaner, good catch. \r\nhttps://github.com/cerebrotech/domino/pull/39571/files#diff-e51ad05d131811c929c39658078e8ac6a41f946ed95614d76d8cdeb01c544d4cR45\r\n"
+      }
+    ]
+  }
+]

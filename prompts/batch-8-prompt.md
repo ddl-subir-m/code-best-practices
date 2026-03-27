@@ -1,0 +1,388 @@
+# Pattern Extraction Prompt v1
+
+For each review thread, identify if the reviewer is enforcing a generalizable engineering pattern, convention, or best practice.
+
+Skip threads that are:
+- Simple acknowledgments ("LGTM", "Fixed", "Good catch")
+- PR-specific discussion with no generalizable takeaway
+- The PR author explaining their own code (not reviewer feedback)
+
+For each pattern found, output JSON:
+1. pattern_name: short, descriptive name
+2. rule: one sentence describing what engineers should do
+3. category: one of [error-handling, naming, architecture, testing, performance, logging, security, api-design, code-organization, documentation]
+4. evidence: quote the reviewer's actual words
+5. pr_number: the PR number
+6. file_path: the file being reviewed
+
+Only include genuinely generalizable patterns, not one-off code-specific comments.
+
+
+---
+
+## Review Threads to Analyze
+
+[
+  {
+    "pr_number": 40076,
+    "pr_title": "DOM-54752 Dom 54752 UI add new endpoint modal",
+    "pr_author": "DDL-Martin-Gazzara",
+    "file_path": "frontend/packages/ui/src/ai-gateway/components/add-new-endpoint-modal/access-settings-form/AccessSettingsForm.tsx",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-galias",
+        "body": "nit, have you tried `as const`?"
+      },
+      {
+        "author": "DDL-Martin-Gazzara",
+        "body": "Nop, but I improved this by moving the array outside the component and defining a constant as `RadioSpec<T>`. The value then were automatically typed with the possible values of EndpointAccessPermissions"
+      }
+    ]
+  },
+  {
+    "pr_number": 40076,
+    "pr_title": "DOM-54752 Dom 54752 UI add new endpoint modal",
+    "pr_author": "DDL-Martin-Gazzara",
+    "file_path": "frontend/packages/ui/src/ai-gateway/components/add-new-endpoint-modal/configuration-settings-input/ConfigurationSettingsInput.tsx",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-galias",
+        "body": "why isn't prevProvider assigned with `const { provider } = formInstance.getFieldsValue();` provider's value as initial value?"
+      },
+      {
+        "author": "DDL-Martin-Gazzara",
+        "body": "Done"
+      }
+    ]
+  },
+  {
+    "pr_number": 40076,
+    "pr_title": "DOM-54752 Dom 54752 UI add new endpoint modal",
+    "pr_author": "DDL-Martin-Gazzara",
+    "file_path": "frontend/packages/ui/src/ai-gateway/components/add-new-endpoint-modal/configuration-settings-input/ConfigurationSettingsInput.tsx",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-galias",
+        "body": "If I am not missing anything, this form instance is not reactive. This can lead to issues with the `prevProvider` logic. Have you checked https://ant.design/components/form#formusewatch for watching form values?"
+      },
+      {
+        "author": "DDL-Martin-Gazzara",
+        "body": "Replaced with useWatch"
+      }
+    ]
+  },
+  {
+    "pr_number": 40076,
+    "pr_title": "DOM-54752 Dom 54752 UI add new endpoint modal",
+    "pr_author": "DDL-Martin-Gazzara",
+    "file_path": "frontend/packages/ui/src/ai-gateway/components/add-new-endpoint-modal/configuration-settings-input/ConfigurationSettingsInput.tsx",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-galias",
+        "body": "The prev + useEffect pattern is discouraged by the react team: https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes. I don't like the new pattern too much so the change is up to you.\r\n\r\nRegardless of the comment above, prevProvider value should not care about `model` value. We should always keep them in sync."
+      },
+      {
+        "author": "DDL-Martin-Gazzara",
+        "body": "I'll go with the React's piece of advice"
+      }
+    ]
+  },
+  {
+    "pr_number": 40076,
+    "pr_title": "DOM-54752 Dom 54752 UI add new endpoint modal",
+    "pr_author": "DDL-Martin-Gazzara",
+    "file_path": "frontend/packages/ui/src/ai-gateway/components/add-new-endpoint-modal/endpoints-settings-form/EndpointSettingsForm.tsx",
+    "line": 36,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-galias",
+        "body": "Have you given a try to https://ant.design/components/form#formusewatch? I think that with new hook this pattern can be deprecated. Specially here that it is repeated a couple of times"
+      },
+      {
+        "author": "DDL-Martin-Gazzara",
+        "body": "Using `useWatch`"
+      }
+    ]
+  },
+  {
+    "pr_number": 40076,
+    "pr_title": "DOM-54752 Dom 54752 UI add new endpoint modal",
+    "pr_author": "DDL-Martin-Gazzara",
+    "file_path": "frontend/packages/ui/src/components/Modal.tsx",
+    "line": 30,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-galias",
+        "body": "have you checked that this doesn't affect other modals?"
+      },
+      {
+        "author": "DDL-Martin-Gazzara",
+        "body": "Modal previous implementations override this style by setting all paddings to 0 (btw the prop they used is deprecated). This property should help the rest of the implementations and we can remove the deprecated property"
+      }
+    ]
+  },
+  {
+    "pr_number": 40076,
+    "pr_title": "DOM-54752 Dom 54752 UI add new endpoint modal",
+    "pr_author": "DDL-Martin-Gazzara",
+    "file_path": "server/app/domino/server/admin/ui/views/adminMain.scala.html",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-galias",
+        "body": "There is a PR that removes this from some days ago: https://github.com/cerebrotech/domino/pull/40136/files, is it correct to readd it?"
+      },
+      {
+        "author": "DDL-Martin-Gazzara",
+        "body": "Good catch. Actually this should not be added. It was removed"
+      }
+    ]
+  },
+  {
+    "pr_number": 40076,
+    "pr_title": "DOM-54752 Dom 54752 UI add new endpoint modal",
+    "pr_author": "DDL-Martin-Gazzara",
+    "file_path": "frontend/packages/ui/src/ai-gateway/components/add-new-endpoint-modal/configuration-settings-input/ConfigurationSettingsInput.tsx",
+    "line": 15,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-galias",
+        "body": "I don't know if any of the logic gets broken but you should always set the prev value regardless of the model?.length value"
+      },
+      {
+        "author": "DDL-Martin-Gazzara",
+        "body": "The idea was to fulfill the textarea when the model was selected. Anyway, I've been thinking about removing this condition, as the configuration schema does not depend on the model but only for the chosen provider"
+      }
+    ]
+  },
+  {
+    "pr_number": 40082,
+    "pr_title": "DOM-55010 Use white labeling favicon for new window",
+    "pr_author": "jenniferjfu2",
+    "file_path": "frontend/apps/web/src/components/App.tsx",
+    "line": 45,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "jenniferjfu2",
+        "body": "Changes are in this function"
+      }
+    ]
+  },
+  {
+    "pr_number": 40082,
+    "pr_title": "DOM-55010 Use white labeling favicon for new window",
+    "pr_author": "jenniferjfu2",
+    "file_path": "nucleus/public/images/favicon.png",
+    "line": 1,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "ddl-galias",
+        "body": "is it correct to change this icon for an empty one?"
+      },
+      {
+        "author": "jenniferjfu2",
+        "body": "It is the least change to make it not visible."
+      }
+    ]
+  },
+  {
+    "pr_number": 40082,
+    "pr_title": "DOM-55010 Use white labeling favicon for new window",
+    "pr_author": "jenniferjfu2",
+    "file_path": "nucleus/public/images/favicon.png",
+    "line": 1,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "ddl-grequeni",
+        "body": "I think the ownership of this directory shouldn't be develop team, right? could you please fix it in the CODEOWNERS file? thanks!"
+      },
+      {
+        "author": "jenniferjfu2",
+        "body": "Actually Develop owns nucleus/."
+      }
+    ]
+  },
+  {
+    "pr_number": 40086,
+    "pr_title": "[DOM-54740] - Model Api activity log fixes",
+    "pr_author": "ddl-tnguyen",
+    "file_path": "model-serving/domain/src/main/scala/domino/modelserving/services/ModelApiPublisher.scala",
+    "line": 89,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "ddl-tnguyen",
+        "body": "Do you guys think this is acceptable or does it need to be a separate `re-publish` event?"
+      },
+      {
+        "author": "fernandoacorreia",
+        "body": "Published makes sense to me."
+      }
+    ]
+  },
+  {
+    "pr_number": 40086,
+    "pr_title": "[DOM-54740] - Model Api activity log fixes",
+    "pr_author": "ddl-tnguyen",
+    "file_path": "frontend/apps/web/src/modules/activity-feed/ActivityUtils.ts",
+    "line": 190,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "fernandoacorreia",
+        "body": "I don't think it's a great pattern to make 'started' the default case without checking the action.\r\n\r\nI suggest something like\r\n\r\n```\r\nif (modelFeedMetadata.action == 'published') {\r\n    return 'published';\r\n  } else if (modelFeedMetadata.action == 'destroyed') {\r\n    return 'stopped';\r\n  } else if (modelFeedMetadata.action == 'started') {\r\n    return 'started';\r\n  } else {\r\n    return modelFeedMetadata.action;\r\n```"
+      },
+      {
+        "author": "ddl-tnguyen",
+        "body": "I agree. I need to merge this first so we publish a new version of the typescript API. But can do a follow up PR that uses the updated ts to have the additional else if \ud83d\udc4d "
+      }
+    ]
+  },
+  {
+    "pr_number": 40086,
+    "pr_title": "[DOM-54740] - Model Api activity log fixes",
+    "pr_author": "ddl-tnguyen",
+    "file_path": "frontend/apps/web/src/modules/activity-feed/Narration.tsx",
+    "line": 482,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "fernandoacorreia",
+        "body": "There is a lot of reformatting and unrelated changes. This would need to be reviewed from someone from the frontend team."
+      }
+    ]
+  },
+  {
+    "pr_number": 40086,
+    "pr_title": "[DOM-54740] - Model Api activity log fixes",
+    "pr_author": "ddl-tnguyen",
+    "file_path": "frontend/apps/web/src/modules/activity-feed/ActivityUtils.ts",
+    "line": null,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "adrianrsy",
+        "body": "nit: typo in comment\r\ncompatibility"
+      }
+    ]
+  },
+  {
+    "pr_number": 40097,
+    "pr_title": "DOM-54060: update consumer model product url mapping and add tests",
+    "pr_author": "steved",
+    "file_path": "nucleus/test/domino/nucleus/modelproduct/lib/ConsumerModelProductUrlMapperSpec.scala",
+    "line": 10,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-grequeni",
+        "body": "This test class should probably be owned by pham, like the class being tested"
+      },
+      {
+        "author": "ddl-grequeni",
+        "body": "nevermind, this is for 5.10. I'm ok if we just fix it in develop branch."
+      },
+      {
+        "author": "steved",
+        "body": "good call, updated there"
+      }
+    ]
+  },
+  {
+    "pr_number": 40117,
+    "pr_title": "[DOM-54955] EDVs in Jobs and Launchers tests ",
+    "pr_author": "ddl-viniatska",
+    "file_path": "e2e-tests/features/domino/external_volumes/dsp_view_and_mount_edv.feature",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-eric-jin",
+        "body": "Small nit:\r\n```suggestion\r\n  Scenario: User with Launcher Project Role runs Launcher with mounted EDV\r\n```"
+      }
+    ]
+  },
+  {
+    "pr_number": 40121,
+    "pr_title": "DOM-55050 Fix provenance checkpoint authz part 2 (FE)",
+    "pr_author": "noahjax",
+    "file_path": "frontend/apps/web/src/modules/restartable-workspaces/__tests__/WorkspaceSessionModal.test.tsx",
+    "line": 23,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "ddl-ryan-connor",
+        "body": "looks like we dont have any separate tests involving `getProvenanceCheckpointsForExecution` (the new one)? is it easy enough for you to add one that would be useful, or would that need frontend expertise?\r\n\r\nor are there already other tests that just dont even need to be updated because the name is staying the same?"
+      },
+      {
+        "author": "noahjax",
+        "body": "I'll take a look once I can get a working deploy up"
+      }
+    ]
+  },
+  {
+    "pr_number": 40123,
+    "pr_title": "[DOM-54962] - Move Model Api IDs to separate list in cucu report",
+    "pr_author": "ddl-tnguyen",
+    "file_path": "e2e-tests/features/steps/api/model_api_steps.py",
+    "line": 81,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "ddl-grequeni",
+        "body": "Should this file be owned by pham? Why is it owned by develop?"
+      }
+    ]
+  },
+  {
+    "pr_number": 40124,
+    "pr_title": "[DOM-55073] Flows: executor writes outputs success flag file instead of user code",
+    "pr_author": "ddl-ryan-connor",
+    "file_path": "executor/app/app/domino/executor/run/RunTerminationHandler.scala",
+    "line": 81,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "noahjax",
+        "body": "What happens in workflows that have no inputs or outputs? Is there any risk that this would fail if `/workflow/outputs/` didn't already exist?"
+      },
+      {
+        "author": "ddl-ryan-connor",
+        "body": "this func is never called if there are no outputs. so there is no risk in that respect"
+      },
+      {
+        "author": "ddl-ryan-connor",
+        "body": "if there are outputs, then the `/workflow/outputs/` directory will exist because it is mounted as an empty dir by k8s"
+      }
+    ]
+  }
+]
+
+---
+
+Return a JSON array of patterns found. Each pattern should have:
+- pattern_name (string)
+- rule (string)
+- category (string, one of: api-design, architecture, code-organization, documentation, error-handling, logging, naming, performance, security, testing)
+- evidence (string — quote the reviewer's actual words)
+- pr_number (integer)
+- file_path (string)
+
+If no patterns are found in this batch, return an empty array: []
+
+Return ONLY the JSON array, no other text.

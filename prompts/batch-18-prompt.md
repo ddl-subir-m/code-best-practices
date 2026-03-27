@@ -1,0 +1,384 @@
+# Pattern Extraction Prompt v1
+
+For each review thread, identify if the reviewer is enforcing a generalizable engineering pattern, convention, or best practice.
+
+Skip threads that are:
+- Simple acknowledgments ("LGTM", "Fixed", "Good catch")
+- PR-specific discussion with no generalizable takeaway
+- The PR author explaining their own code (not reviewer feedback)
+
+For each pattern found, output JSON:
+1. pattern_name: short, descriptive name
+2. rule: one sentence describing what engineers should do
+3. category: one of [error-handling, naming, architecture, testing, performance, logging, security, api-design, code-organization, documentation]
+4. evidence: quote the reviewer's actual words
+5. pr_number: the PR number
+6. file_path: the file being reviewed
+
+Only include genuinely generalizable patterns, not one-off code-specific comments.
+
+
+---
+
+## Review Threads to Analyze
+
+[
+  {
+    "pr_number": 40443,
+    "pr_title": "[DOM-54469] ai hub system test improvements",
+    "pr_author": "ddl-mhito",
+    "file_path": "system-tests/helpers/git_helpers.py",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-mhito",
+        "body": "I did not end up using these function because it didn't work, but I'll leave them here unless someone has strong objections, because they could be useful in the future"
+      },
+      {
+        "author": "ddl-cedricyoung",
+        "body": "My objection is generic.... if it isn't used, delete it. Since it isn't used then code drift may make this broken but nobody would know, then later it becomes this confusing code of **why** is this code here and what should it have been doing and then yet another cruft of the unknown and partially finished work.\r\n\r\nOn the other hand, I could see if you have a Ticket (& reference that ticket in a code comment) to follow up and will be doing that soon (i.e. next sprint or the one after that). But at least that way there is more of a trail to follow and get clarity on. "
+      },
+      {
+        "author": "ddl-mhito",
+        "body": "That makes sense, I'll just delete it."
+      }
+    ]
+  },
+  {
+    "pr_number": 40443,
+    "pr_title": "[DOM-54469] ai hub system test improvements",
+    "pr_author": "ddl-mhito",
+    "file_path": "server/app/domino/server/account/domain/GitCredentialTokenManager.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-cedricyoung",
+        "body": "do you think this might be a security issue, leaking some info about creds (not the actual private keys) that could come up as a false positive in a security audit?"
+      },
+      {
+        "author": "ddl-mhito",
+        "body": "I'm not sure what the conditions are in security audits, but as it isn't the actual key, I think this is okay? We send this information through HTTP requests anyways"
+      },
+      {
+        "author": "ddl-amodi",
+        "body": "This shouldn't have any security concerns as we are only deleting by id. The value of the id is never returned/revealed."
+      }
+    ]
+  },
+  {
+    "pr_number": 40443,
+    "pr_title": "[DOM-54469] ai hub system test improvements",
+    "pr_author": "ddl-mhito",
+    "file_path": "system-tests/tests/aihub/test_ai_hub_templates_e2e.py",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-grequeni",
+        "body": "I don't understand when this code runs \ud83e\udd14 \r\nThis is a fixture, so I would expect it to be something \"requested\" from a test. But looks like a teardown logic. My guess is that this is never run. See https://stackoverflow.com/a/40673918"
+      },
+      {
+        "author": "ddl-mhito",
+        "body": "You're right, I did it wrong. Looking up how pytest deletes tmp_dirs, I think we're okay? Lots of discussion saying it doesn't work right but we shouldn't see collisions. I renamed the file for the e2e test to be sure. "
+      }
+    ]
+  },
+  {
+    "pr_number": 40443,
+    "pr_title": "[DOM-54469] ai hub system test improvements",
+    "pr_author": "ddl-mhito",
+    "file_path": "system-tests/tests/aihub/test_ai_hub_templates_e2e.py",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-grequeni",
+        "body": "Can we add a filter on a specific exception message? This looks too broad, so a real intermittent issue may be masked by these retries."
+      },
+      {
+        "author": "ddl-mhito",
+        "body": "Actually I think this can get deleted, as the original failure reasons for this test shouldn't happen, and any actual failure should probably be looked at. "
+      }
+    ]
+  },
+  {
+    "pr_number": 40443,
+    "pr_title": "[DOM-54469] ai hub system test improvements",
+    "pr_author": "ddl-mhito",
+    "file_path": "system-tests/tests/aihub/test_ai_hub_project_creation.py",
+    "line": null,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "ddl-grequeni",
+        "body": "According to the [docs](https://docs.pytest.org/en/6.2.x/fixture.html#fixture-scopes), the session scope is alive during the entire suite (across all packages/modules tested). Could we end up with conflicting definitions of `git_creds` in the test session? (this one and the one in the other file, which has the same name but a different result). For example if the runner is running a test from this file and the other one, it will eventually try to load both configurations.\r\n\r\nCan we unify them? Like have one session fixture in a common python module/file that sets creds for both github/gitlab and then it's used by all modules that need it. If we are scoping it to \"session\", I guess this approach should work fine, otherwise this should have a smaller scope, like module."
+      },
+      {
+        "author": "ddl-mhito",
+        "body": "Good call. For now I will switch to \"module\" instead of \"session.\" There is probably a cleaner way of doing it, where we havea. setup script in the aihub package, but I'll keep it simple for now. \r\n\r\nedit: NVM, this caused the test to fail. It needs to be session to run on multiple workers, as the module would still run for each worker. \r\n\r\nhttps://pytest-xdist.readthedocs.io/en/latest/how-to.html#making-session-scoped-fixtures-execute-only-once\r\n\r\nI also can likely just delete the hook to delete the tmp_path, pytest will do it automatically? We'll see if there are collisions"
+      }
+    ]
+  },
+  {
+    "pr_number": 40444,
+    "pr_title": "[DOM-55434] mapping creation date cell",
+    "pr_author": "DDL-Martin-Gazzara",
+    "file_path": "frontend/packages/ui/src/ai-gateway/__tests__/utils.test.tsx",
+    "line": 95,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-galias",
+        "body": "minor, the missing args should be just (mockedEndpoint.creationDate, mockedEndpoint, 4)"
+      },
+      {
+        "author": "DDL-Martin-Gazzara",
+        "body": "They're not required"
+      },
+      {
+        "author": "ddl-galias",
+        "body": "I know they are not used but my point is not adding unnecessary ts ignores if they can be avoided."
+      }
+    ]
+  },
+  {
+    "pr_number": 40444,
+    "pr_title": "[DOM-55434] mapping creation date cell",
+    "pr_author": "DDL-Martin-Gazzara",
+    "file_path": "frontend/packages/ui/src/ai-gateway/components/creation-date-cell/CreationDateCell.tsx",
+    "line": 1,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-galias",
+        "body": "have you tried: actualTimeRenderer from '@domino/ui/dist/components/renderers/tableColumns'?"
+      },
+      {
+        "author": "DDL-Martin-Gazzara",
+        "body": "No, but it expects a number. In my case the creationDate is a string, the date in json format"
+      }
+    ]
+  },
+  {
+    "pr_number": 40446,
+    "pr_title": "[DOM-54640] Use correct nginx image in run pods that supports grpc",
+    "pr_author": "ddl-ebrown",
+    "file_path": "server/app/domino/server/computegrid/ComputeGridSettingsAdapter.scala",
+    "line": 77,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "ddl-jbrown",
+        "body": "We should update this value with the same image tag to make sure we stay congruent https://github.com/cerebrotech/hybrid-agent/blob/main/charts/auth-proxy/values.yaml#L15"
+      }
+    ]
+  },
+  {
+    "pr_number": 40452,
+    "pr_title": "DOM-54996 updating domino logo in pdf, add white label logo and pdf title",
+    "pr_author": "ddl-roshikiri",
+    "file_path": "audit_trail/impl/src/main/scala/domino/audit/impl/report/PDFReportGenerator.scala",
+    "line": 30,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "ddl-roshikiri",
+        "body": "this is the main change for conditionally loading the white label template pdf"
+      }
+    ]
+  },
+  {
+    "pr_number": 40452,
+    "pr_title": "DOM-54996 updating domino logo in pdf, add white label logo and pdf title",
+    "pr_author": "ddl-roshikiri",
+    "file_path": "audit_trail/impl/src/main/scala/domino/audit/impl/report/PDFReportGenerator.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-amodi",
+        "body": "```suggestion\r\n    val doc = PDDocument.load(template, MemoryUsageSetting.setupMixed(toBytes(25)))\r\n```"
+      }
+    ]
+  },
+  {
+    "pr_number": 40469,
+    "pr_title": "DOM-53142 Duplicated projects for OwnedAndCollaborating filter",
+    "pr_author": "ddl-grequeni",
+    "file_path": "system-tests/bin/build-client",
+    "line": 43,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "ddl-grequeni",
+        "body": "For some reason, the previous if was randomly failing to detect the image. No idea why. This other command relies only on the `docker images` command, so no `grep` involved (which I think causes some issues under certain circumstances)."
+      },
+      {
+        "author": "niole",
+        "body": "My machine is an old mac so I never get to this if statement"
+      }
+    ]
+  },
+  {
+    "pr_number": 40469,
+    "pr_title": "DOM-53142 Duplicated projects for OwnedAndCollaborating filter",
+    "pr_author": "ddl-grequeni",
+    "file_path": "system-tests/bin/setup",
+    "line": null,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "ddl-grequeni",
+        "body": "This fails sometimes, and exits the script. Needs more work to figure it out, for now just re-running the script works."
+      }
+    ]
+  },
+  {
+    "pr_number": 40469,
+    "pr_title": "DOM-53142 Duplicated projects for OwnedAndCollaborating filter",
+    "pr_author": "ddl-grequeni",
+    "file_path": "system-tests/bin/setup",
+    "line": null,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "ddl-grequeni",
+        "body": "Probably will never get done, unless more changes are needed. For now unsetting all variables works. I think this could be resolved by defining and calling a function, but not sure how will that work with the venv activation."
+      }
+    ]
+  },
+  {
+    "pr_number": 40469,
+    "pr_title": "DOM-53142 Duplicated projects for OwnedAndCollaborating filter",
+    "pr_author": "ddl-grequeni",
+    "file_path": "system-tests/bin/setup",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "niole",
+        "body": "remove?"
+      }
+    ]
+  },
+  {
+    "pr_number": 40469,
+    "pr_title": "DOM-53142 Duplicated projects for OwnedAndCollaborating filter",
+    "pr_author": "ddl-grequeni",
+    "file_path": "system-tests/tests/projects/test_v4_gateway_projects_api.py",
+    "line": 21,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "niole",
+        "body": "I think this test would be better as a unit test on ProjectPortal since it can be verified without exercising the domino app end to end and I have heard QE emphasize that we want to use end to end testing wisely, because it is expensive."
+      },
+      {
+        "author": "ddl-xin",
+        "body": "Totally agree. If it can be done in a unit test, it's preferred."
+      },
+      {
+        "author": "ddl-grequeni",
+        "body": "I added unit tests and one integration test for the `ProjectSearchService` with the real mongoDb collection, to make sure the queries that are executed don't generate duplicates. I think for this bug ticket, those should be enough.\r\n\r\nBesides that, should we still keep the system test but in a more generic \"test of /gateway/projects API\" fashion? We don't have any E2E test for that API yet (maybe some accidental call from CUCU tests, but nothing directly mappable to the API). I would keep it, I think all API endpoints should have some basic E2E test coverage, to give us visibility on potential integration issues. This doesn't mean add one E2E for each regression test, I agree those should be in scala. Please let me know your thoughts on this. Thanks!"
+      }
+    ]
+  },
+  {
+    "pr_number": 40469,
+    "pr_title": "DOM-53142 Duplicated projects for OwnedAndCollaborating filter",
+    "pr_author": "ddl-grequeni",
+    "file_path": "system-tests/bin/setup",
+    "line": null,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "ddl-xin",
+        "body": "I like the script. My only critic is that if a user (e.g. me) uses pyvenv to manage the virtual environment, this won't work. I think it's better to make the default behavior to keep the venv and the user needs to provide an option to create a new venv.\r\n\r\nAlso, please create a different PR for the script and the README. It's better to track changes that way."
+      }
+    ]
+  },
+  {
+    "pr_number": 40469,
+    "pr_title": "DOM-53142 Duplicated projects for OwnedAndCollaborating filter",
+    "pr_author": "ddl-grequeni",
+    "file_path": "server/app/domino/server/search/service/ProjectSearchService.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "niole",
+        "body": "The rename is ok but I think not necessary. It is implied that endpoints that get entities that are visible to a user will return owned and collaborating, since these are the ways that they gain access to the entities"
+      },
+      {
+        "author": "ddl-grequeni",
+        "body": "oh ok, make sense. "
+      }
+    ]
+  },
+  {
+    "pr_number": 40469,
+    "pr_title": "DOM-53142 Duplicated projects for OwnedAndCollaborating filter",
+    "pr_author": "ddl-grequeni",
+    "file_path": "server/app/domino/server/search/service/ProjectSearchService.scala",
+    "line": 66,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "niole",
+        "body": "This is not on you, but we really should have just made an get projects method on collaboration manager, which has a couple of filters on it for excluding archived instead of creating an additional method"
+      },
+      {
+        "author": "ddl-grequeni",
+        "body": "Yeah I agree, I think the search service intent was to have a layer on top of elastic search. I think all these methods that find projects querying mongodb don't belong here. There are way too many project related services out there. Needs some work to clean them up."
+      }
+    ]
+  },
+  {
+    "pr_number": 40469,
+    "pr_title": "DOM-53142 Duplicated projects for OwnedAndCollaborating filter",
+    "pr_author": "ddl-grequeni",
+    "file_path": "server/src/it/scala/domino/server/search/service/ProjectsSearchServiceIntegrationSpec.scala",
+    "line": 55,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "niole",
+        "body": "I think it's ok to share the fixtures since this test is search related. There is the risk of breakage in one or the other tests that use it, but probably nbd"
+      },
+      {
+        "author": "ddl-grequeni",
+        "body": "Yeah the weird thing is that the ElasticSearchClient is not needed for this spec. So I had to mock arguments of the fixture, which won't be necessary in this spec."
+      }
+    ]
+  },
+  {
+    "pr_number": 40469,
+    "pr_title": "DOM-53142 Duplicated projects for OwnedAndCollaborating filter",
+    "pr_author": "ddl-grequeni",
+    "file_path": "server/src/it/scala/domino/server/search/service/ProjectsSearchServiceIntegrationSpec.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "niole",
+        "body": "Please use string interpolation"
+      }
+    ]
+  }
+]
+
+---
+
+Return a JSON array of patterns found. Each pattern should have:
+- pattern_name (string)
+- rule (string)
+- category (string, one of: api-design, architecture, code-organization, documentation, error-handling, logging, naming, performance, security, testing)
+- evidence (string — quote the reviewer's actual words)
+- pr_number (integer)
+- file_path (string)
+
+If no patterns are found in this batch, return an empty array: []
+
+Return ONLY the JSON array, no other text.

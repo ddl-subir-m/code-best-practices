@@ -1,0 +1,378 @@
+[
+  {
+    "pr_number": 40526,
+    "pr_title": "[DOM-55858] Refactor to use project service instead of project persister",
+    "pr_author": "ldebello-ddl",
+    "file_path": "projects/interface/src/main/scala/domino/projects/api/ProjectSummary.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "niole",
+        "body": "Can you use Instant? Instant is the best practice in our codebase"
+      },
+      {
+        "author": "ldebello-ddl",
+        "body": "java.time.Instant or org.joda.time.Instance? I can replace in the ProjectSummary but that value is coming from Project which currently use java.time.DateTime.\r\n\r\n"
+      },
+      {
+        "author": "niole",
+        "body": "ok no need to replace the project data type, just add it to ProjectSummary. java.time.Instant"
+      },
+      {
+        "author": "ldebello-ddl",
+        "body": "done"
+      }
+    ]
+  },
+  {
+    "pr_number": 40526,
+    "pr_title": "[DOM-55858] Refactor to use project service instead of project persister",
+    "pr_author": "ldebello-ddl",
+    "file_path": "projects/monolith-adapter/src/test/scala/domino/projects/monoadapter/GitBasedProjectForkerAndCopierSpec.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "niole",
+        "body": "I'm sorry you had to go through and update all of these individual instances of ProjectSummary. If you have time, you could create a shareable function for creating test data and use that instead. You could add it to this https://github.com/cerebrotech/domino/blob/develop/server/src/tests-lib/scala/domino/server/util/TestUtils.scala"
+      },
+      {
+        "author": "ldebello-ddl",
+        "body": "Using that class would be tricky because there is an existing method for creating a project summary, so the import conflict and there are repeated import although are not the same (just same class name - using import alias solve that but at least tricky), there is a method like the one you propose in \"WorkspaceTestUtil\" I can create a file in the domino/server/util like ProjectTestUtils and move it there and try to use from other project, but not sure if that is class is reachable from all the projects "
+      },
+      {
+        "author": "ldebello-ddl",
+        "body": "added object ProjectTestUtils, let me know if that is ok "
+      }
+    ]
+  },
+  {
+    "pr_number": 40526,
+    "pr_title": "[DOM-55858] Refactor to use project service instead of project persister",
+    "pr_author": "ldebello-ddl",
+    "file_path": "audit_trail/adapter/src/main/scala/domino/audit/adapter/LegacySystemAdapter.scala",
+    "line": null,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "niole",
+        "body": "What should be added to project summary so tht you don't need to use project persister anymore?"
+      },
+      {
+        "author": "ldebello-ddl",
+        "body": "the audit report shows dataset permission changes, so it is fetching projects associated with dataset, so not sure if using project service will allow fetching that data based on principal, another option is using a servicie principal but also not sure if that can allow the fetching"
+      },
+      {
+        "author": "niole",
+        "body": "got it. I guess we should ultimately ask product if a principal who isn't allowed to see a project that a dataset is attached to should be allowed to see details about the project.\r\n\r\nIf product says we shouldn't show that information, then maybe in the case that a user can't see details about the project, we could show a string \"redacted\". "
+      },
+      {
+        "author": "niole",
+        "body": "spoke with luis on slack: apparently pms are ok with this"
+      }
+    ]
+  },
+  {
+    "pr_number": 40527,
+    "pr_title": "[DOM-55556] - Create prediction_data on user's behalf",
+    "pr_author": "ddl-tnguyen",
+    "file_path": "model-monitoring/implementation/src/main/scala/domino/modelmonitoring/implementation/ModelMonitoringPublicApiImpl.scala",
+    "line": null,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "dmcwhorter-ddl",
+        "body": "We should only allow the service/superuser account to do the first case here right?\r\nThat is, only if the principal is a service account can you specify the datasetCreatorId and look it up.  If I'm just a normal Domino user, then this call *must* use the principal in the request.  Otherwise there's an impersonation risk."
+      }
+    ]
+  },
+  {
+    "pr_number": 40529,
+    "pr_title": "[DOM-55718] Add endpoint & hook for getting a single execution and ap\u2026",
+    "pr_author": "ddl-galias",
+    "file_path": "frontend/apps/web/src/modules/domino-flows/api/flyteApiError.ts",
+    "line": null,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "jenniferjfu2",
+        "body": "This error is more generic than Flyte Error. It can be used in other code in the future."
+      }
+    ]
+  },
+  {
+    "pr_number": 40532,
+    "pr_title": "DOM-54099 - test refactor - AI gateway - API endpoint test fail ",
+    "pr_author": "ddl-abishek",
+    "file_path": "e2e-tests/features/domino/ai_gateway/openai_endpoint.feature",
+    "line": 55,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-abishek",
+        "body": "fyi\r\n"
+      }
+    ]
+  },
+  {
+    "pr_number": 40532,
+    "pr_title": "DOM-54099 - test refactor - AI gateway - API endpoint test fail ",
+    "pr_author": "ddl-abishek",
+    "file_path": "e2e-tests/features/domino/ai_gateway/openai_endpoint.feature",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-abishek",
+        "body": "fyi"
+      }
+    ]
+  },
+  {
+    "pr_number": 40532,
+    "pr_title": "DOM-54099 - test refactor - AI gateway - API endpoint test fail ",
+    "pr_author": "ddl-abishek",
+    "file_path": "e2e-tests/features/domino/ai_gateway/openai_endpoint.feature",
+    "line": null,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "ddl-cedricyoung",
+        "body": "these are negation tests which will wait the maximum time every time AND may pass if something else goes wrong.\r\nInstead can you turn it into positive tests so that we don't incur the timeout cost every time and fail if something else goes wrong?"
+      },
+      {
+        "author": "ddl-abishek",
+        "body": "commit c68fe8bb867728da068fa97e6d289ad4fd712158 (HEAD -> DOM-54099, origin/DOM-54099)\r\nAuthor: ddl-abishek <abishek.subramanian@dominodatalab.com>\r\nDate:   Thu Mar 21 13:48:01 2024 -0400\r\n\r\n    checking response dict instead of assertion/response errors\r\n"
+      },
+      {
+        "author": "ddl-abishek",
+        "body": "@ddl-cedricyoung fyi"
+      }
+    ]
+  },
+  {
+    "pr_number": 40532,
+    "pr_title": "DOM-54099 - test refactor - AI gateway - API endpoint test fail ",
+    "pr_author": "ddl-abishek",
+    "file_path": "e2e-tests/features/domino/ai_gateway/openai_endpoint.feature",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-cedricyoung",
+        "body": "Since this is combining tests, I think we should give the reader hints for each section verified\r\n\r\n```suggestion\r\n\r\n     * # Verify embedding\r\n     When I wait to click the button \"test_llm_endpoints.py --endpoint_name embeddings_test\"\r\n      And I wait to click the tab \"Results\"\r\n     Then I wait to see the text \"dict_keys(['object', 'data', 'model', 'usage'])\"\r\n\r\n     * # Verify chat\r\n     When I wait to click the button \"test_llm_endpoints.py --endpoint_name chat2_test\"\r\n      And I wait to click the tab \"Results\"\r\n     Then I wait to see the text \"dict_keys(['id', 'object', 'created', 'model', 'choices', 'usage'])\"\r\n\r\n     * # Verify access error using chat\r\n     When I wait to click the button \"test_llm_endpoints.py --endpoint_name chat_test\"\r\n      And I wait to click the tab \"Results\"\r\n      * # Response error is deliberate because the user does not have permissions to access the chat_test endpoint\r\n     Then I wait to see the text \"Response Error 400 Client Error\"\r\n      And I wait to see the text \"Cannot access endpoint chat_test_{SCENARIO_RUN_ID}\"\r\n\r\n     * # Verify completion\r\n     When I wait to click the button \"test_llm_endpoints.py --endpoint_name completions_test\"\r\n      And I wait to click the tab \"Results\"\r\n     Then I wait to see the text \"dict_keys(['id', 'object', 'created', 'model', 'choices', 'usage'])\"\r\n```"
+      }
+    ]
+  },
+  {
+    "pr_number": 40537,
+    "pr_title": "DOM-55601 e2e tests to use a async compliant custom environment instead of DSE",
+    "pr_author": "ddl-julia-stepiko",
+    "file_path": "e2e-tests/features/domino/model_apis/async_manage.feature",
+    "line": 25,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "ddl-kartik-mathur",
+        "body": "this can be flaky I think since it's trying to install a package for every test run and depends on upstream, we should rather create a docker image from an image of minimal env and use that image to create environment"
+      },
+      {
+        "author": "ddl-julia-stepiko",
+        "body": "At the moment I'm reusing already existed steps and practices.\r\nWe were doing the same steps for running async models on GPU before, and it was stable.\r\nI will talk to qe-team about it"
+      },
+      {
+        "author": "dmcwhorter-ddl",
+        "body": "I think we should do these steps (pip install etc) in some test somewhere if this is what we're expecting our customers to do.\r\nIf we're going to provide a pre-existing image to our customers, then we could test that.  But I think we landed on not doing that and just providing instructions/documentation on how to setup an env for async models."
+      },
+      {
+        "author": "ddl-kartik-mathur",
+        "body": "I agree we should do some test but depending every night on upstream might be hard and more expensive to maintain I think, we can have a separate test that runs for release qualification. Let's see what @ddl-bcolby and team thinks"
+      },
+      {
+        "author": "dmcwhorter-ddl",
+        "body": "hmm, would we do the release qualification test with every cloud release?"
+      },
+      {
+        "author": "ddl-abishek",
+        "body": "@ddl-kartik-mathur it's worthwhile noting the dependencies Julia laid out and document it. If customers want to use async model APIs, DSE is no longer the way to go. \r\n\r\nFor what it's worth, I have routinely 'apt-get installed' dependencies in tests and they have failed exactly once since 2020.\r\n\r\nHence, it's worthwhile merging this PR the way it is. Further, the compute environment's team might not have the bandwidth to create a new images and further maintain it for every release qualification."
+      }
+    ]
+  },
+  {
+    "pr_number": 40545,
+    "pr_title": "[DOM-54415] add ut to all files related billing tags",
+    "pr_author": "DDL-Martin-Gazzara",
+    "file_path": "frontend/packages/ui/src/admin-advanced/billing-tags/manually-apply-billing-tags/BillingTagCellContainer.tsx",
+    "line": 3,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-galias",
+        "body": "I think @domino/core-ui was correct as the final idea is to move core ui away from ui"
+      },
+      {
+        "author": "DDL-Martin-Gazzara",
+        "body": "Path does not exist"
+      }
+    ]
+  },
+  {
+    "pr_number": 40546,
+    "pr_title": "Dom 54415 - add ut to all files related billing tags (configure billing tags section)",
+    "pr_author": "ddl-sebastian-delafuente",
+    "file_path": "frontend/packages/test-utils/src/component-test-utils/action-test-utils.ts",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-galias",
+        "body": "I think this description is wrong"
+      },
+      {
+        "author": "DDL-Martin-Gazzara",
+        "body": "Done"
+      }
+    ]
+  },
+  {
+    "pr_number": 40546,
+    "pr_title": "Dom 54415 - add ut to all files related billing tags (configure billing tags section)",
+    "pr_author": "ddl-sebastian-delafuente",
+    "file_path": "frontend/packages/ui/src/admin-advanced/billing-tags/configure-billing-tags/AddBillingTagInput.tsx",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-galias",
+        "body": "we should use data-test=\"billing-tag-add-button\", this should probably be a good addition for the prettier rules."
+      },
+      {
+        "author": "DDL-Martin-Gazzara",
+        "body": "Done"
+      }
+    ]
+  },
+  {
+    "pr_number": 40546,
+    "pr_title": "Dom 54415 - add ut to all files related billing tags (configure billing tags section)",
+    "pr_author": "ddl-sebastian-delafuente",
+    "file_path": "frontend/packages/ui/src/admin-advanced/billing-tags/configure-billing-tags/__tests__/AddBillingTagInputContainer.test.tsx",
+    "line": 19,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-galias",
+        "body": "I think it is done by default but I usually add the beforeEach block for resetting the mocks"
+      },
+      {
+        "author": "DDL-Martin-Gazzara",
+        "body": "It's not required"
+      }
+    ]
+  },
+  {
+    "pr_number": 40546,
+    "pr_title": "Dom 54415 - add ut to all files related billing tags (configure billing tags section)",
+    "pr_author": "ddl-sebastian-delafuente",
+    "file_path": "frontend/packages/ui/src/admin-advanced/billing-tags/configure-billing-tags/__tests__/BillingTag.test.tsx",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-galias",
+        "body": "nit, you can use noop of jest.fn"
+      },
+      {
+        "author": "DDL-Martin-Gazzara",
+        "body": "Done"
+      }
+    ]
+  },
+  {
+    "pr_number": 40548,
+    "pr_title": "DOM-53142 Patch a second issue producing duplicates",
+    "pr_author": "ddl-grequeni",
+    "file_path": "server/app/domino/server/projects/infrastructure/repositories/ProjectPersister.scala",
+    "line": 1162,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "niole",
+        "body": "why not fix the query now?"
+      },
+      {
+        "author": "ddl-grequeni",
+        "body": "I'm feeling pressure to close this ticket. Fixing the query requires more testing, and I'm not expert in Mongo, so it would take me some more time. This `distinct` was already used before, I removed it thinking that with the other fix was enough. So adding it back is safe. But I agree with you, I think leaving this tech debt will likely not be addressed ever, but at least it's documented."
+      }
+    ]
+  },
+  {
+    "pr_number": 40549,
+    "pr_title": "QE-15117 Ddl kavya qe 15117 save correct execution",
+    "pr_author": "ddl-kavya",
+    "file_path": "e2e-tests/features/steps/api/job_steps.py",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-xin",
+        "body": "nit: it would be useful to also include the job title to the log line."
+      },
+      {
+        "author": "ddl-kavya",
+        "body": "Added job number and title to debug logs."
+      }
+    ]
+  },
+  {
+    "pr_number": 40550,
+    "pr_title": "[DOM-54527] Fetch API Service Layer",
+    "pr_author": "adrianrsy",
+    "file_path": "compute-providers/implementation/src/main/scala/domino/computeproviders/implementation/ComputeProvidersServiceImpl.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "fernandoacorreia",
+        "body": "It's unclear to me what this line does. Is it a leftover?"
+      },
+      {
+        "author": "adrianrsy",
+        "body": "Yes, accidentally left this."
+      }
+    ]
+  },
+  {
+    "pr_number": 40550,
+    "pr_title": "[DOM-54527] Fetch API Service Layer",
+    "pr_author": "adrianrsy",
+    "file_path": "compute-providers/implementation/src/main/scala/domino/computeproviders/implementation/infrastructure/MongoComputeTierPersister.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "fernandoacorreia",
+        "body": "It this contains organization IDs it shouldn't be named `userIds`"
+      }
+    ]
+  },
+  {
+    "pr_number": 40550,
+    "pr_title": "[DOM-54527] Fetch API Service Layer",
+    "pr_author": "adrianrsy",
+    "file_path": "compute-providers/implementation/src/main/scala/domino/computeproviders/implementation/ComputeProvidersServiceImpl.scala",
+    "line": 85,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "fernandoacorreia",
+        "body": "Why is the principal's user ID being used as an argument to set the `organizationIds` query parameter? A user ID is not an organization ID."
+      },
+      {
+        "author": "adrianrsy",
+        "body": "There was an ask to include user access as well: https://docs.google.com/document/d/1Ygp8u39n387r4SUMSW1DFLzi19owCUB2ys-NLfJcUnc/edit?disco=AAABHAv1IMw\n\nI'm persisting a list of user ids and organization ids in the database. On query, I check if the persisted list has any ids in common with the requesting user's organizations' ids and their own id.\n\nIs this the right way to do that?"
+      }
+    ]
+  }
+]

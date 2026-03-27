@@ -1,0 +1,362 @@
+[
+  {
+    "pr_number": 40563,
+    "pr_title": "[DOM-55393] UI add pagination support to endpoints table",
+    "pr_author": "DDL-Martin-Gazzara",
+    "file_path": "frontend/packages/ui/src/ai-gateway/components/gateway-endpoints-table/GatewayEndpointsTable.tsx",
+    "line": 38,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-galias",
+        "body": "Have you checked this? Afaik this row key should be unique, by default the table extracts the record id. This is an example:\r\n![image](https://github.com/cerebrotech/domino/assets/142441807/4053a3ba-8452-4ed2-acd9-6dfcd83fe26c)\r\n"
+      },
+      {
+        "author": "DDL-Martin-Gazzara",
+        "body": "Endpoint names are unique"
+      }
+    ]
+  },
+  {
+    "pr_number": 40568,
+    "pr_title": "[DOM-55553] Clean up modal code",
+    "pr_author": "ddl-richard-tom",
+    "file_path": "frontend/apps/web/src/modules/workspace-session/components/GitRepoMergeConflicts/GitRepoMergeConflictsModal.tsx",
+    "line": null,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "jenniferjfu2",
+        "body": "No space needed around Continue"
+      }
+    ]
+  },
+  {
+    "pr_number": 40574,
+    "pr_title": "DOM-55776 prevent leaked resources after enabling workload service",
+    "pr_author": "ddl-bgreen",
+    "file_path": "executor/app/conf/application.conf",
+    "line": 38,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "ddl-ssenecal",
+        "body": "does this mean we need to make changes to the WO to stop setting this env var?"
+      },
+      {
+        "author": "ddl-bgreen",
+        "body": "Yea we will need to pull that out. Probably won't hurt anything if it is still there."
+      },
+      {
+        "author": "ddl-ssenecal",
+        "body": "Yep, certainly not something that will block the release, but please file a ticket in MS5 to do so."
+      }
+    ]
+  },
+  {
+    "pr_number": 40580,
+    "pr_title": "DOM-55064 Handle annotated tags for type-ahead",
+    "pr_author": "pocheung1",
+    "file_path": "repoman/repoman-service/src/main/scala/domino/repoman/service/provider/GitProvider.scala",
+    "line": 602,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-amodi",
+        "body": "can we add a unit test for this?\r\n"
+      }
+    ]
+  },
+  {
+    "pr_number": 40583,
+    "pr_title": "DOM-55513 Fix Admin notifications action button styles",
+    "pr_author": "sushmithaaitha",
+    "file_path": "frontend/packages/ui/src/userNotifications/AdminNotificationsView.tsx",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-galias",
+        "body": "Can you please check the import path? I haven't seen this way for important at other files"
+      },
+      {
+        "author": "sushmithaaitha",
+        "body": "Fixed the import. IntelliJ automatically added the import in that way."
+      }
+    ]
+  },
+  {
+    "pr_number": 40584,
+    "pr_title": "[DOM-55047] Add the flows run details view",
+    "pr_author": "ddl-galias",
+    "file_path": "frontend/apps/web/src/modules/domino-flows/hooks/__tests__/useGetExecutionNodes.utils.test.ts",
+    "line": null,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "DDL-Martin-Gazzara",
+        "body": "Should we replace the `start-node` and `end-node` with the constants you defined?"
+      }
+    ]
+  },
+  {
+    "pr_number": 40584,
+    "pr_title": "[DOM-55047] Add the flows run details view",
+    "pr_author": "ddl-galias",
+    "file_path": "frontend/apps/web/src/modules/domino-flows/views/flows-run-details/components/flows-run-details-table/FlowsRunDetailsTable.tsx",
+    "line": 6,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "DDL-Martin-Gazzara",
+        "body": "Does it make sense if we define the columns as an object? Then we avoid calling this function every time the component is re-rendered (unless this does not happen)"
+      },
+      {
+        "author": "ddl-galias",
+        "body": "I remember we have had issues in the past with the current table and static columns, that's the main reason why I chose a function"
+      }
+    ]
+  },
+  {
+    "pr_number": 40584,
+    "pr_title": "[DOM-55047] Add the flows run details view",
+    "pr_author": "ddl-galias",
+    "file_path": "frontend/apps/web/src/modules/domino-flows/api/node.types.ts",
+    "line": null,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "jenniferjfu2",
+        "body": "No quote is needed at left side."
+      }
+    ]
+  },
+  {
+    "pr_number": 40584,
+    "pr_title": "[DOM-55047] Add the flows run details view",
+    "pr_author": "ddl-galias",
+    "file_path": "frontend/apps/web/src/modules/domino-flows/api/node.types.ts",
+    "line": 58,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "jenniferjfu2",
+        "body": "var is a reserved word"
+      },
+      {
+        "author": "ddl-galias",
+        "body": "In the context of an object attribute it should not be an issue. This type is defined by the Flyte API:\r\nhttps://docs.flyte.org/en/latest/protos/docs/core/core.html#ref-flyteidl-core-binding\r\n\r\n![image](https://github.com/cerebrotech/domino/assets/142441807/758059c1-8f6d-499e-8483-fa0d869c7d44)\r\n"
+      },
+      {
+        "author": "jenniferjfu2",
+        "body": "Yes, it is not ideal, but we don't have a choice. It is fine."
+      }
+    ]
+  },
+  {
+    "pr_number": 40590,
+    "pr_title": "[DOM-55668] Improvements for Flows-related CC vals",
+    "pr_author": "ddl-ryan-connor",
+    "file_path": "server/app/domino/server/computegrid/ComputeGridSettingsAdapter.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "noahjax",
+        "body": "nit: typo in missing"
+      }
+    ]
+  },
+  {
+    "pr_number": 40590,
+    "pr_title": "[DOM-55668] Improvements for Flows-related CC vals",
+    "pr_author": "ddl-ryan-connor",
+    "file_path": "dev/setup/ansible/roles/full-stack/templates/jvm_flags.bzl.j2",
+    "line": 101,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "ddl-ryan-connor",
+        "body": "ok @ddl-ebrown  think here's where dev-v2 will get the vals.\r\n\r\nthough im not sure what to do about the `com.cerebro.domino.flows.enabled` one. we don't want to just add a default \"enabled=true\" here, need to ref the deployment config and not sure how to do that correctly here. at the very least, for now it could just be a \"known issue\" that on dev-v2 if you want to use flows you have to do `bazel run //nucleus -- --jvm_flag=-Dcom.cerebro.domino.flows.enabled=true`\r\n\r\ncc @ddl-jbrown "
+      },
+      {
+        "author": "ddl-ebrown",
+        "body": "Yeah, basically I wanted to make sure when we're NOT doing an install using k8s / helm charts that we still get the right default values during development."
+      },
+      {
+        "author": "ddl-ryan-connor",
+        "body": "i'll add this to the dev-v2 and flows runbooks"
+      }
+    ]
+  },
+  {
+    "pr_number": 40592,
+    "pr_title": "[PLAT-8119] Fix Pod Networking",
+    "pr_author": "ddl-pjohnson",
+    "file_path": "dino/ami/dev-v2.pkr.hcl",
+    "line": 20,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "urianchang",
+        "body": "Would doing something like this be possible? Just checking if we can set EKS version at one place and keep kubectl version synchronized.\r\n\r\n```suggestion\r\n  default = \"https://s3.us-west-2.amazonaws.com/amazon-eks/${var.eks_version}/2023-08-16/bin/linux/amd64/kubectl\"\r\n```"
+      },
+      {
+        "author": "ddl-pjohnson",
+        "body": "I think I just copy-pasta'd this from the existing script, I can't find a download url that only has `major.minor` in it, so we would still need the patch version. I can add logic to just extract `major.minor` from the full version I guess."
+      }
+    ]
+  },
+  {
+    "pr_number": 40592,
+    "pr_title": "[PLAT-8119] Fix Pod Networking",
+    "pr_author": "ddl-pjohnson",
+    "file_path": "dino/ansible/playbooks/roles/install-packages/tasks/homebrew.yml",
+    "line": 48,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "urianchang",
+        "body": "Is there a dep that needs Go 1.19? If I recall, we've been installing 1.17 since `dino` hasn't been updated to a newer Go version."
+      },
+      {
+        "author": "ddl-pjohnson",
+        "body": "1.17 isn't available in linuxbrew anymore, so had to update unfortunately. Ideally we will move away from installing language runtimes using brew."
+      },
+      {
+        "author": "urianchang",
+        "body": "Ah, ok. Thank you for the update. "
+      }
+    ]
+  },
+  {
+    "pr_number": 40592,
+    "pr_title": "[PLAT-8119] Fix Pod Networking",
+    "pr_author": "ddl-pjohnson",
+    "file_path": "dino/ami/scripts/install_prereqs.sh",
+    "line": 26,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "urianchang",
+        "body": "Does Homebrew need the `packaging` library? I'm somewhat hesitant on passing `--break-system-packages` when building the AMI."
+      },
+      {
+        "author": "ddl-pjohnson",
+        "body": "Not homebrew specifically, but ansible needs it for running pip install. I think this is probably a bug with brew ansible, I can add a comment."
+      },
+      {
+        "author": "ddl-pjohnson",
+        "body": "Actually, just removed this since it's not necessary anymore."
+      }
+    ]
+  },
+  {
+    "pr_number": 40592,
+    "pr_title": "[PLAT-8119] Fix Pod Networking",
+    "pr_author": "ddl-pjohnson",
+    "file_path": "dino/ansible/playbooks/roles/install-packages/tasks/homebrew.yml",
+    "line": 36,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "urianchang",
+        "body": "This may be similar to those Python packages we used to install on Mac and are not really used. Have you tried removing this block?\r\n\r\nI'm guessing that we'd only need to pass `--break-system-packages` for \"developer preferences\": https://github.com/cerebrotech/domino/blob/develop/dev/setup/ansible/roles/common/tasks/user_preferences.yml#L42-L56. That playbook is still referencing Python 3.10. It's probably not used by anyone at the moment."
+      },
+      {
+        "author": "ddl-pjohnson",
+        "body": "I've been a bit reluctant to remove this, since it is part of the \"interface\" that dev-v2 is offering e.g. are there scripts that depend on pyyaml implicitly? On the other hand it's time we stopped doing that and made people set up proper virtual envs, so I'll yeet this like we did locally."
+      }
+    ]
+  },
+  {
+    "pr_number": 40592,
+    "pr_title": "[PLAT-8119] Fix Pod Networking",
+    "pr_author": "ddl-pjohnson",
+    "file_path": "dino/ansible/playbooks/roles/install-packages/files/pod-networking-fix.sh",
+    "line": 9,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "urianchang",
+        "body": "Are these messages written to a log file for every node startup and shutdown, or are they mainly for reference if someone ran the script manually?"
+      },
+      {
+        "author": "ddl-pjohnson",
+        "body": "The script is run by systemd, which has it's own logging mechanism. I was mostly using it as a reference when testing, since it's hard to see what is happening when a node is restarting. I can remove if you want?"
+      },
+      {
+        "author": "urianchang",
+        "body": "No biggie, we can keep it. I was mainly curious if we'd have to check some log file in case the script doesn't run."
+      }
+    ]
+  },
+  {
+    "pr_number": 40595,
+    "pr_title": "[DOM-54509] - Initial auth for Model Deployment API",
+    "pr_author": "ddl-tnguyen",
+    "file_path": "model-serving/web/main/domino/modelserving/transformers/ModelDeploymentApiRequestTransformer.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "fernandoacorreia",
+        "body": "We don't need `AuthenticatedPrincipal` here. It's better to pass just the ID."
+      }
+    ]
+  },
+  {
+    "pr_number": 40595,
+    "pr_title": "[DOM-54509] - Initial auth for Model Deployment API",
+    "pr_author": "ddl-tnguyen",
+    "file_path": "model-serving/application/src/main/scala/domino/modelserving/application/services/ModelDeploymentApiService.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "fernandoacorreia",
+        "body": "This line is missing `.throwIfNotAuthorized()`"
+      }
+    ]
+  },
+  {
+    "pr_number": 40595,
+    "pr_title": "[DOM-54509] - Initial auth for Model Deployment API",
+    "pr_author": "ddl-tnguyen",
+    "file_path": "model-serving/application/src/main/scala/domino/modelserving/application/services/ModelDeploymentApiService.scala",
+    "line": 44,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "fernandoacorreia",
+        "body": "@dmcwhorter-ddl I don't understand why the model name and version are optional if the source isn't. What's the situation when we want to have a source with the model name or version, or both, missing?\r\n\r\n```\r\nfinal case class ModelDeploymentModelDetailSource (\r\n  registeredModelName: Option[String],\r\n  registeredModelVersion: Option[Int],\r\n  registeredModelType: Option[String]\r\n)\r\n```"
+      },
+      {
+        "author": "fernandoacorreia",
+        "body": "https://dominodatalab.atlassian.net/browse/DOM-55957"
+      },
+      {
+        "author": "ddl-yaniv-amar",
+        "body": "Thanks @fernandoacorreia . I agree, it should not be optional. I'll discuss with David and get it updated. Assigning the ticket to myself."
+      }
+    ]
+  },
+  {
+    "pr_number": 40598,
+    "pr_title": "[DOM-54528] Create and Update APIs for Compute Providers Admin API",
+    "pr_author": "adrianrsy",
+    "file_path": "compute-providers/implementation/src/main/scala/domino/computeproviders/implementation/ComputeProvidersServiceImpl.scala",
+    "line": 308,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "adrianrsy",
+        "body": "I'm not sure if exceptions are the right thing to be throwing for validation errors, but I'm also not sure if there's a better way to aggregate errors for all fields.\r\nIs this the right approach for scala or should I be doing some kind of Either chaining?"
+      },
+      {
+        "author": "dmcwhorter-ddl",
+        "body": "I think it would be ideal to \r\n1. return all errors for all fields\r\n2. not use exceptions but rather normal control logic to accumulate validation failures\r\nHowever I think we could capture this in a nice to have ticket for later and this is fine as a starting point"
+      }
+    ]
+  }
+]

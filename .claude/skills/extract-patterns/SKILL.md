@@ -22,6 +22,7 @@ The user invokes this with `/extract` and optionally provides arguments:
 
 - `/extract` — **smart resume**: if a historical run is in progress, picks up the next month. If historical is complete, does an incremental run (new PRs since last run).
 - `/extract --full --since 2024-01-01` — start a historical month-by-month extraction
+- `/extract --full --since 2024-01-01 --batch all` — fetch the entire date range at once (no monthly chunking)
 - `/extract --compile-only` — skip extraction, just recompile from existing patterns.json
 
 ## Step 0: Read State and Determine Mode
@@ -36,7 +37,22 @@ cat state.json 2>/dev/null || echo "NO_STATE"
 
 1. If user passed `--compile-only` → skip to Step 5.
 
-2. If user passed `--full --since DATE` → **initialize historical run**:
+2. If user passed `--full --since DATE --batch all` → **single-batch historical run**:
+   - Write to state.json:
+     ```json
+     {
+       "historical_run": {
+         "start_date": "2024-01-01",
+         "end_date": "2026-03-26",
+         "batch_mode": "all",
+         "status": "in_progress"
+       }
+     }
+     ```
+   - Proceed to Step 1 with the full date range (WINDOW_START = start_date, WINDOW_END = today).
+   - After Step 4 completes, mark `status: "complete"` and skip to Step 5.
+
+3. If user passed `--full --since DATE` (without `--batch all`) → **initialize monthly historical run**:
    - Calculate all months from `--since` date to today
    - Write to state.json:
      ```json
@@ -44,6 +60,7 @@ cat state.json 2>/dev/null || echo "NO_STATE"
        "historical_run": {
          "start_date": "2024-01-01",
          "end_date": "2026-03-26",
+         "batch_mode": "monthly",
          "months": ["2024-01", "2024-02", ..., "2026-03"],
          "current_month_index": 0,
          "status": "in_progress"
@@ -52,7 +69,7 @@ cat state.json 2>/dev/null || echo "NO_STATE"
      ```
    - Proceed to Step 1 with the first month.
 
-3. If `state.json` has `historical_run.status == "in_progress"` → **resume historical run**:
+4. If `state.json` has `historical_run.status == "in_progress"` and `batch_mode == "monthly"` → **resume monthly historical run**:
    - Read `current_month_index` to find the next month to process
    - If `current_month_index >= len(months)` → mark `status: "complete"`, skip to Step 5
    - Otherwise proceed to Step 1 with that month
@@ -72,7 +89,8 @@ Patterns so far: {N}
 ## Step 1: Fetch PR Review Threads for Current Window
 
 Determine the date window:
-- **Historical run**: fetch only the current month (e.g., `--since 2024-04-01 --until 2024-04-30`)
+- **Historical run (batch_mode: "all")**: fetch the entire range (e.g., `--since 2024-03-26 --until 2026-03-26`)
+- **Historical run (batch_mode: "monthly")**: fetch only the current month (e.g., `--since 2024-04-01 --until 2024-04-30`)
 - **Incremental run**: fetch from `last_extraction_date` to today
 
 Run:
@@ -161,7 +179,12 @@ source .venv/bin/activate && python extract.py report --input patterns.json --ou
 
 **Update state.json:**
 
-For historical runs, advance to the next month:
+For historical runs with `batch_mode: "all"`, mark complete immediately:
+- Set `historical_run.status` to `"complete"`
+- Update `last_extraction_date` to today
+- Skip the monthly advancement logic below
+
+For historical runs with `batch_mode: "monthly"`, advance to the next month:
 - Read state.json
 - Increment `historical_run.current_month_index` by 1
 - Update `last_extraction_date` to the end of the current month

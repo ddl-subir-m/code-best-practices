@@ -1,0 +1,314 @@
+[
+  {
+    "pr_number": 40376,
+    "pr_title": "DOM-54805 - [UI] Add new Projects Billing tag search and bulk update table",
+    "pr_author": "ddl-sebastian-delafuente",
+    "file_path": "frontend/packages/ui/src/admin-advanced/billing-tags/manually-apply-billing-tags/ProjectsTable.tsx",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-galias",
+        "body": "we should not use any, you can use the data type of the table data source or unknown"
+      },
+      {
+        "author": "ddl-sebastian-delafuente",
+        "body": "DONE"
+      }
+    ]
+  },
+  {
+    "pr_number": 40376,
+    "pr_title": "DOM-54805 - [UI] Add new Projects Billing tag search and bulk update table",
+    "pr_author": "ddl-sebastian-delafuente",
+    "file_path": "frontend/packages/ui/src/admin-advanced/billing-tags/manually-apply-billing-tags/ProjectsTableContainer.tsx",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-galias",
+        "body": "you have a state setter here but the state is never read. I think it should not be necessary"
+      },
+      {
+        "author": "ddl-sebastian-delafuente",
+        "body": "DONE"
+      }
+    ]
+  },
+  {
+    "pr_number": 40376,
+    "pr_title": "DOM-54805 - [UI] Add new Projects Billing tag search and bulk update table",
+    "pr_author": "ddl-sebastian-delafuente",
+    "file_path": "frontend/packages/ui/src/admin-advanced/billing-tags/manually-apply-billing-tags/ProjectsTable.tsx",
+    "line": 31,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-galias",
+        "body": "I think we should assign the default value to `[]` for safety as at least by type definition this can be undefined"
+      },
+      {
+        "author": "ddl-sebastian-delafuente",
+        "body": "DONE"
+      }
+    ]
+  },
+  {
+    "pr_number": 40376,
+    "pr_title": "DOM-54805 - [UI] Add new Projects Billing tag search and bulk update table",
+    "pr_author": "ddl-sebastian-delafuente",
+    "file_path": "frontend/packages/ui/src/admin-advanced/billing-tags/manually-apply-billing-tags/ProjectsTableContainer.tsx",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-galias",
+        "body": "Not sure if this is correct by design of the feature, but you are setting the submitting flag to false before the refetch ends, this could technically allow operating over a set of outdated data. In any case the submitting bulk state is not used so I think this does not change anything."
+      },
+      {
+        "author": "ddl-sebastian-delafuente",
+        "body": "DONE"
+      }
+    ]
+  },
+  {
+    "pr_number": 40378,
+    "pr_title": "INFOSEC-841 Czito.infosec 841.enforce enable downloading support bundle ff",
+    "pr_author": "ddl-czito",
+    "file_path": "server/app/domino/server/workbench/authz/WorkbenchRolesProvider.scala",
+    "line": 37,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "dmitriyvolk",
+        "body": "I'm not quite sure why not make it a CC flag, like every other one here, but it's really up to you. If it's a short-lived flag changing temporarily how a feature works \u2014\u00a0it's FF. If it's a configuration choice \u2014 making it a CC value"
+      }
+    ]
+  },
+  {
+    "pr_number": 40381,
+    "pr_title": "[DOM-54753] UI delete feature",
+    "pr_author": "DDL-Martin-Gazzara",
+    "file_path": "frontend/packages/ui/src/ai-gateway/api-services.ts",
+    "line": 54,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-galias",
+        "body": "just curious, nothing to change. But I have seen that in other PRs you used `window.location.origin` and here not. Is there any specific reason?"
+      },
+      {
+        "author": "DDL-Martin-Gazzara",
+        "body": "Not at all. I should double-check in the place where I used `window.location.origin` if it is really needed."
+      }
+    ]
+  },
+  {
+    "pr_number": 40384,
+    "pr_title": "[DOM-55394] Refactored tests to click on selected kebab button",
+    "pr_author": "ddl-viniatska",
+    "file_path": "e2e-tests/features/steps/ui/external_volume_steps.py",
+    "line": 10,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-cfuerst",
+        "body": "Could you make these two steps a little more consistent in language? One says `EDV admin` and the other says `Admin EDV`. Either one works for me."
+      }
+    ]
+  },
+  {
+    "pr_number": 40384,
+    "pr_title": "[DOM-55394] Refactored tests to click on selected kebab button",
+    "pr_author": "ddl-viniatska",
+    "file_path": "e2e-tests/features/steps/ui/external_volume_steps.py",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-cfuerst",
+        "body": "```suggestion\r\ndef wait_to_click_unregister_link_step_on_nexus(ctx, edv_name):\r\n```\r\nWe're trying to use \"Nexus\" instead of \"Hybrid\" nowadays."
+      }
+    ]
+  },
+  {
+    "pr_number": 40385,
+    "pr_title": "DOM-52828 Use projectId for retrieving job properties",
+    "pr_author": "noahjax",
+    "file_path": "jobs/jobs-implementation/src/main/scala/domino/jobs/implementation/InProcessJobsService.scala",
+    "line": 447,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "noahjax",
+        "body": "I added this to support the initial use case of fetching a project by owner/projectName, so this PR renders it unnecessary"
+      }
+    ]
+  },
+  {
+    "pr_number": 40389,
+    "pr_title": "[DOM-55316] Fix apps/web storybooks",
+    "pr_author": "ddl-richard-tom",
+    "file_path": "frontend/packages/mocks/src/mock-usecases/projects.ts",
+    "line": 19,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "ddl-galias",
+        "body": "nit, there are some existing mocks for projects at frontend/packages/mocks/src/generators/DominoServerProjectsApiProjectGatewayOverview.ts"
+      },
+      {
+        "author": "ddl-richard-tom",
+        "body": "Good callout. However, for this PR I'm just consolidating things and untangling the coupling of mocks between test and storybook files. I'm trying to avoid test breaking"
+      }
+    ]
+  },
+  {
+    "pr_number": 40393,
+    "pr_title": "[DOM-54280] Add FLYTE_DEFAULT_PROJECT env var to runs",
+    "pr_author": "noahjax",
+    "file_path": "server/app/domino/server/dispatcher/infrastructure/KubernetesConfigurationGenerator.scala",
+    "line": 438,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "ddl-ebrown",
+        "body": "Based on the code at https://github.com/flyteorg/flytekit/blob/d23eb440a9cdb730e3802d7fa93b5aafd0670779/flytekit/clis/sdk_in_container/utils.py#L19 this looks good to me"
+      }
+    ]
+  },
+  {
+    "pr_number": 40394,
+    "pr_title": "DOM-45299 add endpoint for UI to call in order to implement hide project copy button",
+    "pr_author": "niole",
+    "file_path": "projects/monolith-adapter/src/main/scala/domino/projects/monoadapter/ProjectServiceAdapter.scala",
+    "line": 1168,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "niole",
+        "body": "Moved billing tag to happen before any thing is created, so if it fails, we don't end up with orphaned resources in the git pod or the remote git provider"
+      }
+    ]
+  },
+  {
+    "pr_number": 40394,
+    "pr_title": "DOM-45299 add endpoint for UI to call in order to implement hide project copy button",
+    "pr_author": "niole",
+    "file_path": "projects/projects-web/conf/projects.api.routes",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "niole",
+        "body": "toying around with the new \"best practice\" for apis: https://docs.google.com/document/d/18UQ242kR5Cb-_RaSElnmIQui4pu6seh7YqPlxWG5snA/edit#heading=h.nscqknnl8lti. Should I make another routes file that doesn't include the `/v4/projects` at the beginning of the url?"
+      },
+      {
+        "author": "ddl-grequeni",
+        "body": "_Apologies for the wall of text..._ \ud83d\udc31 \r\n\r\nThe UI is already using `v4/projects/permissions/all` to get the `canCopy` and `canFork` attributes. Should we integrate the two solutions? Would this new logic apply to fork operation too? I imagine one possible option is to have a new subresource of project `v4/projects/:projectId/permissions` and have all the logic of \"canCopy\" in one place. Maybe `permissions` doesn't make sense for the current logic, so something more generic could work better, like `v4/projects/:projectId/actions` and then have a list of actions \r\n```\r\n[{id: \"copy\", supported: true, reason: null, uri: \"http://..../v4/projects/:projectId/copy\"},\r\n {id: \"fork\", supported: false, reason: \"...\", uri: \"...\"}]\r\n``` \r\nI think some approach like this would give a more \"RESTful\" navigation to the API too (collection/id/collection).\r\n\r\nAbout the versions, I would avoid mixing v1 and v4 in the same path.\r\n`v4/projects` is the internal, legacy, \"non-standard\" version of the API. Then we have `projects/v1/projects` which is the \"public\", closer to the standard one. We could start a new API even closer to the standard using `/{domain}/v1/projects/:projectId/actions` format (only defining that single endpoint for now). The {domain} could be \"develop\" as a more coarse grained product domain, encapsulating projects, environments, workspaces, etc. IMO for this particular ticket, we should be fine with just defining a new endpoint under the legacy v4, or creating a brand new API `/develop/v1` with only this new endpoint.\r\n\r\nIf we do a new API, I would go with the spec first approach (like public API) rather than resty. It's easy to make mistakes in resty definitions, that go unseen in code reviews and are only detected when we do a system test. The spec first approach means we manually define the yaml we are going to give to customers, so the code review is easier (not having to guess what the auto-generated swagger is going to look like from resty files and scala code). And the implementation must use the generated code, so there is an extra layer of validation that the spec is correct."
+      }
+    ]
+  },
+  {
+    "pr_number": 40394,
+    "pr_title": "DOM-45299 add endpoint for UI to call in order to implement hide project copy button",
+    "pr_author": "niole",
+    "file_path": "repoman/lib/src/main/scala/domino/repoman/lib/GitHubApiClientFactory.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-grequeni",
+        "body": "We could make it a class, so it's mockable in unit tests"
+      }
+    ]
+  },
+  {
+    "pr_number": 40394,
+    "pr_title": "DOM-45299 add endpoint for UI to call in order to implement hide project copy button",
+    "pr_author": "niole",
+    "file_path": "repoman/lib/src/main/scala/domino/repoman/lib/exceptions/exeptions.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-grequeni",
+        "body": "nit: From this [scala style guide](https://docs.scala-lang.org/style/files.html), I think we should put this and the class below in its own file (called RepoManException.scala). I think it makes it easier to find, helps keep files smaller too. "
+      }
+    ]
+  },
+  {
+    "pr_number": 40394,
+    "pr_title": "DOM-45299 add endpoint for UI to call in order to implement hide project copy button",
+    "pr_author": "niole",
+    "file_path": "repoman/lib/BUILD",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-grequeni",
+        "body": "nit: maybe \"commons\" or \"utils\" instead of \"lib\"? To be a bit more specific on the library intent."
+      },
+      {
+        "author": "niole",
+        "body": "renamed to utils"
+      }
+    ]
+  },
+  {
+    "pr_number": 40394,
+    "pr_title": "DOM-45299 add endpoint for UI to call in order to implement hide project copy button",
+    "pr_author": "niole",
+    "file_path": "projects/interface/src/main/scala/domino/projects/api/dtos/SupportedActions.scala",
+    "line": 34,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "niole",
+        "body": "I agree tthat it's easier to understand and work with dtos that are defined in their own files/logical groupings. The  projects/dto.scala file is really big. Maybe we should file a ticket to refactor everything out of the dto file."
+      }
+    ]
+  },
+  {
+    "pr_number": 40394,
+    "pr_title": "DOM-45299 add endpoint for UI to call in order to implement hide project copy button",
+    "pr_author": "niole",
+    "file_path": "projects/monolith-adapter/src/main/scala/domino/projects/monoadapter/ProjectServiceAdapter.scala",
+    "line": 2734,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "niole",
+        "body": "I feel like this means that we should refactor the copyProject authorization"
+      }
+    ]
+  },
+  {
+    "pr_number": 40394,
+    "pr_title": "DOM-45299 add endpoint for UI to call in order to implement hide project copy button",
+    "pr_author": "niole",
+    "file_path": "server/app/domino/server/projects/domain/authorizers/ProjectAuthorizer.scala",
+    "line": 286,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "niole",
+        "body": "should add a deprecation annotation here"
+      }
+    ]
+  },
+  {
+    "pr_number": 40394,
+    "pr_title": "DOM-45299 add endpoint for UI to call in order to implement hide project copy button",
+    "pr_author": "niole",
+    "file_path": "projects/monolith-adapter/src/main/scala/domino/projects/monoadapter/ProjectServiceAdapter.scala",
+    "line": 2723,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "niole",
+        "body": "should add a deprecation annotation to this service method"
+      }
+    ]
+  }
+]

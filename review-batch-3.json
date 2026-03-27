@@ -1,0 +1,402 @@
+[
+  {
+    "pr_number": 39571,
+    "pr_title": "[DOM-54217] move develop scheduled / periodic tasks into nucleus-develop deployment",
+    "pr_author": "ddl-mhito",
+    "file_path": "jobs/jobs-monolith-adapter/src/main/scala/domino/jobs/monoadapter/LongLivedJobsNotifyScheduler.scala",
+    "line": 17,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "ddl-ryan-connor",
+        "body": "we might be able to safely remove more code.\r\n\r\nin this class and the workspace one, i think we can remove the two lines that do\r\n\r\n```\r\n  scheduler.addContextObject for manager\r\n  scheduler.addContextObject for service principal\r\n```\r\n\r\nand then inject less stuff to the scheduler classes, and then i _think_ also completely remove the `[Workspace/Job]*Job` files"
+      },
+      {
+        "author": "ddl-mhito",
+        "body": "removed. \r\n\r\nWhat is that code you pasted doing? Was that only relevant for queuing up the job?"
+      },
+      {
+        "author": "ddl-ryan-connor",
+        "body": "it adds an object to the quartz job's job context so within the job code that object can be retrieved"
+      }
+    ]
+  },
+  {
+    "pr_number": 39571,
+    "pr_title": "[DOM-54217] move develop scheduled / periodic tasks into nucleus-develop deployment",
+    "pr_author": "ddl-mhito",
+    "file_path": "dev/setup/ansible/roles/full-stack/tasks/helm/nucleus.yaml",
+    "line": 94,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "niole",
+        "body": "Should nucleus-develop get deleted here?"
+      },
+      {
+        "author": "ddl-mhito",
+        "body": "Yes, it should, good catch. "
+      },
+      {
+        "author": "ddl-ryan-connor",
+        "body": "confused again -- it was added, look at line 93"
+      },
+      {
+        "author": "ddl-mhito",
+        "body": "Yeah just noticed, it's up there (just needs tom be develop, not nucleus-develop)"
+      },
+      {
+        "author": "niole",
+        "body": "got it"
+      }
+    ]
+  },
+  {
+    "pr_number": 39571,
+    "pr_title": "[DOM-54217] move develop scheduled / periodic tasks into nucleus-develop deployment",
+    "pr_author": "ddl-mhito",
+    "file_path": "dev/nucleus-heap-dump.sh",
+    "line": 169,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "niole",
+        "body": "SHould nucleus-develop be included here?"
+      },
+      {
+        "author": "ddl-mhito",
+        "body": "Yes, it should, good catch. "
+      },
+      {
+        "author": "ddl-ryan-connor",
+        "body": "im confused, it was added"
+      },
+      {
+        "author": "ddl-ryan-connor",
+        "body": "look at line 166"
+      },
+      {
+        "author": "ddl-mhito",
+        "body": "Oops, yeah it's there"
+      },
+      {
+        "author": "niole",
+        "body": "ah, i see it now"
+      }
+    ]
+  },
+  {
+    "pr_number": 39571,
+    "pr_title": "[DOM-54217] move develop scheduled / periodic tasks into nucleus-develop deployment",
+    "pr_author": "ddl-mhito",
+    "file_path": "jobs/jobs-monolith-adapter/src/main/scala/domino/jobs/monoadapter/LongLivedJobsNotifyScheduler.scala",
+    "line": 25,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "niole",
+        "body": "What do these changes have to do with moving this job to the nucleus-develop pod?"
+      },
+      {
+        "author": "ddl-mhito",
+        "body": "Nothing - this has to do with removing code that is unnecessary (Quartz job stuff that is never used)"
+      }
+    ]
+  },
+  {
+    "pr_number": 39571,
+    "pr_title": "[DOM-54217] move develop scheduled / periodic tasks into nucleus-develop deployment",
+    "pr_author": "ddl-mhito",
+    "file_path": "server/app/domino/server/lib/config/NucleusScopes.scala",
+    "line": 12,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "niole",
+        "body": "Should we just remove all cases that look for workspace-volume-snapshot-cleaner by string?"
+      },
+      {
+        "author": "ddl-ryan-connor",
+        "body": "this should be the only string `workspace-volume-snapshot-cleaner` and it is actually added in this PR to handle an edge case that can happen during fleectommand deployments or upgrades, and this can be removed later after the chart/catalog/plat-apps PRs land and are ingested/used, and i've already discussed with martin"
+      },
+      {
+        "author": "niole",
+        "body": "ok sounds good. would be good to add a comment with the follow up ticket number so it doesn't get lost"
+      }
+    ]
+  },
+  {
+    "pr_number": 39571,
+    "pr_title": "[DOM-54217] move develop scheduled / periodic tasks into nucleus-develop deployment",
+    "pr_author": "ddl-mhito",
+    "file_path": "server/app/domino/server/search/service/ElasticSearchService.scala",
+    "line": 118,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "niole",
+        "body": "This statement makes it so that if someone disables the service, but it happens to still be running, you won't be able to stop the search event stream. THis could mean that this service would get stuck in a running state, when it should be stopped"
+      },
+      {
+        "author": "ddl-ryan-connor",
+        "body": "that's not possible, it can only be disabled by restarting the pod, which means it won't be running anymore."
+      }
+    ]
+  },
+  {
+    "pr_number": 39571,
+    "pr_title": "[DOM-54217] move develop scheduled / periodic tasks into nucleus-develop deployment",
+    "pr_author": "ddl-mhito",
+    "file_path": "workspace-classic/monolith-adapter/src/main/scala/domino/workspaces/monoadapter/LongLivedWorkspaceNotifyOrShutdownScheduleManagerAdapter.scala",
+    "line": 29,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "niole",
+        "body": "It sounds like this issue should be solved through a mongo db migration that removes the quartz job. I don't think it's necessary to write backwards compatible logic in scala for this"
+      },
+      {
+        "author": "ddl-ryan-connor",
+        "body": "this has been examined by me back when i did similar logic and again by me and martin with involvement from distributions for this PR. a simple mongo migration wont work, this logic is necessary."
+      },
+      {
+        "author": "niole",
+        "body": "for some reason I thought that the quartz job metadata was kept in mongo. just for my own understanding: is it not kept in mongo or is it something else about the job which keeps a mongo migration from resolving this?"
+      },
+      {
+        "author": "ddl-mhito",
+        "body": "From Ryan when we had this discussion earlier: \r\n\r\n> - we upgrade and the migrations run.\r\n> - so, now the job record is removed from the mongo quartz job collection.\r\n> however, after that but before nucleus pod upgrade happens, the nucleus-dispatcher restarts (for whatever reason), still running its pre-upgrade code.\r\n> - well, that pre upgrade code automatically registers the job on app start if it is not found in the quartz mongo collection.\r\n> - now the nucleus pod image upgrade actually happens. but since we removed the quartz job code instead of telling the quartz job to unregister if it exists, now the job lives in the quartz mongo collection forever, being triggered normally, unless there is manual intervention."
+      },
+      {
+        "author": "niole",
+        "body": "\"well, that pre upgrade code automatically registers the job on app start if it is not found in the quartz mongo collection.\", should this code be removed?"
+      }
+    ]
+  },
+  {
+    "pr_number": 39571,
+    "pr_title": "[DOM-54217] move develop scheduled / periodic tasks into nucleus-develop deployment",
+    "pr_author": "ddl-mhito",
+    "file_path": "workspace-classic/monolith-adapter/src/main/scala/domino/workspaces/monoadapter/LongLivedWorkspaceNotifyOrShutdownScheduleManagerAdapter.scala",
+    "line": 38,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "niole",
+        "body": "This will get very noisy if this runs every couple seconds. It would be better if this had a debug log level"
+      },
+      {
+        "author": "ddl-mhito",
+        "body": "Good point, I'll change it."
+      }
+    ]
+  },
+  {
+    "pr_number": 39614,
+    "pr_title": "DOM-54210 bitbucket datacenter PAT access DOM-55142 rename to data center",
+    "pr_author": "ddl-roshikiri",
+    "file_path": "repoman/repoman-domain/src/main/scala/domino/repoman/domain/RepositoryUri.scala",
+    "line": null,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "ddl-roshikiri",
+        "body": "test values for http://bb-datacenter.workbench-analyze-team-sandbox.domino.tech:7990/users/roshikiri/repos/tester-1/browse\r\n\r\ncredentialsa re in onepassword"
+      }
+    ]
+  },
+  {
+    "pr_number": 39614,
+    "pr_title": "DOM-54210 bitbucket datacenter PAT access DOM-55142 rename to data center",
+    "pr_author": "ddl-roshikiri",
+    "file_path": "server/app/domino/server/projects/domain/services/ProjectCreator.scala",
+    "line": 258,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "ddl-roshikiri",
+        "body": "this validation is happening on the repoman side as well\r\nhttps://github.com/cerebrotech/domino/pull/39614/files#diff-ab35f39f969b8c07ffd1924071cdf08fcd5e6097b7420106838fe8bb62daf422R86"
+      },
+      {
+        "author": "ddl-roshikiri",
+        "body": "however, the retry logic is not"
+      }
+    ]
+  },
+  {
+    "pr_number": 39614,
+    "pr_title": "DOM-54210 bitbucket datacenter PAT access DOM-55142 rename to data center",
+    "pr_author": "ddl-roshikiri",
+    "file_path": "repoman/repoman-service/src/main/scala/domino/repoman/service/utils/AuthenticatedGitProcess.scala",
+    "line": null,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "ddl-roshikiri",
+        "body": "in theory we should remove sslVerify=false but we can't do that for testing on our domino bitbucket enterprise until we pay for a legit not-self-signed SSL cert"
+      }
+    ]
+  },
+  {
+    "pr_number": 39614,
+    "pr_title": "DOM-54210 bitbucket datacenter PAT access DOM-55142 rename to data center",
+    "pr_author": "ddl-roshikiri",
+    "file_path": "repoman/repoman-service/src/main/scala/domino/repoman/service/utils/RepomanGitUtil.scala",
+    "line": 89,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "niole",
+        "body": "Some would say that you should just use an if statement here"
+      }
+    ]
+  },
+  {
+    "pr_number": 39614,
+    "pr_title": "DOM-54210 bitbucket datacenter PAT access DOM-55142 rename to data center",
+    "pr_author": "ddl-roshikiri",
+    "file_path": "repoman/repoman-service/src/main/scala/domino/repoman/service/utils/RepomanGitUtil.scala",
+    "line": 106,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "niole",
+        "body": "why should this run in `/tmp`?"
+      },
+      {
+        "author": "ddl-roshikiri",
+        "body": "this is run in `/tmp` because we don't want to run commands from the root directory and we know that `/tmp` exists"
+      }
+    ]
+  },
+  {
+    "pr_number": 39614,
+    "pr_title": "DOM-54210 bitbucket datacenter PAT access DOM-55142 rename to data center",
+    "pr_author": "ddl-roshikiri",
+    "file_path": "repoman/repoman-service/src/main/scala/domino/repoman/service/utils/RepomanGitUtil.scala",
+    "line": null,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "niole",
+        "body": "For all of the prinlns, can we use a logger with error log level? The println will log this message all of the time and that will make the logs noisy."
+      },
+      {
+        "author": "ddl-roshikiri",
+        "body": "Since exceptions are being thrown, the printlns were primarily used for debugging so I'll just remove them"
+      }
+    ]
+  },
+  {
+    "pr_number": 39614,
+    "pr_title": "DOM-54210 bitbucket datacenter PAT access DOM-55142 rename to data center",
+    "pr_author": "ddl-roshikiri",
+    "file_path": "server/src/test/domino/server/projects/domain/services/ProjectCreatorMockSpec.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "niole",
+        "body": "No need for curlies"
+      }
+    ]
+  },
+  {
+    "pr_number": 39614,
+    "pr_title": "DOM-54210 bitbucket datacenter PAT access DOM-55142 rename to data center",
+    "pr_author": "ddl-roshikiri",
+    "file_path": "repoman/repoman-service/src/main/scala/domino/repoman/service/utils/AuthenticatedGitProcess.scala",
+    "line": 138,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "niole",
+        "body": "Can we add a unit test that verifies that this \"noVerify\" is only added for bitbucket datacenter?"
+      }
+    ]
+  },
+  {
+    "pr_number": 39614,
+    "pr_title": "DOM-54210 bitbucket datacenter PAT access DOM-55142 rename to data center",
+    "pr_author": "ddl-roshikiri",
+    "file_path": "repoman/repoman-service/src/main/scala/domino/repoman/service/utils/RepomanGitUtil.scala",
+    "line": 83,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "niole",
+        "body": "Is it possible for bitbucket datacenter uri to not contain port?"
+      },
+      {
+        "author": "ddl-roshikiri",
+        "body": "this ssl no verify tag is used solely for insecure https connections like for our testing env. There might be a better way to filter these out from customer's production setups without a port"
+      },
+      {
+        "author": "niole",
+        "body": "maybe we should just put a cert on the test deployment? Having a case where we don't verify ssl means there is a case where we could send data to an unknown party and also in plain text.  @SeanW-DDL do we usually add TLS to our test deployments?"
+      },
+      {
+        "author": "niole",
+        "body": "can we comment with a ticket ID for removing this when it's possible to do so?"
+      },
+      {
+        "author": "ddl-roshikiri",
+        "body": "https://dominodatalab.atlassian.net/browse/DOM-55174"
+      }
+    ]
+  },
+  {
+    "pr_number": 39614,
+    "pr_title": "DOM-54210 bitbucket datacenter PAT access DOM-55142 rename to data center",
+    "pr_author": "ddl-roshikiri",
+    "file_path": "server/app/domino/server/projects/domain/services/ProjectCreator.scala",
+    "line": 87,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "ddl-roshikiri",
+        "body": "since jobs is using the injected module in `server/` this needs to stay in place"
+      }
+    ]
+  },
+  {
+    "pr_number": 39772,
+    "pr_title": "DOM-54500 Removing connection check in hybrid with shared credentials",
+    "pr_author": "ddl-aj-rossman",
+    "file_path": "datasource/datasource-impl/src/main/scala/domino/datasource/impl/DataSourceServiceImpl.scala",
+    "line": 745,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-eric-jin",
+        "body": "It might be good to add a unit/integration test here with `ProxyPingBody` mocked to throw an error to ensure Ping is not called in this case to detect regressions."
+      },
+      {
+        "author": "ddl-eric-jin",
+        "body": "Additionally, it could be informative to add a comment as to why this combination is checked and its relation to the control plane."
+      },
+      {
+        "author": "ddl-aj-rossman",
+        "body": "Agreed!"
+      }
+    ]
+  },
+  {
+    "pr_number": 39772,
+    "pr_title": "DOM-54500 Removing connection check in hybrid with shared credentials",
+    "pr_author": "ddl-aj-rossman",
+    "file_path": "frontend/packages/ui/src/data/data-sources/create-data-source/AuthenticateStepContent.tsx",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-galias",
+        "body": "We should avoid using `object` as type, if the type is not defined it should be enough by defining the minimum set of attributes it should have"
+      },
+      {
+        "author": "ddl-aj-rossman",
+        "body": "Gotcha, thank you"
+      }
+    ]
+  }
+]

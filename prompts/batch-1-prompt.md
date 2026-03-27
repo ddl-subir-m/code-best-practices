@@ -1,0 +1,428 @@
+# Pattern Extraction Prompt v1
+
+For each review thread, identify if the reviewer is enforcing a generalizable engineering pattern, convention, or best practice.
+
+Skip threads that are:
+- Simple acknowledgments ("LGTM", "Fixed", "Good catch")
+- PR-specific discussion with no generalizable takeaway
+- The PR author explaining their own code (not reviewer feedback)
+
+For each pattern found, output JSON:
+1. pattern_name: short, descriptive name
+2. rule: one sentence describing what engineers should do
+3. category: one of [error-handling, naming, architecture, testing, performance, logging, security, api-design, code-organization, documentation]
+4. evidence: quote the reviewer's actual words
+5. pr_number: the PR number
+6. file_path: the file being reviewed
+
+Only include genuinely generalizable patterns, not one-off code-specific comments.
+
+
+---
+
+## Review Threads to Analyze
+
+[
+  {
+    "pr_number": 39449,
+    "pr_title": "[DOM-54010] Image size in execution lifecycle params",
+    "pr_author": "ddl-rliu",
+    "file_path": "server/app/domino/server/runlifecycle/domain/entities/ExecutionLifecycleParameters.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-rliu",
+        "body": "Should store as field in `Image` instead (?)"
+      }
+    ]
+  },
+  {
+    "pr_number": 39449,
+    "pr_title": "[DOM-54010] Image size in execution lifecycle params",
+    "pr_author": "ddl-rliu",
+    "file_path": "server/app/domino/server/runlifecycle/domain/entities/RunLifecycleSagaDefinition.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-rliu",
+        "body": "Not necessarily \"latest\", check the # from the env spec"
+      }
+    ]
+  },
+  {
+    "pr_number": 39449,
+    "pr_title": "[DOM-54010] Image size in execution lifecycle params",
+    "pr_author": "ddl-rliu",
+    "file_path": "server/app/domino/server/runlifecycle/domain/entities/RunLifecycleSagaDefinition.scala",
+    "line": 157,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "ddl-rliu",
+        "body": "Note: Don't store size here, since we want these to be immutable. Also because of things like domsed and lstio, we don't know these ahead of time."
+      },
+      {
+        "author": "ddl-ryan-connor",
+        "body": "just to clarify, it's because we want to create the `images` just once and in the linked code where we know the final list of images for the pod and the proper image names etc as applied to the k8s cluster https://github.com/cerebrotech/domino/blob/c103b759e3c91d8a834aa485cbc45c037e6e554f/server/app/domino/server/saga/domain/services/ExecutionResourceMonitor.scala#L101"
+      }
+    ]
+  },
+  {
+    "pr_number": 39449,
+    "pr_title": "[DOM-54010] Image size in execution lifecycle params",
+    "pr_author": "ddl-rliu",
+    "file_path": "server/app/domino/server/saga/domain/services/ExecutionImageMonitor.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-rliu",
+        "body": "Put this in ExecutionResourceMonitor::extractContainersAndImages"
+      }
+    ]
+  },
+  {
+    "pr_number": 39449,
+    "pr_title": "[DOM-54010] Image size in execution lifecycle params",
+    "pr_author": "ddl-rliu",
+    "file_path": "server/src/test/domino/server/runlifecycle/domain/entities/ExecutionLifecycleParametersSpec.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-rliu",
+        "body": "Not sure if its okay to modify `ExecutionLifecycleParameters_V3_3` like this. If not, I would fix this by changing `imageNameToImageSizeMap` to be an `Option[Map[String, Information]]` instead."
+      },
+      {
+        "author": "ddl-ryan-connor",
+        "body": "hmm why is this needed? as you can see ive added many args to the params without needing to modify this"
+      },
+      {
+        "author": "ddl-ryan-connor",
+        "body": "oh right because the stuff ive added is an option. yeah just make it an option"
+      },
+      {
+        "author": "ddl-rliu",
+        "body": "As far as I can tell, this Spec exists because of https://dominodatalab.atlassian.net/browse/DOM-11026 and at this point doesn't seem to test any relevant functionality (version 3.3 seems to be very old). In light of this, it likely makes more sense to have `Map` over `Option[Map]`"
+      }
+    ]
+  },
+  {
+    "pr_number": 39449,
+    "pr_title": "[DOM-54010] Image size in execution lifecycle params",
+    "pr_author": "ddl-rliu",
+    "file_path": "server/app/domino/server/runlifecycle/domain/entities/RunLifecycleSagaDefinition.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-rliu",
+        "body": "At first I tried to have this keyed by image name, but that logic would look like\r\n```scala\r\ncase Some(environmentRevision) => (environmentRevision.metadata.dockerImageName, \r\n    environmentRevision.metadata.compressedImageSize) match {\r\n  case (Some(name), Some(size)) =>\r\n    val dockerRegistryUri = null // Use serviceDiscovery and \r\n      //local vs. remote dataplane logic to determine this?\r\n    Map(name.qualifiedImageName(dockerRegistryUri) -> size)\r\n  case _ => Map()\r\n}\r\n```"
+      },
+      {
+        "author": "ddl-rliu",
+        "body": "`imageNameToImageSizeMap` is not very accurate in this case, maybe should be `containerNameToImageSizeMap`"
+      },
+      {
+        "author": "ddl-ryan-connor",
+        "body": "sure that name change sounds good"
+      }
+    ]
+  },
+  {
+    "pr_number": 39449,
+    "pr_title": "[DOM-54010] Image size in execution lifecycle params",
+    "pr_author": "ddl-rliu",
+    "file_path": "server/app/domino/server/runlifecycle/domain/entities/RunLifecycleSagaDefinition.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-ryan-connor",
+        "body": "why do we need the match on `null`? the environment revision retriever can give back `null`? but isn't this all scala native stuff?"
+      },
+      {
+        "author": "ddl-rliu",
+        "body": "Updated: https://github.com/cerebrotech/domino/pull/39449/files#diff-89f724a3b4c84633dc68ca412777c01740229c8a397922cecab6794d3dd0d232R147-R154"
+      }
+    ]
+  },
+  {
+    "pr_number": 39449,
+    "pr_title": "[DOM-54010] Image size in execution lifecycle params",
+    "pr_author": "ddl-rliu",
+    "file_path": "server/app/domino/server/saga/domain/services/ExecutionResourceMonitor.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-ryan-connor",
+        "body": "nit: this can go inside the `Some(pod)` case to not do it if cant get the execution pod"
+      }
+    ]
+  },
+  {
+    "pr_number": 39449,
+    "pr_title": "[DOM-54010] Image size in execution lifecycle params",
+    "pr_author": "ddl-rliu",
+    "file_path": "server/app/domino/server/saga/domain/services/ExecutionResourceMonitor.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-ryan-connor",
+        "body": "we're now calling `container.getImage` twice.\r\n\r\nshould change `if (imageName.isDefined) {` to a match on `imageName` and put this line inside the `if`"
+      },
+      {
+        "author": "ddl-rliu",
+        "body": "Updated to read\r\n```scala\r\nval imageName = Option(container.getImage())\r\nimageName match {\r\n  case Some(imageName) =>\r\n    imageCounts(imageName) += 1\r\n    imageNameToContainerNameMap.put(imageName, container.getName)\r\n  case None =>\r\n}\r\n```"
+      }
+    ]
+  },
+  {
+    "pr_number": 39449,
+    "pr_title": "[DOM-54010] Image size in execution lifecycle params",
+    "pr_author": "ddl-rliu",
+    "file_path": "server/app/domino/server/saga/domain/services/ExecutionResourceMonitor.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-ryan-connor",
+        "body": "i think this is still the way to go to future proof for executor, nginx, etc. but it is a little obfuscated. can we add the comment above this line?\r\n\r\n`// apply args: (imageName, numContainersUsingTheImage, sizeBytesFromExecutionParamsMap)`"
+      },
+      {
+        "author": "ddl-rliu",
+        "body": "Good point. Here's how it looks after making it more readable\r\n```scala\r\nval images = imageCounts.toList.map(nameAndCount =>\r\n  // apply args: (imageName, numContainersUsingTheImage, sizeBytesFromExecutionParamsMap)\r\n  Image(\r\n    name = nameAndCount._1,\r\n    numContainers = nameAndCount._2,\r\n    sizeBytes = imageNameToContainerNameMap.get(nameAndCount._1).flatMap(containerNameToImageSizeBytesMap.get)\r\n  )\r\n)\r\n```"
+      }
+    ]
+  },
+  {
+    "pr_number": 39449,
+    "pr_title": "[DOM-54010] Image size in execution lifecycle params",
+    "pr_author": "ddl-rliu",
+    "file_path": "server/app/domino/server/saga/domain/services/ExecutionResourceMonitor.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-ryan-connor",
+        "body": "should this be here?"
+      },
+      {
+        "author": "ddl-rliu",
+        "body": "Ah yeah, I guess this should still be in draft phase with all the debugging statements I'm adding. Going to remove these now that that BSON issue was nailed down."
+      }
+    ]
+  },
+  {
+    "pr_number": 39449,
+    "pr_title": "[DOM-54010] Image size in execution lifecycle params",
+    "pr_author": "ddl-rliu",
+    "file_path": "server/src/it/scala/domino/server/runlifecycle/infrastructure/RunLifecycleSagaDefinitionSpec.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-ryan-connor",
+        "body": "is it easy to add a test that the size map is correct when the right stuff is returned?"
+      },
+      {
+        "author": "ddl-rliu",
+        "body": "Ended up going with something like this: https://github.com/cerebrotech/domino/pull/39449/files#diff-dffd0827eb2497c2abc14e4643f539876866dfd19afd87c26208d02ec961dd56R197-R208"
+      }
+    ]
+  },
+  {
+    "pr_number": 39449,
+    "pr_title": "[DOM-54010] Image size in execution lifecycle params",
+    "pr_author": "ddl-rliu",
+    "file_path": "server/app/domino/server/saga/domain/services/ExecutionImageMonitor.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-ryan-connor",
+        "body": "should this be here?"
+      },
+      {
+        "author": "ddl-rliu",
+        "body": "gonna remove"
+      }
+    ]
+  },
+  {
+    "pr_number": 39449,
+    "pr_title": "[DOM-54010] Image size in execution lifecycle params",
+    "pr_author": "ddl-rliu",
+    "file_path": "server/app/domino/server/saga/domain/services/ExecutionImageMonitor.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-ryan-connor",
+        "body": "need to do same here https://github.com/cerebrotech/domino/blob/e6ac94c388a26d4c942cd9aa0efdafc05746a933/server/app/domino/server/saga/domain/services/ExecutionImageMonitor.scala#L175"
+      }
+    ]
+  },
+  {
+    "pr_number": 39449,
+    "pr_title": "[DOM-54010] Image size in execution lifecycle params",
+    "pr_author": "ddl-rliu",
+    "file_path": "server/app/domino/server/saga/domain/services/ExecutionImageMonitor.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-ryan-connor",
+        "body": "can we also add a comment like\r\n\r\n`// so, size will not change if it is already known`"
+      }
+    ]
+  },
+  {
+    "pr_number": 39449,
+    "pr_title": "[DOM-54010] Image size in execution lifecycle params",
+    "pr_author": "ddl-rliu",
+    "file_path": "server/src/it/scala/domino/server/runlifecycle/infrastructure/RunLifecycleSagaDefinitionSpec.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-ryan-connor",
+        "body": "why does this need to be in a separate func?"
+      },
+      {
+        "author": "ddl-rliu",
+        "body": "I see, different tests in this Spec sometimes use a separate function, sometimes they don't. I'll remove it in this case, since it seems extraneous."
+      },
+      {
+        "author": "ddl-ryan-connor",
+        "body": "oh yeah. huh, i dont know why it's like that. i guess if the test passes just fine without it, seems better without the extraneous func"
+      }
+    ]
+  },
+  {
+    "pr_number": 39449,
+    "pr_title": "[DOM-54010] Image size in execution lifecycle params",
+    "pr_author": "ddl-rliu",
+    "file_path": "server/app/domino/server/runlifecycle/domain/entities/ExecutionLifecycleParameters.scala",
+    "line": 26,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "noahjax",
+        "body": "What is the value of making this `Option[Map]` instead of just `Map`? Does an empty `Map` indicate something different than `None` would? If not I would prefer the latter, as it is much easier to work with "
+      },
+      {
+        "author": "noahjax",
+        "body": "Also, is there a reason we are we storing a map of containerName -> imageSize instead of `imageName -> imageSize`? Seems like later on we want the latter, and the relationship between image and size feels more direct to me as well. \r\n\r\nI guess this is because the UI cares more about the container name than the image name?"
+      },
+      {
+        "author": "ddl-ryan-connor",
+        "body": "because the main (only) use case for this right now is to get at this value with no mongo query during saga processing when we build the images list for the saga params.\r\n\r\nthe problem is that we build the image list from the images in the pod spec, and those image names look like this\r\n\r\n`\"153827342122.dkr.ecr.us-west-2.amazonaws.com/noahfly37041/environment:6602072201493f24c0cf3fa0-2\",`\r\n\r\nwe dont have that image name easily here, it's build later as part of exec resource params maker in `getRunImage` which uses data plane config to contact the docker service registry to get the fully qualified name\r\n\r\nwe do, however, know the container name here, and can use that for the mapping.\r\n\r\ni guess we could duplicate that logic here, or make that method public and inject the params maker here, or something like that. not sure its better than doing this way though"
+      },
+      {
+        "author": "ddl-rliu",
+        "body": "I had `Map` at first, for the reasons you mentioned it would be nice to use `Map`. One advantage of `Option[Map]` is that it deals with [the issue (?) mentioned here](https://github.com/cerebrotech/domino/pull/39449/#discussion_r1538169085) \u2013 unclear if changing `ExecutionLifecycleParameters_V3_3` is actually okay or not, I haven't dug into what that spec is testing but I'll see about taking a deeper look.\r\n\r\nedit: did some digging, seems better to use `Map` over `Option[Map]`"
+      },
+      {
+        "author": "noahjax",
+        "body": "Cool...It is valid that sometimes having an optional field is key when interacting with mongo or an api, but in that case we can normally convert it from optional to empty when entering our domain object"
+      }
+    ]
+  },
+  {
+    "pr_number": 39449,
+    "pr_title": "[DOM-54010] Image size in execution lifecycle params",
+    "pr_author": "ddl-rliu",
+    "file_path": "server/app/domino/server/runlifecycle/domain/entities/ExecutionLifecycleParameters.scala",
+    "line": 91,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "noahjax",
+        "body": "You can handle the optional nature of this via a `getOrElse(Map.empty)` similar to how we handle `containerImagePulled`"
+      },
+      {
+        "author": "ddl-ryan-connor",
+        "body": "one reason is sagabson gets harder to deal with if we dont make it an option, might require a mongo migration, i think we ran into this before, i'll try to find the previous PR"
+      },
+      {
+        "author": "ddl-ryan-connor",
+        "body": "i think this is what im thinking of. but i guess the issue there was we couldn't provide a reasonable default. https://github.com/cerebrotech/domino/pull/38976\r\n\r\nso im fine with changing it not-option"
+      }
+    ]
+  },
+  {
+    "pr_number": 39449,
+    "pr_title": "[DOM-54010] Image size in execution lifecycle params",
+    "pr_author": "ddl-rliu",
+    "file_path": "server/app/domino/server/runlifecycle/domain/entities/RunLifecycleSagaDefinition.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "noahjax",
+        "body": "These look like great places to use a for comprehension to avoid all this nested mapping. In particular your last `match` here doesn't really do anything...seems like you could just make the call to `environmentRevisionRetriever.retrieve` and log if it is empty. I would try something like\r\n```\r\nval environmentRevision = for {\r\n  envRevKey <- run.trigger.environmentRevisionKey\r\n  envRevId <- envRevKey.environmentRevisionId\r\n} yield {\r\n  environmentRevisionRetriever.retrieve(envRevId)\r\n}\r\nif (environmentRevision.isEmpty) {\r\n  logger.debug(s\"Could not get environment revision for run ${run.id} to get image size\")\r\n}\r\n```\r\nYou can probably do something similar for `containerNameToImageSizeMap` or extend the for comprehension I defined to extract the image size\r\n"
+      },
+      {
+        "author": "ddl-rliu",
+        "body": "Oh that's nice, TIL. Looks something like this now, which is much cleaner I think.\r\n```scala\r\nval containerNameToImageSizeMap = for {\r\n  environmentRevisionKey <- run.trigger.environmentRevisionKey\r\n  environmentRevisionId = environmentRevisionKey.environmentRevisionId\r\n  environmentRevision = environmentRevisionRetriever.retrieve(environmentRevisionId)\r\n  compressedImageSize <- environmentRevision.metadata.compressedImageSize\r\n} yield {\r\n  Map(\"run\" -> compressedImageSize)\r\n}\r\n```"
+      }
+    ]
+  },
+  {
+    "pr_number": 39449,
+    "pr_title": "[DOM-54010] Image size in execution lifecycle params",
+    "pr_author": "ddl-rliu",
+    "file_path": "server/app/domino/server/saga/domain/services/ExecutionResourceMonitor.scala",
+    "line": null,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "noahjax",
+        "body": "Nit: I know you didn't introduce this but you can map over a Map just as easy as a list, so IMO there's no reason for the toList call\r\n```\r\nimageCounts.map { case (name, count) => // stuff }\r\n```"
+      },
+      {
+        "author": "ddl-rliu",
+        "body": "Changed to look like\r\n```scala\r\nval images: List[Image] = imageCounts.map {\r\n  case (imageName, count) => (for {\r\n    containerName <- imageNameToContainerNameMap.get(imageName)\r\n    sizeBytes = containerNameToImageSizeBytesMap.get(containerName)\r\n  } yield {\r\n    Image(\r\n      name = imageName,\r\n      numContainers = count,\r\n      sizeBytes = sizeBytes\r\n    )\r\n  }).get\r\n}.toList\r\n```\r\nAlso removed the explanatory comment, since it feels more readable when written like this."
+      },
+      {
+        "author": "ddl-ryan-connor",
+        "body": "i dont think this will work, we still want an image if the container is not in the size map"
+      },
+      {
+        "author": "ddl-ryan-connor",
+        "body": "also we generally dont want to call `.get` on options"
+      },
+      {
+        "author": "ddl-ryan-connor",
+        "body": "you want\r\n```\r\nval images: List[Image] = imageCounts.map { case (imageName, count) => Image(\r\n  name = imageName,\r\n  numContainers = count,\r\n  sizeBytes = imageNameToContainerNameMap.get(imageName).flatMap(containerNameToImageSizeBytesMap.get)\r\n)}\r\n```"
+      },
+      {
+        "author": "ddl-ryan-connor",
+        "body": "with `.toList` tacked on to the end if necessary"
+      },
+      {
+        "author": "ddl-rliu",
+        "body": "shoot yeah\r\n"
+      }
+    ]
+  }
+]
+
+---
+
+Return a JSON array of patterns found. Each pattern should have:
+- pattern_name (string)
+- rule (string)
+- category (string, one of: api-design, architecture, code-organization, documentation, error-handling, logging, naming, performance, security, testing)
+- evidence (string — quote the reviewer's actual words)
+- pr_number (integer)
+- file_path (string)
+
+If no patterns are found in this batch, return an empty array: []
+
+Return ONLY the JSON array, no other text.

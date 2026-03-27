@@ -34,8 +34,8 @@ VALID_CATEGORIES = {
 STATE_FILE = "state.json"
 
 GRAPHQL_SEARCH_QUERY = """
-query($query: String!, $first: Int!, $after: String) {
-  search(query: $query, type: ISSUE, first: $first, after: $after) {
+query($searchQuery: String!, $first: Int!, $after: String) {
+  search(query: $searchQuery, type: ISSUE, first: $first, after: $after) {
     pageInfo {
       hasNextPage
       endCursor
@@ -158,7 +158,7 @@ def cmd_fetch(args):
 
     while True:
         variables = {
-            "query": search_query,
+            "searchQuery": search_query,
             "first": batch_size,
             "after": cursor,
         }

@@ -1,0 +1,358 @@
+[
+  {
+    "pr_number": 39906,
+    "pr_title": "[DOM-54004] Scoped Flows Storage Credentials for Run Container",
+    "pr_author": "ddl-ryan-connor",
+    "file_path": "server/app/domino/server/computegrid/ComputeGridSettingsAdapter.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "noahjax",
+        "body": "While you are in here can you change this from `f\"arn:aws:iam::153827342122:role/$clusterName-flyte-dataplane-role\" -> f\"arn:aws:iam::153827342122:role/$clusterName-flyte-dataplane\"`? The role name got changed on the terraform side of things and I forgot to update it here"
+      },
+      {
+        "author": "ddl-ryan-connor",
+        "body": "done, and consolidated the roles into one\r\n"
+      }
+    ]
+  },
+  {
+    "pr_number": 39915,
+    "pr_title": "PLAT-7735: resolve default deployer version from catalog",
+    "pr_author": "steved",
+    "file_path": "dino/pkg/fleetcommand/client/catalog.go",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "urianchang",
+        "body": "Is this the new link: https://github.com/cerebrotech/fleetcommand/blob/main/src/fleetcommand/routes/api/remote_catalog.py?"
+      },
+      {
+        "author": "steved",
+        "body": "Err yeah, I'm not sure what I was doing here. thanks!"
+      }
+    ]
+  },
+  {
+    "pr_number": 39919,
+    "pr_title": "DOM-54603 Add logs to repoman",
+    "pr_author": "ddl-grequeni",
+    "file_path": "repoman/repoman-service/src/main/scala/domino/repoman/service/strategy/RepositoryStrategy.scala",
+    "line": 59,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "ddl-grequeni",
+        "body": "This should be enough to identify all clones happening within Repoman execution. There is another codepath for cloning but looks like that is for templates (and already logs when it's cloning (see GitProvider.scala, log \"Cloning template repository...\")"
+      },
+      {
+        "author": "ddl-mhito",
+        "body": "Yeah, that's my code. Sending it back to the RepositoryStrategy would've been a pain, so I just did the cloning there. Might change it if I have time / find an easy way. "
+      },
+      {
+        "author": "ddl-grequeni",
+        "body": "No need to change it, was just explaining why I added the log here and not in other places. thanks for clarifying! "
+      }
+    ]
+  },
+  {
+    "pr_number": 39919,
+    "pr_title": "DOM-54603 Add logs to repoman",
+    "pr_author": "ddl-grequeni",
+    "file_path": "repoman/repoman-service/src/main/scala/domino/repoman/service/strategy/RepoManagerActor.scala",
+    "line": null,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "ddl-grequeni",
+        "body": "This is kind of a critical problem with this method. If new branches have been created in the remote but none of the existing ones have been modified, then this method doesn't update the clone, and that means the new branches take up to 10 minutes to show up in repoman responses"
+      }
+    ]
+  },
+  {
+    "pr_number": 39919,
+    "pr_title": "DOM-54603 Add logs to repoman",
+    "pr_author": "ddl-grequeni",
+    "file_path": "repoman/repoman-service/src/main/scala/domino/repoman/service/strategy/RepoManagerActor.scala",
+    "line": 1088,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "ddl-grequeni",
+        "body": "Weird behavior, if it failed last time, we don't queue it again. But next time we do queue it (because we delete the failure cached value). So 2 consecutive almost concurrent calls to this end up updating the clone anyways. Why bother having this failure cache?"
+      },
+      {
+        "author": "ddl-mhito",
+        "body": "Maybe due to the retry policy of messages through Domino Messaging? The retry for this particular method is twice. Maybe this handles the edge case where the clone fails, but the message responses fails to send or receive, so the message is sent again, and we don't want to try the clone failing again. "
+      },
+      {
+        "author": "ddl-grequeni",
+        "body": "not sure I follow. which messages? who would be the sender/receiver?"
+      }
+    ]
+  },
+  {
+    "pr_number": 39919,
+    "pr_title": "DOM-54603 Add logs to repoman",
+    "pr_author": "ddl-grequeni",
+    "file_path": "repoman/repoman-service/src/main/scala/domino/repoman/service/strategy/RepoManagerActor.scala",
+    "line": null,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "ddl-grequeni",
+        "body": "Remove this log, this is too much"
+      }
+    ]
+  },
+  {
+    "pr_number": 39919,
+    "pr_title": "DOM-54603 Add logs to repoman",
+    "pr_author": "ddl-grequeni",
+    "file_path": "repoman/repoman-service/src/main/scala/domino/repoman/service/provider/GitHubProvider.scala",
+    "line": 143,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "ddl-mhito",
+        "body": "The only time it's possible for a branch to not exist on the remote is if it has been deleted on the remote in the time when the clone was present in the clone cache. I think that the fileMetaDataCache (which the branches are taken from) is guaranteed to contain only the cloned branches. \r\n\r\nI don't believe that repoman ever directly modifies this local clone without modifying the upstream (like creating a new branch). "
+      },
+      {
+        "author": "ddl-grequeni",
+        "body": "I was thinking of what happens if the branch is deleted in the remote, not through repoman I mean."
+      }
+    ]
+  },
+  {
+    "pr_number": 39919,
+    "pr_title": "DOM-54603 Add logs to repoman",
+    "pr_author": "ddl-grequeni",
+    "file_path": "repoman/repoman-service/src/main/scala/domino/repoman/service/strategy/RepoManagerActor.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-mhito",
+        "body": "nit: change \"repository\" to \"repo\" to avoid a long line (URIs are long)"
+      }
+    ]
+  },
+  {
+    "pr_number": 39919,
+    "pr_title": "DOM-54603 Add logs to repoman",
+    "pr_author": "ddl-grequeni",
+    "file_path": "repoman/repoman-service/src/main/scala/domino/repoman/service/strategy/RepoManagerActor.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-mhito",
+        "body": "nit: change \"repository\" to \"repo\" to avoid a long line (URIs are long)"
+      }
+    ]
+  },
+  {
+    "pr_number": 39919,
+    "pr_title": "DOM-54603 Add logs to repoman",
+    "pr_author": "ddl-grequeni",
+    "file_path": "repoman/repoman-service/src/main/scala/domino/repoman/service/strategy/RepoManagerActor.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-mhito",
+        "body": "Nit: \r\n`\r\nlog.info(s\"No stale branches in $repositoryKey. Local clone was not updated.\")`"
+      }
+    ]
+  },
+  {
+    "pr_number": 39933,
+    "pr_title": "[DOM-54272] Add central config value for Flows",
+    "pr_author": "ddl-rliu",
+    "file_path": "server/app/domino/server/lib/config/central/validation/CentralConfigKeys.scala",
+    "line": 842,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-rliu",
+        "body": "> is the jira ticket just to add the CC, or to use it?\r\n> \r\n> like for example return `NotImplemented` or something in this endpoint\r\n> \r\n> https://github.com/cerebrotech/domino/blob/dfc8b1ce1eb8e14c5402b2572b120bb1d2906b08/jobs/jobs-web/app/domino/jobs/web/JobsController.scala#L324\r\n\r\nCan potentially enable/disable some of the behavior implemented in https://github.com/cerebrotech/domino/pull/39637 based on the CC "
+      },
+      {
+        "author": "ddl-ryan-connor",
+        "body": "i think probably only the thing i linked is where we'd want to use it"
+      },
+      {
+        "author": "noahjax",
+        "body": "@ddl-rliu I'd include locking down this endpoint as part of the PR, shouldn't be much extra work. Ideally the exception we throw would indicate that the endpoint could be enabled but isn't right now"
+      },
+      {
+        "author": "ddl-ebrown",
+        "body": "I think I originally wrote the ticket around just adding it, but I agree with @ddl-ryan-connor / @noahjax that we might as well use it to guard the API endpoints we have as well while you're here."
+      },
+      {
+        "author": "ddl-rliu",
+        "body": "Done! \r\n![image](https://github.com/cerebrotech/domino/assets/140021987/dcc09247-e5dc-41da-ad0d-b3f761231240)\r\n"
+      },
+      {
+        "author": "ddl-rliu",
+        "body": "And when CC flag is set to true\r\n\r\n![image](https://github.com/cerebrotech/domino/assets/140021987/67e6fe52-81e2-4a6b-8bf2-5253c839ad80)\r\n"
+      },
+      {
+        "author": "ddl-ebrown",
+        "body": "Seems like we should have a quick test around this behavior"
+      },
+      {
+        "author": "ddl-ryan-connor",
+        "body": "yeah @ddl-rliu you could add a simple unit test for the cc-not-enabled case to `InProcessJobsServiceSpec.scala`"
+      },
+      {
+        "author": "ddl-rliu",
+        "body": "Done! https://github.com/cerebrotech/domino/pull/39933/files#diff-78bdd266ce2f32ea059babed6c850b275c19df477e3c53a82aaaed5d7da83c0dR839"
+      }
+    ]
+  },
+  {
+    "pr_number": 39933,
+    "pr_title": "[DOM-54272] Add central config value for Flows",
+    "pr_author": "ddl-rliu",
+    "file_path": "server/app/domino/server/lib/config/Settings.scala",
+    "line": 1693,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "ddl-ebrown",
+        "body": "FYI @ddl-galias this is the CC flag that we're going to use"
+      }
+    ]
+  },
+  {
+    "pr_number": 39933,
+    "pr_title": "[DOM-54272] Add central config value for Flows",
+    "pr_author": "ddl-rliu",
+    "file_path": "jobs/jobs-implementation/src/main/scala/domino/jobs/implementation/InProcessJobsService.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "ddl-rliu",
+        "body": "CC is checked in JobService rather than JobsController in order to address the error\r\n```\r\njobs/jobs-web/app/domino/jobs/web/JobsController.scala:18: error:\r\nobject server is not a member of package domino\r\nimport domino.server.lib.config.Settings\r\n```"
+      }
+    ]
+  },
+  {
+    "pr_number": 39933,
+    "pr_title": "[DOM-54272] Add central config value for Flows",
+    "pr_author": "ddl-rliu",
+    "file_path": "jobs/jobs-implementation/src/main/scala/domino/jobs/implementation/InProcessJobsService.scala",
+    "line": null,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "noahjax",
+        "body": "We really shouldn't have any dependencies on `server` in `jobs-implementation`. I know that this dependency was added [here](https://github.com/cerebrotech/domino/pull/31741/files) and not in your PR, but I am still reluctant to expand the extend to which this depends on `server`.\r\n\r\nThe whole idea of having `jobs-implementation` and `jobs-monolith-adapter` is that we can isolate all dependencies on `server` to `jobs-monolith-adapter` and keep `jobs-implementation` code clean. Then over time we can purge more and more dependencies on `server` until we can get rid of the adapter code altogether. While this will never happen because we don't prioritize any work to purge deps, I don't want to move backwards.\r\n\r\nSome other options:\r\n- Utilize the existing class we have for checking settings outside of `jobs-monolith-adapter`, `SettingsAdapter`. This class is used in a number of places already, including `JobsController`. You'd have to add another function to this class to check if flows is enabled. Personally I'm not a huge fan of any sort of logic in the controller, but in this case it's not terrible because it is really simple\r\n  - Alternatively you could start injecting this `SettingsAdapter` into `InProcessJobsService` instead and keep the rest of your PR almost the same\r\n- push this check into `JobLauncherAdapter`. It is a bit more annoying to do there because all jobs use the same `launchJob` function, but you can accomplish pretty much the same thing by checking for the existence of `workflowConfig`\r\n- Inject this value as a named boolean. This would entail\r\n  - defining a `def providesFlowsEnabled(settings: Settings): Boolean` in `JobsMonoAdapterInjectionModule`. You will need to use both the `@Provides` and `@Named` annotations here\r\n  - consuming this named boolean here instead of all of settings via `@Named flowsEnabled: Boolean` in the class constructor\r\n  - Refactoring tests, which will actually be cleaner now because you don't have to mock settings"
+      },
+      {
+        "author": "ddl-rliu",
+        "body": "Done! https://github.com/cerebrotech/domino/pull/39933/commits/4f024250a65b3d1fbd748dd72da60c38bb7c4334#diff-c98fec9eecdb4ba3e85675ec2129a20885200ac52732cd034e42afd2f47541a2"
+      }
+    ]
+  },
+  {
+    "pr_number": 39986,
+    "pr_title": "DOM-54603 Fix Repoman not seeing new branches in remotes + basic repoman unit tests",
+    "pr_author": "ddl-grequeni",
+    "file_path": "repoman/repoman-service/src/main/scala/domino/repoman/service/provider/GitProvider.scala",
+    "line": 40,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "ddl-grequeni",
+        "body": "This diff looks weird, I just moved the private constants below from the abstract class to the static object."
+      }
+    ]
+  },
+  {
+    "pr_number": 39986,
+    "pr_title": "DOM-54603 Fix Repoman not seeing new branches in remotes + basic repoman unit tests",
+    "pr_author": "ddl-grequeni",
+    "file_path": "repoman/repoman-service/src/main/scala/domino/repoman/service/provider/GitProvider.scala",
+    "line": 956,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "ddl-grequeni",
+        "body": "This is fixing the original issue, return all branches found in the git fetch rather than filtering by the branches repoman knows about."
+      },
+      {
+        "author": "niole",
+        "body": "Do you know why it used to only look at branches currently known by repoman? It doesn't make sense to me"
+      },
+      {
+        "author": "ddl-grequeni",
+        "body": "No, this is why I was so reluctant to change this logic and was thinking of adding a separate method, but then I realized the `staleBranches` are only used in one place, so editing this would only affect that place which is what we intended to change. Maybe this was used differently in the past and then usages changed/evolved but this method didn't. Also cucu tests around this used to pass because they were all using the same branches that repoman knew about, but when we started having a unique branch per test, then this issue came to light."
+      }
+    ]
+  },
+  {
+    "pr_number": 39986,
+    "pr_title": "DOM-54603 Fix Repoman not seeing new branches in remotes + basic repoman unit tests",
+    "pr_author": "ddl-grequeni",
+    "file_path": "repoman/repoman-service/src/main/scala/domino/repoman/service/strategy/RepoManagerActor.scala",
+    "line": 70,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "ddl-grequeni",
+        "body": "This is to be able to mock the RepositoryProvider when testing the RepoManagerActor"
+      }
+    ]
+  },
+  {
+    "pr_number": 39986,
+    "pr_title": "DOM-54603 Fix Repoman not seeing new branches in remotes + basic repoman unit tests",
+    "pr_author": "ddl-grequeni",
+    "file_path": "repoman/repoman-service/src/main/scala/domino/repoman/service/strategy/RepoManagerActor.scala",
+    "line": 77,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "ddl-grequeni",
+        "body": "Same here, the `config` was statically resolved before, now it can be mocked.\r\n`repositoryProviderResolver` is the one I mentioned above, now we can mock what this resolver returns and do whatever we want in unit tests."
+      }
+    ]
+  },
+  {
+    "pr_number": 39986,
+    "pr_title": "DOM-54603 Fix Repoman not seeing new branches in remotes + basic repoman unit tests",
+    "pr_author": "ddl-grequeni",
+    "file_path": "repoman/repoman-service/src/main/scala/domino/repoman/service/provider/GitProvider.scala",
+    "line": 45,
+    "is_resolved": false,
+    "comments": [
+      {
+        "author": "ddl-mhito",
+        "body": "Thanks for cleaning this up to avoid going into RepositoryStrategy"
+      }
+    ]
+  },
+  {
+    "pr_number": 39986,
+    "pr_title": "DOM-54603 Fix Repoman not seeing new branches in remotes + basic repoman unit tests",
+    "pr_author": "ddl-grequeni",
+    "file_path": "repoman/repoman-service/src/main/resources/application.conf",
+    "line": 41,
+    "is_resolved": true,
+    "comments": [
+      {
+        "author": "niole",
+        "body": "You probably will need to add a default value for this in this application conf in charts: https://github.com/cerebrotech/charts/blob/master/domino/repoman/files/application.conf. I would check to see what happens in an fcmd deployment if you don't provide a default value. If you get some failures around the config value not being there, definitely add to the charts file. It's probably a good idea to add to the charts file anyway, so that all configuration values are transparent to engineers who work with charts."
+      },
+      {
+        "author": "ddl-grequeni",
+        "body": "Yes, thanks for pointing this out! It makes it fail with the EXPIRED_DEAD_LETTER error which would have been hard to debug if you hadn't commented this.\r\nI'll add it to charts, but I think the APP should have a default anyways, I don't know how is that config file propagated to on prem customers, but in any case, if I add a new config that makes the APP break if not defined, is like adding a backwards incompatibility. So I added some fallback logic in case this is not present in the config file, it will default to true."
+      }
+    ]
+  }
+]
