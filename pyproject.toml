@@ -1,0 +1,16 @@
+[project]
+name = "code-best-practices"
+version = "0.1.0"
+description = "Mine PR review history into AI-native developer tooling"
+requires-python = ">=3.10"
+dependencies = [
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=9.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

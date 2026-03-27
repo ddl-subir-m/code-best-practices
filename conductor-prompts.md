@@ -8,8 +8,8 @@ Run these 4 workspaces in parallel in Conductor. Each touches different files.
 ```json
 {
   "scripts": {
-    "setup": "pip install pytest pyyaml",
-    "run": "pytest tests/ -v"
+    "setup": "python3.11 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt",
+    "run": "source .venv/bin/activate && pytest tests/ -v"
   }
 }
 ```
@@ -136,7 +136,8 @@ CLI interface:
   python extract.py analyze --input raw-reviews/ --output patterns.json
   python extract.py report --input patterns.json --output validation-report.md
 
-Use argparse with subcommands. Python 3.10+. Dependencies: pyyaml only.
+Use argparse with subcommands. Python 3.11+. Dependencies: pyyaml only.
+The project has a venv at .venv/ — run `source .venv/bin/activate` before executing.
 Do NOT touch: compile.py, tests/, output/
 ```
 
@@ -244,7 +245,8 @@ CLI interface:
   python compile.py --input patterns.json --output output/
   python compile.py --input patterns.json --output output/ --cursorrules-merge path/to/existing/.cursorrules
 
-Use argparse. Python 3.10+. No external dependencies (stdlib only).
+Use argparse. Python 3.11+. No external dependencies (stdlib only).
+The project has a venv at .venv/ — run `source .venv/bin/activate` before executing.
 Do NOT touch: extract.py, tests/, prompts/
 ```
 
@@ -339,7 +341,7 @@ BUILD tests/test_extract.py with 3 tests:
    - If modules.yaml exists, validate it has a "modules" key
    - Each module maps to a list of path prefixes
 
-Use pytest. Create tests/__init__.py as empty file.
+Use pytest (already installed in .venv/). Create tests/__init__.py as empty file.
 Use tmp_path fixture for all file I/O (don't write to the real project directory).
 Do NOT touch: extract.py, compile.py, prompts/
 ```
@@ -436,8 +438,8 @@ After all 4 complete:
 ```json
 {
   "scripts": {
-    "setup": "pip install pytest pyyaml",
-    "run": "pytest tests/ -v"
+    "setup": "python3.11 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt",
+    "run": "source .venv/bin/activate && pytest tests/ -v"
   }
 }
 ```
