@@ -1,0 +1,43 @@
+Loaded 101 PRs with 368 review threads
+Split into 19 batches of up to 20 threads
+  Batch 1: 20 threads -> review-batch-1.json
+  Batch 2: 20 threads -> review-batch-2.json
+  Batch 3: 20 threads -> review-batch-3.json
+  Batch 4: 20 threads -> review-batch-4.json
+  Batch 5: 20 threads -> review-batch-5.json
+  Batch 6: 20 threads -> review-batch-6.json
+  Batch 7: 20 threads -> review-batch-7.json
+  Batch 8: 20 threads -> review-batch-8.json
+  Batch 9: 20 threads -> review-batch-9.json
+  Batch 10: 20 threads -> review-batch-10.json
+  Batch 11: 20 threads -> review-batch-11.json
+  Batch 12: 20 threads -> review-batch-12.json
+  Batch 13: 20 threads -> review-batch-13.json
+  Batch 14: 20 threads -> review-batch-14.json
+  Batch 15: 20 threads -> review-batch-15.json
+  Batch 16: 20 threads -> review-batch-16.json
+  Batch 17: 20 threads -> review-batch-17.json
+  Batch 18: 20 threads -> review-batch-18.json
+  Batch 19: 8 threads -> review-batch-19.json
+  Prompt 1: prompts/batch-1-prompt.md
+  Prompt 2: prompts/batch-2-prompt.md
+  Prompt 3: prompts/batch-3-prompt.md
+  Prompt 4: prompts/batch-4-prompt.md
+  Prompt 5: prompts/batch-5-prompt.md
+  Prompt 6: prompts/batch-6-prompt.md
+  Prompt 7: prompts/batch-7-prompt.md
+  Prompt 8: prompts/batch-8-prompt.md
+  Prompt 9: prompts/batch-9-prompt.md
+  Prompt 10: prompts/batch-10-prompt.md
+  Prompt 11: prompts/batch-11-prompt.md
+  Prompt 12: prompts/batch-12-prompt.md
+  Prompt 13: prompts/batch-13-prompt.md
+  Prompt 14: prompts/batch-14-prompt.md
+  Prompt 15: prompts/batch-15-prompt.md
+  Prompt 16: prompts/batch-16-prompt.md
+  Prompt 17: prompts/batch-17-prompt.md
+  Prompt 18: prompts/batch-18-prompt.md
+  Prompt 19: prompts/batch-19-prompt.md
+
+Batches written. Run each prompt through Claude, then use:
+  python extract.py merge --input <results-dir> --output patterns.json

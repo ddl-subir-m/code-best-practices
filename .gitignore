@@ -7,3 +7,7 @@ output/
 *.egg-info/
 dist/
 build/
+review-batch-*.json
+prompts/batch-*-prompt.md
+tmp/batch-*-results.json
+raw-reviews/

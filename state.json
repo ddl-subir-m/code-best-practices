@@ -1,7 +1,7 @@
 {
   "last_extraction_date": "2026-03-26",
   "last_pr_number": 47285,
-  "total_prs_processed": 175,
+  "total_prs_processed": 1616,
   "extraction_runs": [
     {
       "date": "2026-03-26",
@@ -13,6 +13,70 @@
     {
       "date": "2026-03-26",
       "prs": 155,
+      "patterns_found": null
+    },
+    {
+      "date": "2026-03-26",
+      "month": "2024-03",
+      "prs_analyzed": 155,
+      "raw_patterns_found": 315,
+      "total_patterns": 324
+    },
+    {
+      "date": "2026-03-26",
+      "prs": 151,
+      "patterns_found": null
+    },
+    {
+      "date": "2026-03-26",
+      "prs": 151,
+      "patterns_found": null
+    },
+    {
+      "date": "2026-03-26",
+      "month": "2024-04",
+      "prs_analyzed": 151,
+      "raw_patterns_found": 360,
+      "total_patterns": 683
+    },
+    {
+      "date": "2026-03-26",
+      "prs": 0,
+      "patterns_found": null
+    },
+    {
+      "date": "2026-03-26",
+      "prs": 151,
+      "patterns_found": null
+    },
+    {
+      "date": "2026-03-26",
+      "prs": 151,
+      "patterns_found": null
+    },
+    {
+      "date": "2026-03-26",
+      "prs": 164,
+      "patterns_found": null
+    },
+    {
+      "date": "2026-03-26",
+      "prs": 101,
+      "patterns_found": null
+    },
+    {
+      "date": "2026-03-26",
+      "prs": 139,
+      "patterns_found": null
+    },
+    {
+      "date": "2026-03-26",
+      "prs": 127,
+      "patterns_found": null
+    },
+    {
+      "date": "2026-03-26",
+      "prs": 151,
       "patterns_found": null
     }
   ],
@@ -47,7 +111,7 @@
       "2026-02",
       "2026-03"
     ],
-    "current_month_index": 0,
+    "current_month_index": 2,
     "status": "in_progress"
   }
 }

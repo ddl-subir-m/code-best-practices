@@ -88,6 +88,11 @@ Patterns so far: {N}
 
 ## Step 1: Fetch PR Review Threads for Current Window
 
+**Clear raw-reviews/ before fetching** (for monthly runs, prevents accumulation across months):
+```bash
+rm -rf raw-reviews/
+```
+
 Determine the date window:
 - **Historical run (batch_mode: "all")**: fetch the entire range (e.g., `--since 2024-03-26 --until 2026-03-26`)
 - **Historical run (batch_mode: "monthly")**: fetch only the current month (e.g., `--since 2024-04-01 --until 2024-04-30`)
@@ -125,7 +130,7 @@ Skip any batch that already has a results file in tmp/.
 
 Read `prompts/extract-patterns-v1.md` for the extraction instructions.
 
-For each batch file (`review-batch-*.json`) that does NOT have a corresponding
+For each batch file (`tmp/review-batch-*.json`) that does NOT have a corresponding
 `tmp/batch-N-results.json`:
 
 **For small runs (≤4 batches):** Process sequentially.
@@ -218,7 +223,7 @@ print(json.dumps(state, indent=2))
 
 **Clean up tmp/ for next month:**
 ```bash
-rm -f tmp/batch-*-results.json review-batch-*.json
+rm -f tmp/batch-*-results.json tmp/review-batch-*.json tmp/prompts/batch-*-prompt.md
 ```
 
 Report: "Month {N}/{total} complete. Merged X new patterns, Y matched existing. Total: Z patterns."

@@ -318,16 +318,18 @@ def cmd_analyze(args):
     print(f"Split into {len(batches)} batches of up to 20 threads")
 
     # Write batched threads for analysis
+    tmp_dir = Path("tmp")
+    tmp_dir.mkdir(exist_ok=True)
     all_batch_files = []
     for i, batch in enumerate(batches):
-        batch_file = f"review-batch-{i + 1}.json"
+        batch_file = tmp_dir / f"review-batch-{i + 1}.json"
         with open(batch_file, "w") as f:
             json.dump(batch, f, indent=2)
-        all_batch_files.append(batch_file)
+        all_batch_files.append(str(batch_file))
         print(f"  Batch {i + 1}: {len(batch)} threads -> {batch_file}")
 
     # Build extraction prompts
-    prompts_dir = Path("prompts")
+    prompts_dir = tmp_dir / "prompts"
     prompts_dir.mkdir(exist_ok=True)
     for i, batch in enumerate(batches):
         prompt = build_extraction_prompt(batch)
