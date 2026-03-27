@@ -7,7 +7,7 @@
 #   ./run-historical-extraction.sh 2024-04 2026-03        # custom range
 #   ./run-historical-extraction.sh 2024-04 2026-03 8      # custom range, 8 parallel Claude calls
 #
-set -euo pipefail
+set -eo pipefail
 
 REPO="cerebrotech/domino"
 START_MONTH="${1:-2024-03}"

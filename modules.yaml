@@ -1,0 +1,79 @@
+modules:
+  .circleci:
+  - /.circleci/
+  activity:
+  - /activity/
+  admin:
+  - /admin/
+  aigateway:
+  - /aigateway/
+  apps:
+  - /apps/
+  audit_trail:
+  - /audit_trail/
+  aws-common:
+  - /aws-common/
+  build:
+  - /build/
+  common:
+  - /common-core/
+  - /common/
+  compute-grid:
+  - /compute-grid/
+  compute-providers:
+  - /compute-providers/
+  dataset-rw:
+  - /dataset-rw/
+  datasource:
+  - /datasource/
+  dependencies.yaml:
+  - /dependencies.yaml/
+  dino:
+  - /dino/
+  domino-cost:
+  - /domino-cost/
+  e2e-tests:
+  - /e2e-tests/
+  executor:
+  - /executor/
+  filesync:
+  - /filesync/
+  frontend:
+  - /frontend/
+  jobs:
+  - /jobs/
+  model-api-sagas:
+  - /model-api-sagas/
+  model-serving:
+  - /model-serving/
+  nucleus:
+  - /nucleus/
+  project-management:
+  - /project-management/
+  projects:
+  - /projects/
+  registered-models:
+  - /registered-models/
+  repoman:
+  - /repoman/
+  run:
+  - /run/
+  scheduler:
+  - /scheduler/
+  server:
+  - /server/
+  service-health:
+  - /service-health/
+  skeletons:
+  - /skeletons/
+  system-tests:
+  - /system-tests/
+  workspace-all:
+  - /workspace-all/
+  workspace-classic:
+  - /workspace-classic/
+  other:
+  - '*'
+threshold: 5
+auto_generated: true
+last_updated: '2026-03-26'

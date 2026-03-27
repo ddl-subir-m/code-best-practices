@@ -1,8 +1,8 @@
-Loaded 683 existing patterns from patterns.json
-Loaded 330 new raw patterns from tmp/
+Loaded 1792 existing patterns from patterns.json
+Loaded 923 new raw patterns from tmp/
 
 Merge complete:
-  Merged into existing: 8
-  Added new: 322
-  Total patterns: 1005
+  Merged into existing: 605
+  Added new: 318
+  Total patterns: 2110
   Written to: patterns.json
