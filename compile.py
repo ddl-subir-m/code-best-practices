@@ -11,6 +11,7 @@ from pathlib import Path
 
 REQUIRED_FIELDS = {"id", "rule", "scope", "modules", "mode", "status"}
 GLOBAL_MODULE_THRESHOLD = 3
+SKILL_MIN_REVIEW_COUNT = 2
 
 
 def load_patterns(path: str) -> list[dict]:
@@ -96,8 +97,9 @@ def format_rule_entry(p: dict) -> str:
 
 def generate_claude_rules(patterns: list[dict], output_dir: str, modules_map: dict[str, str]) -> list[str]:
     """Generate .claude/rules/{module}-practices.md files. Returns list of created paths."""
-    # Filter to ambient patterns only (ambient or both)
-    ambient = [p for p in patterns if p["mode"] in ("ambient", "both")]
+    # Rules include ambient patterns + active patterns that don't qualify as skills
+    ambient = [p for p in patterns if p["mode"] in ("ambient", "both")
+               or (p["mode"] == "active" and p.get("review_count", 1) < SKILL_MIN_REVIEW_COUNT)]
     groups = group_by_module(ambient)
     rules_dir = os.path.join(output_dir, ".claude", "rules")
     os.makedirs(rules_dir, exist_ok=True)
@@ -139,7 +141,8 @@ def generate_claude_rules(patterns: list[dict], output_dir: str, modules_map: di
 
 def generate_claude_skills(patterns: list[dict], output_dir: str) -> list[str]:
     """Generate .claude/skills/{topic}/SKILL.md files. Returns list of created paths."""
-    active = [p for p in patterns if p["mode"] in ("active", "both")]
+    active = [p for p in patterns if p["mode"] in ("active", "both")
+              and p.get("review_count", 1) >= SKILL_MIN_REVIEW_COUNT]
     skills_dir = os.path.join(output_dir, ".claude", "skills")
     created = []
 
