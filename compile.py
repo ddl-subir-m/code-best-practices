@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Compile patterns.json into Claude Code rules, Claude Code skills, and Cursor rules."""
 
+from __future__ import annotations
+
 import argparse
 import json
 import os
@@ -12,6 +14,7 @@ from pathlib import Path
 REQUIRED_FIELDS = {"id", "rule", "scope", "modules", "mode", "status"}
 GLOBAL_MODULE_THRESHOLD = 3
 MIN_REVIEW_COUNT = 2
+MAX_RULES_PER_FILE = 30
 
 
 def load_patterns(path: str) -> list[dict]:
@@ -39,24 +42,38 @@ def load_patterns(path: str) -> list[dict]:
     return active
 
 
-def load_modules_yaml(output_dir: str) -> dict[str, str]:
-    """Load modules.yaml if it exists, returning module_key -> display_name mapping."""
+def load_modules_yaml(output_dir: str) -> tuple[dict[str, str], dict[str, list[str]]]:
+    """Load modules.yaml if it exists.
+
+    Returns (module_key -> display_name, module_key -> glob_paths).
+    """
     yaml_path = os.path.join(os.path.dirname(output_dir.rstrip("/")), "modules.yaml")
     if not os.path.exists(yaml_path):
-        # Also check in the current working directory
         yaml_path = "modules.yaml"
     if not os.path.exists(yaml_path):
-        return {}
+        return {}, {}
 
     try:
         import yaml
         with open(yaml_path) as f:
             data = yaml.safe_load(f)
         if isinstance(data, dict):
-            return {k: v if isinstance(v, str) else v.get("display_name", k) for k, v in data.items()}
+            modules = data.get("modules", data)
+            names = {}
+            globs = {}
+            for k, v in modules.items():
+                if isinstance(v, str):
+                    names[k] = v
+                elif isinstance(v, dict):
+                    names[k] = v.get("display_name", k)
+                elif isinstance(v, list):
+                    # v is a list of path prefixes like ["/frontend/"]
+                    # Convert to globs: /frontend/ -> frontend/**
+                    globs[k] = [p.strip("/") + "/**" for p in v if p != "*"]
+            return names, globs
     except Exception:
         pass
-    return {}
+    return {}, {}
 
 
 def display_name(module: str, modules_map: dict[str, str]) -> str:
@@ -91,16 +108,25 @@ def format_rule_entry(p: dict) -> str:
     elif bad:
         lines.append(f"  Bad: `{bad}`")
     if p.get("source_prs"):
-        lines.append(f"  Sources: PR {', '.join(p['source_prs'])}")
+        prs = p["source_prs"]
+        if len(prs) > 5:
+            lines.append(f"  Sources: {len(prs)} PRs")
+        else:
+            lines.append(f"  Sources: PR {', '.join(prs)}")
     return "\n".join(lines)
 
 
-def generate_claude_rules(patterns: list[dict], output_dir: str, modules_map: dict[str, str]) -> list[str]:
+def generate_claude_rules(
+    patterns: list[dict], output_dir: str, modules_map: dict[str, str],
+    globs_map: dict[str, list[str]] | None = None,
+) -> list[str]:
     """Generate .claude/rules/{module}-practices.md files. Returns list of created paths."""
+    globs_map = globs_map or {}
     # Only include patterns validated by repetition (review_count >= MIN_REVIEW_COUNT).
     # Active-mode patterns that meet the threshold become skills instead (handled separately).
     ambient = [p for p in patterns if p.get("review_count", 1) >= MIN_REVIEW_COUNT
-               and p["mode"] in ("ambient", "both")]
+               and p["mode"] in ("ambient", "both")
+               and p.get("rule", "").strip()]  # skip empty rules
     groups = group_by_module(ambient)
     rules_dir = os.path.join(output_dir, ".claude", "rules")
     os.makedirs(rules_dir, exist_ok=True)
@@ -113,18 +139,30 @@ def generate_claude_rules(patterns: list[dict], output_dir: str, modules_map: di
         filename = f"mined-{module}-practices.md"
         filepath = os.path.join(rules_dir, filename)
 
+        # Cap rules per file: keep highest review_count patterns
+        ranked = sorted(module_patterns, key=lambda p: p.get("review_count", 1), reverse=True)
+        capped = ranked[:MAX_RULES_PER_FILE]
+        if len(ranked) > MAX_RULES_PER_FILE:
+            print(f"  {module}: capped {len(ranked)} → {MAX_RULES_PER_FILE} rules (by review_count)")
+
         # Group by category within module
         by_category: dict[str, list[dict]] = defaultdict(list)
-        for p in module_patterns:
+        for p in capped:
             cat = p.get("category", p.get("scope", "general"))
             by_category[cat].append(p)
 
-        lines = [
-            f"# {name} Best Practices",
-            f"Auto-generated from PR review history. Do not edit manually.",
-            f"Source: patterns.json | Generated: {today}",
-            "",
-        ]
+        # Build frontmatter with globs so rules only load for relevant files
+        lines = ["---"]
+        if module != "global" and module in globs_map:
+            glob_list = ", ".join(globs_map[module])
+            lines.append(f"globs: [{glob_list}]")
+        lines.append(f"description: {name} best practices from PR review history")
+        lines.append("---")
+        lines.append("")
+        lines.append(f"# {name} Best Practices")
+        lines.append(f"Auto-generated from PR review history. Do not edit manually.")
+        lines.append(f"Source: patterns.json | Generated: {today}")
+        lines.append("")
 
         for cat in sorted(by_category.keys()):
             cat_display = cat.replace("-", " ").replace("_", " ").title()
@@ -265,10 +303,10 @@ def main():
         print("No active patterns found. Nothing to generate.")
         return
 
-    modules_map = load_modules_yaml(args.output)
+    modules_map, globs_map = load_modules_yaml(args.output)
 
     # Generate all outputs
-    rules = generate_claude_rules(patterns, args.output, modules_map)
+    rules = generate_claude_rules(patterns, args.output, modules_map, globs_map)
     skills = generate_claude_skills(patterns, args.output)
     cursorrules = generate_cursorrules(patterns, args.output, args.cursorrules_merge, modules_map)
 
