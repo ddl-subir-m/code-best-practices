@@ -107,7 +107,7 @@ def generate_claude_rules(patterns: list[dict], output_dir: str, modules_map: di
 
     for module, module_patterns in sorted(groups.items()):
         name = display_name(module, modules_map)
-        filename = f"{module}-practices.md"
+        filename = f"mined-{module}-practices.md"
         filepath = os.path.join(rules_dir, filename)
 
         # Group by category within module
@@ -144,7 +144,7 @@ def generate_claude_skills(patterns: list[dict], output_dir: str) -> list[str]:
     created = []
 
     for p in active:
-        topic = p["id"]
+        topic = f"mined-{p['id']}"
         skill_dir = os.path.join(skills_dir, topic)
         os.makedirs(skill_dir, exist_ok=True)
         filepath = os.path.join(skill_dir, "SKILL.md")

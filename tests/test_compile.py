@@ -25,8 +25,8 @@ class TestGenerateClaudeRules:
         generate_claude_rules(sample_patterns, str(tmp_path), {})
 
         rules_dir = tmp_path / ".claude" / "rules"
-        apps_file = rules_dir / "apps-practices.md"
-        server_file = rules_dir / "server-practices.md"
+        apps_file = rules_dir / "mined-apps-practices.md"
+        server_file = rules_dir / "mined-server-practices.md"
 
         assert apps_file.exists(), "Expected apps-practices.md to be generated"
         assert server_file.exists(), "Expected server-practices.md to be generated"
@@ -63,12 +63,12 @@ class TestGenerateClaudeRules:
         generate_claude_rules([pattern], str(tmp_path), {})
 
         rules_dir = tmp_path / ".claude" / "rules"
-        global_file = rules_dir / "global-practices.md"
-        assert global_file.exists(), "Expected global-practices.md for 3+ module patterns"
+        global_file = rules_dir / "mined-global-practices.md"
+        assert global_file.exists(), "Expected mined-global-practices.md for 3+ module patterns"
         assert "validate inputs" in global_file.read_text().lower()
 
         # Should NOT appear in per-module files
-        for name in ("apps-practices.md", "server-practices.md", "extensions-practices.md"):
+        for name in ("mined-apps-practices.md", "mined-server-practices.md", "mined-extensions-practices.md"):
             module_file = rules_dir / name
             assert not module_file.exists(), f"{name} should not exist for global patterns"
 
@@ -93,7 +93,7 @@ class TestGenerateClaudeRules:
         generate_claude_rules([pattern], str(tmp_path), {})
 
         rules_dir = tmp_path / ".claude" / "rules"
-        server_file = rules_dir / "server-practices.md"
+        server_file = rules_dir / "mined-server-practices.md"
         assert server_file.exists()
 
         text = server_file.read_text()
