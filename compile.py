@@ -14,7 +14,7 @@ from pathlib import Path
 REQUIRED_FIELDS = {"id", "rule", "scope", "modules", "mode", "status"}
 GLOBAL_MODULE_THRESHOLD = 3
 MIN_REVIEW_COUNT = 2
-MAX_RULES_PER_FILE = 30
+MAX_RULES_PER_FILE = 15
 
 
 def load_patterns(path: str) -> list[dict]:
@@ -125,7 +125,7 @@ def generate_claude_rules(
     # Only include patterns validated by repetition (review_count >= MIN_REVIEW_COUNT).
     # Active-mode patterns that meet the threshold become skills instead (handled separately).
     ambient = [p for p in patterns if p.get("review_count", 1) >= MIN_REVIEW_COUNT
-               and p["mode"] in ("ambient", "both")
+               and p["mode"] == "ambient"
                and p.get("rule", "").strip()]  # skip empty rules
     groups = group_by_module(ambient)
     rules_dir = os.path.join(output_dir, ".claude", "rules")
@@ -182,10 +182,36 @@ def generate_claude_rules(
     return created
 
 
+def dedup_skills(patterns: list[dict]) -> list[dict]:
+    """Deduplicate skills by grouping on shared ID prefixes.
+
+    Skills like reuse-existing-ui-components, reuse-existing-shared-components,
+    reuse-existing-hooks-and-utilities all share the prefix "reuse-existing" and
+    describe the same convention. Keep only the one with the highest review_count.
+    """
+    # Build prefix groups: first 3 hyphen-separated words
+    groups: dict[str, list[dict]] = defaultdict(list)
+    for p in patterns:
+        parts = p["id"].split("-")
+        prefix = "-".join(parts[:3]) if len(parts) >= 3 else p["id"]
+        groups[prefix].append(p)
+
+    deduped = []
+    for prefix, group in groups.items():
+        if len(group) == 1:
+            deduped.append(group[0])
+        else:
+            # Keep the one with highest review_count (most validated)
+            best = max(group, key=lambda p: p.get("review_count", 1))
+            deduped.append(best)
+    return deduped
+
+
 def generate_claude_skills(patterns: list[dict], output_dir: str) -> list[str]:
     """Generate .claude/skills/{topic}/SKILL.md files. Returns list of created paths."""
-    active = [p for p in patterns if p["mode"] in ("active", "both")
+    active = [p for p in patterns if p["mode"] == "active"
               and p.get("review_count", 1) >= MIN_REVIEW_COUNT]
+    active = dedup_skills(active)
     skills_dir = os.path.join(output_dir, ".claude", "skills")
 
     # Clean up stale mined-* skill dirs from previous runs
@@ -255,7 +281,7 @@ def generate_claude_skills(patterns: list[dict], output_dir: str) -> list[str]:
 def generate_cursorrules(patterns: list[dict], output_dir: str, merge_path: str | None, modules_map: dict[str, str]) -> str:
     """Generate .cursorrules file, merging with existing if provided. Returns path."""
     # Use only global-scope patterns (in 3+ modules) plus ambient patterns
-    ambient = [p for p in patterns if p["mode"] in ("ambient", "both")]
+    ambient = [p for p in patterns if p["mode"] == "ambient"]
 
     today = date.today().isoformat()
     marker = "## Auto-generated from PR review mining"

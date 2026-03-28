@@ -429,7 +429,6 @@ def determine_mode(category: str, rule: str) -> str:
 
     Ambient — universal constraints always loaded in context (rules).
     Active  — multi-step processes or triggered guidance surfaced on demand (skills).
-    Both    — universal constraint that also has detailed step-by-step guidance.
     """
     rule_lower = rule.lower()
 
@@ -440,10 +439,6 @@ def determine_mode(category: str, rule: str) -> str:
     # Multi-step processes -> active (skills)
     if any(marker in rule_lower for marker in ("step 1", "1.", "2.", "first,", "then,")):
         return "active"
-
-    # Very long rules (300+ chars) are detailed guides, better as skills
-    if len(rule) > 300:
-        return "both"
 
     # Everything else is a universal convention -> ambient (rules)
     return "ambient"
@@ -562,7 +557,7 @@ def cmd_merge(args):
 # Dedup subcommand
 # ---------------------------------------------------------------------------
 
-def call_claude(prompt: str, timeout: int = 120) -> str:
+def call_claude(prompt: str, timeout: int = 300) -> str:
     """Call Claude in headless mode via the claude CLI."""
     try:
         result = subprocess.run(
@@ -631,7 +626,7 @@ def cmd_dedup(args):
         patterns = json.load(f)
 
     original_count = len(patterns)
-    print(f"Loaded {original_count} patterns from {input_file}")
+    print(f"Loaded {original_count} patterns from {input_file}", flush=True)
 
     # --- Pass 1: Merge exact ID duplicates (no LLM needed) ---
     by_id: dict[str, list[dict]] = defaultdict(list)
@@ -647,81 +642,74 @@ def cmd_dedup(args):
         else:
             id_merged.append(group[0])
 
-    print(f"Pass 1 (exact ID): merged {id_merge_count} duplicates, {len(id_merged)} remaining")
+    print(f"Pass 1 (exact ID): merged {id_merge_count} duplicates, {len(id_merged)} remaining", flush=True)
 
-    # --- Pass 2: LLM semantic dedup within each scope ---
-    by_scope: dict[str, list[dict]] = defaultdict(list)
-    for p in id_merged:
-        by_scope[p.get("scope", "general")].append(p)
+    # --- Pass 2: LLM semantic dedup across all patterns (scope-agnostic) ---
+    BATCH_SIZE = 200
+
+    # Sort by ID so similar names land in the same batch
+    id_merged.sort(key=lambda p: p.get("id", ""))
+
+    batches = [id_merged[i:i + BATCH_SIZE] for i in range(0, len(id_merged), BATCH_SIZE)]
+    total_batches = len(batches)
 
     final_patterns = []
     llm_merge_count = 0
 
-    for scope, scope_patterns in sorted(by_scope.items()):
-        if len(scope_patterns) <= 1:
-            final_patterns.extend(scope_patterns)
+    for batch_num, batch in enumerate(batches, 1):
+        if len(batch) <= 1:
+            final_patterns.extend(batch)
             continue
 
-        # Batch into groups of 50 for LLM processing
-        batches = [scope_patterns[i:i + 50] for i in range(0, len(scope_patterns), 50)]
+        pattern_list = json.dumps(
+            [{"index": i, "id": p["id"], "rule": p["rule"]} for i, p in enumerate(batch)],
+            indent=2,
+        )
 
-        for batch_num, batch in enumerate(batches, 1):
-            if len(batch) <= 1:
-                final_patterns.extend(batch)
+        prompt = (
+            "You are deduplicating patterns extracted from code review history.\n\n"
+            "Below is a list of patterns from various categories. Identify groups of "
+            "patterns that describe the SAME underlying rule or convention, even if worded "
+            "differently or filed under different categories.\n\n"
+            "Return ONLY a JSON array of groups. Each group is an array of index numbers "
+            "that should be merged. Only include groups with 2+ patterns. Patterns that "
+            "are unique should NOT appear in any group. Be conservative — only group "
+            "patterns that are clearly about the same thing.\n\n"
+            f"Patterns:\n{pattern_list}\n\n"
+            "Return ONLY the JSON array, e.g.: [[0, 3, 7], [2, 5]]"
+        )
+
+        print(f"  Batch {batch_num}/{total_batches}: "
+              f"sending {len(batch)} patterns to Claude...", flush=True)
+        response = call_claude(prompt)
+        groups = parse_json_response(response)
+
+        if not groups:
+            final_patterns.extend(batch)
+            continue
+
+        merged_indices: set[int] = set()
+        for group in groups:
+            if not isinstance(group, list) or len(group) < 2:
                 continue
-
-            pattern_list = json.dumps(
-                [{"index": i, "id": p["id"], "rule": p["rule"]} for i, p in enumerate(batch)],
-                indent=2,
-            )
-
-            prompt = (
-                "You are deduplicating patterns extracted from code review history.\n\n"
-                f"Below is a list of patterns in the \"{scope}\" category. Identify groups of "
-                "patterns that describe the SAME underlying rule or convention, even if worded "
-                "differently.\n\n"
-                "Return ONLY a JSON array of groups. Each group is an array of index numbers "
-                "that should be merged. Only include groups with 2+ patterns. Patterns that "
-                "are unique should NOT appear in any group. Be conservative — only group "
-                "patterns that are clearly about the same thing.\n\n"
-                f"Patterns:\n{pattern_list}\n\n"
-                "Return ONLY the JSON array, e.g.: [[0, 3, 7], [2, 5]]"
-            )
-
-            print(f"  Scope '{scope}' batch {batch_num}/{len(batches)}: "
-                  f"sending {len(batch)} patterns to Claude...")
-            response = call_claude(prompt)
-            groups = parse_json_response(response)
-
-            if not groups:
-                final_patterns.extend(batch)
+            valid = [i for i in group if isinstance(i, int) and 0 <= i < len(batch)]
+            if len(valid) < 2:
                 continue
+            group_patterns = [batch[i] for i in valid]
+            final_patterns.append(merge_duplicate_group(group_patterns))
+            merged_indices.update(valid)
+            llm_merge_count += len(valid) - 1
 
-            merged_indices: set[int] = set()
-            for group in groups:
-                if not isinstance(group, list) or len(group) < 2:
-                    continue
-                valid = [i for i in group if isinstance(i, int) and 0 <= i < len(batch)]
-                if len(valid) < 2:
-                    continue
-                group_patterns = [batch[i] for i in valid]
-                final_patterns.append(merge_duplicate_group(group_patterns))
-                merged_indices.update(valid)
-                llm_merge_count += len(valid) - 1
+        for i, p in enumerate(batch):
+            if i not in merged_indices:
+                final_patterns.append(p)
 
-            for i, p in enumerate(batch):
-                if i not in merged_indices:
-                    final_patterns.append(p)
-
-        print(f"  Scope '{scope}': {len(scope_patterns)} → "
-              f"{len(scope_patterns) - llm_merge_count} patterns")
-
-    print(f"\nPass 2 (LLM semantic): merged {llm_merge_count} duplicates")
-    print(f"\nDedup complete: {original_count} → {len(final_patterns)} patterns")
+    print(f"\nPass 2 (LLM semantic): merged {llm_merge_count} duplicates", flush=True)
+    print(f"\nDedup complete: {original_count} → {len(final_patterns)} patterns", flush=True)
 
     with open(input_file, "w") as f:
         json.dump(final_patterns, f, indent=2)
-    print(f"Written to {input_file}")
+    print(f"Written to {input_file}", flush=True)
 
 
 # ---------------------------------------------------------------------------

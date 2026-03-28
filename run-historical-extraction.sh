@@ -6,6 +6,7 @@
 #   ./run-historical-extraction.sh                        # default: 2024-03 to now, 4 parallel
 #   ./run-historical-extraction.sh 2024-04 2026-03        # custom range
 #   ./run-historical-extraction.sh 2024-04 2026-03 8      # custom range, 8 parallel Claude calls
+#   ./run-historical-extraction.sh 2024-04 2026-03 4 --skip-dedup  # skip LLM dedup pass
 #
 set -eo pipefail
 
@@ -13,6 +14,8 @@ REPO="cerebrotech/domino"
 START_MONTH="${1:-2024-03}"
 END_MONTH="${2:-$(date +%Y-%m)}"
 MAX_PARALLEL="${3:-4}"  # concurrent Claude calls (3rd arg, default 4)
+SKIP_DEDUP=false
+[[ "${4:-}" == "--skip-dedup" ]] && SKIP_DEDUP=true
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
 VENV="$PROJECT_DIR/.venv/bin/activate"
 LOG_DIR="$PROJECT_DIR/logs"
@@ -466,8 +469,12 @@ else
 fi
 
 # ── Dedup + reclass + compile ────────────────────────────────────────────────
-echo "=== Deduplicating patterns... ==="
-source "$VENV" && python "$PROJECT_DIR/extract.py" dedup --input patterns.json
+if [[ "$SKIP_DEDUP" == "true" ]]; then
+  echo "=== Skipping LLM dedup (--skip-dedup) ==="
+else
+  echo "=== Deduplicating patterns... ==="
+  source "$VENV" && python "$PROJECT_DIR/extract.py" dedup --input patterns.json
+fi
 
 echo "=== Reclassifying modes... ==="
 source "$VENV" && python "$PROJECT_DIR/extract.py" reclass --input patterns.json
