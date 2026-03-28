@@ -94,6 +94,40 @@ print(calendar.monthrange($year, $((10#$month)))[1])
     else
       local extraction_prompt=$(cat "$PROJECT_DIR/prompts/extract-patterns-v1.md")
       local batch_data=$(cat "$batch_file")
+
+      # Build existing pattern IDs section for dedup context
+      local existing_section=""
+      if [[ -f "$PROJECT_DIR/patterns.json" ]]; then
+        local id_text
+        id_text=$(python3 -c "
+import json
+from collections import defaultdict
+with open('$PROJECT_DIR/patterns.json') as f:
+    patterns = json.load(f)
+by_cat = defaultdict(set)
+for p in patterns:
+    pid, cat = p.get('id',''), p.get('scope','general')
+    if pid: by_cat[cat].add(pid)
+for cat in sorted(by_cat):
+    print(f'### {cat}')
+    print(', '.join(sorted(by_cat[cat])))
+    print()
+" 2>/dev/null)
+        if [[ -n "$id_text" ]]; then
+          existing_section="
+---
+
+## Existing Pattern Names (reuse these when the pattern matches)
+
+If a review thread matches one of these existing patterns, reuse the EXACT name as
+your pattern_name instead of creating a new one. Only invent a new name if the
+pattern is genuinely novel.
+
+$id_text
+"
+        fi
+      fi
+
       prompt_content="$extraction_prompt
 
 ---
@@ -101,11 +135,11 @@ print(calendar.monthrange($year, $((10#$month)))[1])
 ## Review Threads to Analyze
 
 $batch_data
-
+$existing_section
 ---
 
 Return a JSON array of patterns found. Each pattern should have:
-- pattern_name (string)
+- pattern_name (string — reuse an existing name from above if the pattern matches)
 - rule (string)
 - category (string, one of: api-design, architecture, code-organization, documentation, error-handling, logging, naming, performance, security, testing)
 - evidence (string — quote the reviewer's actual words)

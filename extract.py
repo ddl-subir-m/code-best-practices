@@ -264,13 +264,56 @@ def batch_threads(threads: list[dict], size: int = 20) -> list[list[dict]]:
     return [threads[i:i + size] for i in range(0, len(threads), size)]
 
 
-def build_extraction_prompt(batch: list[dict]) -> str:
+def load_existing_pattern_ids(patterns_file: str = "patterns.json") -> dict[str, list[str]]:
+    """Load existing pattern IDs grouped by category for dedup context in extraction prompts.
+
+    Returns {category: [id, id, ...]} with only IDs (no rules) to keep prompt size small.
+    """
+    if not os.path.exists(patterns_file):
+        return {}
+    try:
+        with open(patterns_file) as f:
+            patterns = json.load(f)
+        by_cat: dict[str, set[str]] = defaultdict(set)
+        for p in patterns:
+            pid = p.get("id", "")
+            cat = p.get("scope", "general")
+            if pid:
+                by_cat[cat].add(pid)
+        return {cat: sorted(ids) for cat, ids in sorted(by_cat.items())}
+    except (json.JSONDecodeError, KeyError):
+        return {}
+
+
+def build_extraction_prompt(batch: list[dict], patterns_file: str = "patterns.json") -> str:
     """Build the Claude extraction prompt for a batch of threads."""
     prompt_path = Path("prompts/extract-patterns-v1.md")
     with open(prompt_path) as f:
         system_prompt = f.read()
 
     threads_text = json.dumps(batch, indent=2)
+
+    # Include existing pattern IDs so the LLM reuses them instead of inventing new names
+    existing = load_existing_pattern_ids(patterns_file)
+    existing_section = ""
+    if existing:
+        lines = []
+        for cat, ids in existing.items():
+            lines.append(f"### {cat}")
+            lines.append(", ".join(ids))
+            lines.append("")
+        id_text = "\n".join(lines)
+        existing_section = f"""
+---
+
+## Existing Pattern Names (reuse these when the pattern matches)
+
+If a review thread matches one of these existing patterns, reuse the EXACT name as
+your `pattern_name` instead of creating a new one. Only invent a new name if the
+pattern is genuinely novel.
+
+{id_text}
+"""
 
     return f"""{system_prompt}
 
@@ -279,11 +322,11 @@ def build_extraction_prompt(batch: list[dict]) -> str:
 ## Review Threads to Analyze
 
 {threads_text}
-
+{existing_section}
 ---
 
 Return a JSON array of patterns found. Each pattern should have:
-- pattern_name (string)
+- pattern_name (string — reuse an existing name from above if the pattern matches)
 - rule (string)
 - category (string, one of: {', '.join(sorted(VALID_CATEGORIES))})
 - evidence (string — quote the reviewer's actual words)
