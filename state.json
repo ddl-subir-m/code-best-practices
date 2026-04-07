@@ -1,7 +1,7 @@
 {
-  "last_extraction_date": "2026-03-27",
-  "last_pr_number": 47285,
-  "total_prs_processed": 3489,
+  "last_extraction_date": "2026-04-07",
+  "last_pr_number": 47321,
+  "total_prs_processed": 3507,
   "extraction_runs": [
     {
       "date": "2026-03-26",
@@ -197,6 +197,16 @@
     {
       "date": "2026-03-27",
       "prs": 44,
+      "patterns_found": null
+    },
+    {
+      "date": "2026-04-03",
+      "prs": 14,
+      "patterns_found": null
+    },
+    {
+      "date": "2026-04-07",
+      "prs": 4,
       "patterns_found": null
     }
   ],
