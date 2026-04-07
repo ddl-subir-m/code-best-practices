@@ -6,6 +6,8 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
+import shutil
 import sys
 from collections import defaultdict
 from datetime import date
@@ -182,29 +184,63 @@ def generate_claude_rules(
     return created
 
 
+def _has_steps(p: dict) -> bool:
+    """Check if a pattern has non-empty enriched steps."""
+    steps = p.get("steps")
+    return isinstance(steps, list) and len(steps) > 0
+
+
 def dedup_skills(patterns: list[dict]) -> list[dict]:
     """Deduplicate skills by grouping on shared ID prefixes.
 
     Skills like reuse-existing-ui-components, reuse-existing-shared-components,
     reuse-existing-hooks-and-utilities all share the prefix "reuse-existing" and
     describe the same convention. Keep only the one with the highest review_count.
+
+    Enriched skills (non-empty steps) bypass prefix dedup — they were individually
+    triaged and enriched, so they earned their spot.
     """
-    # Build prefix groups: first 3 hyphen-separated words
-    groups: dict[str, list[dict]] = defaultdict(list)
+    enriched = []
+    unenriched = []
     for p in patterns:
+        if _has_steps(p):
+            enriched.append(p)
+        else:
+            unenriched.append(p)
+
+    # Only prefix-dedup unenriched skills
+    groups: dict[str, list[dict]] = defaultdict(list)
+    for p in unenriched:
         parts = p["id"].split("-")
         prefix = "-".join(parts[:3]) if len(parts) >= 3 else p["id"]
         groups[prefix].append(p)
 
-    deduped = []
+    deduped = list(enriched)  # enriched pass through directly
     for prefix, group in groups.items():
         if len(group) == 1:
             deduped.append(group[0])
         else:
-            # Keep the one with highest review_count (most validated)
             best = max(group, key=lambda p: p.get("review_count", 1))
             deduped.append(best)
     return deduped
+
+
+def _skill_description(p: dict) -> str:
+    """Build a 'what + when' description for skill frontmatter."""
+    rule = p.get("rule", "")
+    trigger = p.get("trigger", "")
+    if trigger:
+        return f"{rule} Use when: {trigger}"
+    return rule
+
+
+def _slugify_title(title: str) -> str:
+    """Convert a skill title to a URL-safe slug."""
+    slug = title.lower().strip()
+    slug = re.sub(r"[^a-z0-9\s-]", "", slug)
+    slug = re.sub(r"[\s]+", "-", slug)
+    slug = re.sub(r"-+", "-", slug)
+    return slug.strip("-")
 
 
 def generate_claude_skills(patterns: list[dict], output_dir: str) -> list[str]:
@@ -212,11 +248,14 @@ def generate_claude_skills(patterns: list[dict], output_dir: str) -> list[str]:
     active = [p for p in patterns if p["mode"] == "active"
               and p.get("review_count", 1) >= MIN_REVIEW_COUNT]
     active = dedup_skills(active)
+
+    # Safety net: skip patterns with empty steps (they'd produce hollow skills)
+    active = [p for p in active if _has_steps(p)]
+
     skills_dir = os.path.join(output_dir, ".claude", "skills")
 
     # Clean up stale mined-* skill dirs from previous runs
     if os.path.exists(skills_dir):
-        import shutil
         for old in Path(skills_dir).iterdir():
             if old.is_dir() and old.name.startswith("mined-"):
                 shutil.rmtree(old)
@@ -224,18 +263,24 @@ def generate_claude_skills(patterns: list[dict], output_dir: str) -> list[str]:
     created = []
 
     for p in active:
-        topic = f"mined-{p['id']}"
+        # Use skill_title for directory name if available
+        if p.get("skill_title"):
+            topic = f"mined-{_slugify_title(p['skill_title'])}"
+        else:
+            topic = f"mined-{p['id']}"
         skill_dir = os.path.join(skills_dir, topic)
         os.makedirs(skill_dir, exist_ok=True)
         filepath = os.path.join(skill_dir, "SKILL.md")
 
-        name = p["id"].replace("-", " ").replace("_", " ").title()
+        # Use skill_title for display name, fall back to title-cased id
+        name = p.get("skill_title") or p["id"].replace("-", " ").replace("_", " ").title()
         sources = ", ".join(p.get("source_prs", []))
+        description = _skill_description(p)
 
         lines = [
             "---",
             f"name: {p['id']}",
-            f"description: {p['rule']}",
+            f"description: {description}",
             "---",
             f"# {name}",
             "",
@@ -251,21 +296,19 @@ def generate_claude_skills(patterns: list[dict], output_dir: str) -> list[str]:
             lines.append("")
 
         lines.append("## Steps")
-        if p.get("steps"):
-            for step in p["steps"]:
-                lines.append(f"- {step}")
-        else:
-            lines.append(p["rule"])
+        for i, step in enumerate(p["steps"], 1):
+            lines.append(f"{i}. {step}")
         lines.append("")
 
         if p.get("good_example") or p.get("bad_example"):
             lines.append("## Examples")
+            lines.append("")
 
         if p.get("bad_example"):
-            lines.append(f"**Bad:** {p['bad_example']}")
+            lines.append(f"**Bad:**\n```\n{p['bad_example']}\n```")
             lines.append("")
         if p.get("good_example"):
-            lines.append(f"**Good:** {p['good_example']}")
+            lines.append(f"**Good:**\n```\n{p['good_example']}\n```")
 
         lines.append("")
         if sources:

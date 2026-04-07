@@ -128,3 +128,63 @@ class TestModulesYamlSchema:
                 assert isinstance(p, str), (
                     f"Module '{module_name}' path entries should be strings"
                 )
+
+
+class TestReclassGuard:
+    """Verify reclass skips patterns that have been triaged."""
+
+    def test_reclass_skips_triaged_patterns(self, tmp_path):
+        """Patterns with skill_worthy set are not touched by reclass."""
+        import json
+        from extract import cmd_reclass
+
+        patterns = [
+            {
+                "id": "triaged-active",
+                "rule": "When writing tests, use specific assertions.",
+                "trigger": "",
+                "rationale": "",
+                "good_example": None,
+                "bad_example": None,
+                "source_prs": ["#1"],
+                "scope": "testing",
+                "modules": ["server"],
+                "mode": "active",
+                "confidence": 0.3,
+                "review_count": 3,
+                "status": "active",
+                "skill_worthy": True,
+                "skill_rationale": "multi-step workflow",
+            },
+            {
+                "id": "untriaged",
+                "rule": "Always use explicit imports.",
+                "trigger": "",
+                "rationale": "",
+                "good_example": None,
+                "bad_example": None,
+                "source_prs": ["#2"],
+                "scope": "naming",
+                "modules": ["server"],
+                "mode": "active",
+                "confidence": 0.3,
+                "review_count": 2,
+                "status": "active",
+            },
+        ]
+        pf = tmp_path / "patterns.json"
+        pf.write_text(json.dumps(patterns))
+
+        args = type("Args", (), {"input": str(pf)})()
+        cmd_reclass(args)
+
+        result = json.loads(pf.read_text())
+        # Triaged pattern should keep its original mode (active)
+        triaged = next(p for p in result if p["id"] == "triaged-active")
+        assert triaged["mode"] == "active"
+
+        # Untriaged pattern should be reclassified by the heuristic
+        # "When writing tests..." starts with "When" -> active
+        # "Always use explicit imports." doesn't start with when/before/after/if -> ambient
+        untriaged = next(p for p in result if p["id"] == "untriaged")
+        assert untriaged["mode"] == "ambient"

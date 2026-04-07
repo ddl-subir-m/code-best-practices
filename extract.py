@@ -9,6 +9,7 @@ Usage:
 """
 
 import argparse
+import concurrent.futures
 import json
 import os
 import subprocess
@@ -495,7 +496,7 @@ def raw_to_canonical(raw: dict) -> dict:
         "source_prs": [f"#{raw['pr_number']}"],
         "scope": category,
         "modules": [module] if module else [],
-        "mode": determine_mode(category, rule),
+        "mode": "ambient",  # Default to ambient; triage is the only promotion path
         "confidence": 0.1,
         "review_count": 1,
         "status": "active",
@@ -577,17 +578,23 @@ def call_claude(prompt: str, timeout: int = 300) -> str:
         return ""
 
 
-def parse_json_response(text: str) -> list:
-    """Parse a JSON array from Claude's response, handling markdown code blocks."""
+def _strip_code_fences(text: str) -> str:
+    """Strip markdown code fences from LLM output."""
     text = text.strip()
-    if not text:
-        return []
     if text.startswith("```"):
         lines = text.split("\n")
         lines = lines[1:]  # remove opening ```json
         if lines and lines[-1].strip() == "```":
             lines = lines[:-1]
         text = "\n".join(lines).strip()
+    return text
+
+
+def parse_json_response(text: str) -> list:
+    """Parse a JSON array from Claude's response, handling markdown code blocks."""
+    text = _strip_code_fences(text)
+    if not text:
+        return []
     try:
         result = json.loads(text)
         if isinstance(result, list):
@@ -890,6 +897,246 @@ def cmd_report(args):
 
 
 # ---------------------------------------------------------------------------
+# Triage subcommand
+# ---------------------------------------------------------------------------
+
+MIN_REVIEW_COUNT_TRIAGE = 2
+
+
+def build_triage_prompt(batch: list[dict]) -> str:
+    """Build the Claude triage prompt for a batch of patterns."""
+    pattern_list = json.dumps(
+        [{"id": p["id"], "rule": p["rule"], "scope": p.get("scope", ""), "modules": p.get("modules", [])}
+         for p in batch],
+        indent=2,
+    )
+    return (
+        "For each pattern below, determine whether it requires multi-step guidance "
+        "(a workflow, decision tree, or code example) to be useful as a coding assistant skill, "
+        "or whether it's a simple one-sentence convention best served as an ambient rule.\n\n"
+        "A pattern is skill-worthy if an engineer would benefit from step-by-step instructions, "
+        "concrete code examples, or a decision tree to apply it correctly. "
+        "A pattern is NOT skill-worthy if it can be fully communicated in a single sentence.\n\n"
+        f"Patterns:\n{pattern_list}\n\n"
+        'Return ONLY a JSON array: [{"id": "pattern-id", "skill_worthy": true/false, '
+        '"skill_rationale": "one sentence explaining why"}]\n\n'
+        "Return ONLY the JSON array, no other text."
+    )
+
+
+def cmd_triage(args):
+    """Score active patterns on skill-worthiness and demote simple conventions."""
+    input_file = args.input
+    dry_run = args.dry_run
+    force = args.force
+    batch_size = 50
+
+    with open(input_file) as f:
+        patterns = json.load(f)
+
+    # Filter to triage population: active + review_count >= threshold
+    candidates = []
+    for p in patterns:
+        if p.get("mode") != "active":
+            continue
+        if p.get("review_count", 1) < MIN_REVIEW_COUNT_TRIAGE:
+            continue
+        if not force and p.get("skill_worthy") is not None:
+            continue
+        candidates.append(p)
+
+    print(f"Loaded {len(patterns)} patterns, {len(candidates)} eligible for triage", flush=True)
+
+    if not candidates:
+        print("No patterns to triage.")
+        return
+
+    # Batch and send to Claude
+    batches = [candidates[i:i + batch_size] for i in range(0, len(candidates), batch_size)]
+    results: dict[str, dict] = {}  # id -> {skill_worthy, skill_rationale}
+
+    for batch_num, batch in enumerate(batches, 1):
+        prompt = build_triage_prompt(batch)
+        print(f"  Batch {batch_num}/{len(batches)}: sending {len(batch)} patterns to Claude...", flush=True)
+        response = call_claude(prompt)
+        parsed = parse_json_response(response)
+
+        if not parsed:
+            print(f"  Warning: batch {batch_num} returned no valid results, skipping", file=sys.stderr)
+            continue
+
+        for item in parsed:
+            if not isinstance(item, dict):
+                continue
+            pid = item.get("id", "")
+            if pid and "skill_worthy" in item:
+                results[pid] = {
+                    "skill_worthy": bool(item["skill_worthy"]),
+                    "skill_rationale": item.get("skill_rationale", ""),
+                }
+
+    # Report results
+    worthy = sum(1 for r in results.values() if r["skill_worthy"])
+    not_worthy = sum(1 for r in results.values() if not r["skill_worthy"])
+    print(f"\nTriage results: {worthy} skill-worthy, {not_worthy} demoted to ambient", flush=True)
+
+    if dry_run:
+        print("\n[DRY RUN] No changes written to disk.")
+        print(f"\nSkill-worthy patterns ({worthy}):")
+        for pid, r in sorted(results.items()):
+            if r["skill_worthy"]:
+                print(f"  {pid}: {r['skill_rationale']}")
+        return
+
+    # Apply results to patterns
+    for p in patterns:
+        pid = p.get("id", "")
+        if pid in results:
+            r = results[pid]
+            p["skill_worthy"] = r["skill_worthy"]
+            p["skill_rationale"] = r["skill_rationale"]
+            if not r["skill_worthy"]:
+                p["mode"] = "ambient"
+                p["mode_rationale"] = r["skill_rationale"]
+
+    with open(input_file, "w") as f:
+        json.dump(patterns, f, indent=2)
+
+    print(f"Written to {input_file}", flush=True)
+
+
+# ---------------------------------------------------------------------------
+# Enrich subcommand
+# ---------------------------------------------------------------------------
+
+def build_enrich_prompt(pattern: dict) -> str:
+    """Build the Claude enrichment prompt for a single pattern."""
+    return (
+        "You are enriching an engineering pattern mined from PR review history "
+        "at Domino Data Lab. Given this pattern, generate structured skill content.\n\n"
+        f"Pattern ID: {pattern['id']}\n"
+        f"Rule: {pattern['rule']}\n"
+        f"Category: {pattern.get('scope', '')}\n"
+        f"Source PRs: {', '.join(pattern.get('source_prs', []))}\n"
+        f"Modules: {', '.join(pattern.get('modules', []))}\n\n"
+        "Generate a JSON object with these fields:\n"
+        '1. "id": the pattern ID (echo it back for validation)\n'
+        '2. "trigger": 1-2 sentences describing when this applies (second person: "You\'re writing...")\n'
+        '3. "steps": array of 3-6 concrete action steps as strings\n'
+        '4. "good_example": a concrete code example showing the correct approach '
+        "(use Scala for server/apps patterns, TypeScript/React for frontend patterns)\n"
+        '5. "bad_example": a concrete code example showing the anti-pattern\n'
+        '6. "rationale": 1-2 sentences explaining WHY this matters\n'
+        '7. "skill_title": an imperative-voice title (e.g., "Replace full-object fetches with count queries")\n\n'
+        "Return ONLY the JSON object, no other text."
+    )
+
+
+def parse_json_object(text: str) -> dict:
+    """Parse a JSON object from Claude's response, handling markdown code blocks."""
+    text = _strip_code_fences(text)
+    if not text:
+        return {}
+    try:
+        result = json.loads(text)
+        if isinstance(result, dict):
+            return result
+    except json.JSONDecodeError:
+        pass
+    return {}
+
+
+def enrich_single_pattern(pattern: dict) -> dict | None:
+    """Enrich a single pattern via Claude. Returns enrichment fields or None on failure."""
+    prompt = build_enrich_prompt(pattern)
+    response = call_claude(prompt, timeout=120)
+    result = parse_json_object(response)
+    if not result:
+        return None
+
+    # Validate the response has steps
+    steps = result.get("steps", [])
+    if not isinstance(steps, list) or len(steps) < 1:
+        return None
+
+    return result
+
+
+def cmd_enrich(args):
+    """Enrich skill-worthy patterns with steps, examples, and triggers."""
+    input_file = args.input
+    force = args.force
+    max_workers = args.workers
+
+    with open(input_file) as f:
+        patterns = json.load(f)
+
+    # Filter to enrichment population: skill_worthy=True + not already enriched
+    candidates = []
+    candidate_indices = []
+    for i, p in enumerate(patterns):
+        if not p.get("skill_worthy"):
+            continue
+        if not force and isinstance(p.get("steps"), list) and len(p.get("steps", [])) > 0:
+            continue
+        candidates.append(p)
+        candidate_indices.append(i)
+
+    print(f"Loaded {len(patterns)} patterns, {len(candidates)} eligible for enrichment", flush=True)
+
+    if not candidates:
+        print("No patterns to enrich.")
+        return
+
+    # Enrich in parallel
+    enriched_count = 0
+    failed_count = 0
+
+    def process(idx_pattern):
+        idx, pattern = idx_pattern
+        result = enrich_single_pattern(pattern)
+        return idx, pattern["id"], result
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {
+            executor.submit(process, (candidate_indices[i], c)): i
+            for i, c in enumerate(candidates)
+        }
+        for future in concurrent.futures.as_completed(futures):
+            try:
+                idx, pid, result = future.result()
+                if result:
+                    # Validate id matches
+                    if result.get("id") and result["id"] != pid:
+                        print(f"  Warning: id mismatch for {pid}, skipping", file=sys.stderr)
+                        failed_count += 1
+                        continue
+                    # Apply enrichment fields
+                    p = patterns[idx]
+                    for field in ("trigger", "steps", "good_example", "bad_example", "rationale", "skill_title"):
+                        if field in result and result[field]:
+                            p[field] = result[field]
+                    enriched_count += 1
+                    print(f"  [{enriched_count}/{len(candidates)}] Enriched: {pid}", flush=True)
+                else:
+                    failed_count += 1
+                    print(f"  Warning: enrichment failed for {pid}", file=sys.stderr)
+                    # Fall back to ambient mode to avoid the black hole
+                    patterns[idx]["mode"] = "ambient"
+                    patterns[idx]["mode_rationale"] = "Enrichment failed, fell back to ambient"
+            except Exception as e:
+                failed_count += 1
+                print(f"  Error enriching pattern: {e}", file=sys.stderr)
+
+    print(f"\nEnrichment complete: {enriched_count} enriched, {failed_count} failed", flush=True)
+
+    with open(input_file, "w") as f:
+        json.dump(patterns, f, indent=2)
+
+    print(f"Written to {input_file}", flush=True)
+
+
+# ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
 
@@ -906,6 +1153,10 @@ def cmd_reclass(args):
     for p in patterns:
         old_mode = p.get("mode", "ambient")
         before[old_mode] += 1
+        # Skip patterns that have been triaged — triage decisions take precedence
+        if p.get("skill_worthy") is not None:
+            after[old_mode] += 1
+            continue
         new_mode = determine_mode(p.get("scope", ""), p.get("rule", ""))
         after[new_mode] += 1
         p["mode"] = new_mode
@@ -959,6 +1210,18 @@ def main():
     p_dedup = subparsers.add_parser("dedup", help="Deduplicate patterns (exact ID + LLM semantic)")
     p_dedup.add_argument("--input", default="patterns.json", help="Patterns JSON file to deduplicate in-place")
 
+    # triage
+    p_triage = subparsers.add_parser("triage", help="Score active patterns on skill-worthiness")
+    p_triage.add_argument("--input", default="patterns.json", help="Patterns JSON file to triage in-place")
+    p_triage.add_argument("--dry-run", action="store_true", help="Print results without writing to disk")
+    p_triage.add_argument("--force", action="store_true", help="Re-triage already-triaged patterns")
+
+    # enrich
+    p_enrich = subparsers.add_parser("enrich", help="Enrich skill-worthy patterns with steps and examples")
+    p_enrich.add_argument("--input", default="patterns.json", help="Patterns JSON file to enrich in-place")
+    p_enrich.add_argument("--force", action="store_true", help="Re-enrich already-enriched patterns")
+    p_enrich.add_argument("--workers", type=int, default=4, help="Number of parallel Claude calls")
+
     args = parser.parse_args()
 
     commands = {
@@ -969,6 +1232,8 @@ def main():
         "report": cmd_report,
         "reclass": cmd_reclass,
         "dedup": cmd_dedup,
+        "triage": cmd_triage,
+        "enrich": cmd_enrich,
     }
     commands[args.command](args)
 

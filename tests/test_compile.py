@@ -183,7 +183,7 @@ class TestGenerateCursorRules:
         text = cursorrules.read_text()
         assert len(text) > 0, ".cursorrules should not be empty"
         # Only ambient patterns should appear (db-layer-sorting is active, excluded)
-        ambient = [p for p in sample_patterns if p["mode"] in ("ambient", "both")]
+        ambient = [p for p in sample_patterns if p["mode"] == "ambient"]
         for p in ambient:
             assert p["rule"] in text, f"Ambient pattern '{p['id']}' rule text missing from .cursorrules"
 
@@ -207,7 +207,7 @@ class TestGenerateCursorRules:
         assert "## Auto-generated from PR review mining" in text
 
         # Ambient patterns present (active ones excluded from cursorrules)
-        ambient = [p for p in sample_patterns if p["mode"] in ("ambient", "both")]
+        ambient = [p for p in sample_patterns if p["mode"] == "ambient"]
         for p in ambient:
             assert p["rule"] in text
 
@@ -238,3 +238,123 @@ class TestLoadPatterns:
         """Empty JSON array returns an empty list without error."""
         result = load_patterns(str(empty_patterns_json))
         assert result == []
+
+
+# ---------------------------------------------------------------------------
+# 5. Enriched skill generation
+# ---------------------------------------------------------------------------
+
+def _make_enriched_pattern(pid, steps=None, skill_title=None, trigger=None,
+                           good_example=None, bad_example=None, rationale=None):
+    """Create a pattern with enrichment fields for testing."""
+    p = {
+        "id": pid,
+        "rule": f"Rule for {pid}",
+        "trigger": trigger or "",
+        "rationale": rationale or "",
+        "good_example": good_example,
+        "bad_example": bad_example,
+        "source_prs": ["#100"],
+        "scope": "testing",
+        "modules": ["server"],
+        "mode": "active",
+        "confidence": 0.5,
+        "review_count": 3,
+        "status": "active",
+    }
+    if steps is not None:
+        p["steps"] = steps
+    if skill_title is not None:
+        p["skill_title"] = skill_title
+    return p
+
+
+class TestEnrichedSkillGeneration:
+    def test_skips_empty_steps(self, tmp_path):
+        """Active pattern with no steps produces no SKILL.md."""
+        patterns = [
+            _make_enriched_pattern("no-steps"),
+            _make_enriched_pattern("empty-steps", steps=[]),
+            _make_enriched_pattern("null-steps", steps=None),
+        ]
+        # Ensure steps key doesn't exist for first pattern
+        if "steps" in patterns[0]:
+            del patterns[0]["steps"]
+
+        generate_claude_skills(patterns, str(tmp_path))
+
+        skills_dir = tmp_path / ".claude" / "skills"
+        if skills_dir.exists():
+            skill_dirs = [d for d in skills_dir.iterdir() if d.is_dir()]
+            assert len(skill_dirs) == 0, f"No skills should be generated, got {len(skill_dirs)}"
+
+    def test_uses_skill_title(self, tmp_path):
+        """Pattern with skill_title uses it as the heading."""
+        patterns = [_make_enriched_pattern(
+            "test-count-query",
+            steps=["Identify the query", "Replace with COUNT", "Verify"],
+            skill_title="Replace full-object fetches with count queries",
+        )]
+
+        generate_claude_skills(patterns, str(tmp_path))
+
+        skills_dir = tmp_path / ".claude" / "skills"
+        skill_dirs = [d for d in skills_dir.iterdir() if d.is_dir()]
+        assert len(skill_dirs) == 1
+
+        content = (skill_dirs[0] / "SKILL.md").read_text()
+        assert "# Replace full-object fetches with count queries" in content
+        # Directory should use slugified title
+        assert "replace-full-object-fetches" in skill_dirs[0].name
+
+    def test_renders_trigger_section(self, tmp_path):
+        """Pattern with trigger field renders ## When to apply section."""
+        patterns = [_make_enriched_pattern(
+            "trigger-test",
+            steps=["Step 1", "Step 2", "Step 3"],
+            trigger="You're writing a query that fetches full objects just to count them.",
+        )]
+
+        generate_claude_skills(patterns, str(tmp_path))
+
+        skills_dir = tmp_path / ".claude" / "skills"
+        skill_dirs = [d for d in skills_dir.iterdir() if d.is_dir()]
+        content = (skill_dirs[0] / "SKILL.md").read_text()
+        assert "## When to apply" in content
+        assert "fetches full objects" in content
+
+    def test_renders_numbered_steps(self, tmp_path):
+        """Steps array renders as numbered list, not single-line rule."""
+        patterns = [_make_enriched_pattern(
+            "steps-test",
+            steps=["Identify the problem", "Apply the fix", "Verify the result"],
+        )]
+
+        generate_claude_skills(patterns, str(tmp_path))
+
+        skills_dir = tmp_path / ".claude" / "skills"
+        skill_dirs = [d for d in skills_dir.iterdir() if d.is_dir()]
+        content = (skill_dirs[0] / "SKILL.md").read_text()
+        assert "1. Identify the problem" in content
+        assert "2. Apply the fix" in content
+        assert "3. Verify the result" in content
+
+    def test_skips_prefix_dedup_for_enriched(self, tmp_path):
+        """Two enriched patterns sharing a prefix both produce skills."""
+        patterns = [
+            _make_enriched_pattern(
+                "add-tests-for-new-methods",
+                steps=["Write test", "Run test", "Check coverage"],
+            ),
+            _make_enriched_pattern(
+                "add-tests-for-edge-cases",
+                steps=["Identify edges", "Write edge tests", "Verify boundaries"],
+            ),
+        ]
+
+        generate_claude_skills(patterns, str(tmp_path))
+
+        skills_dir = tmp_path / ".claude" / "skills"
+        skill_dirs = [d for d in skills_dir.iterdir() if d.is_dir()]
+        # Both should survive despite sharing "add-tests-for" prefix
+        assert len(skill_dirs) == 2

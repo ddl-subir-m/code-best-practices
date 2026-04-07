@@ -40,6 +40,12 @@ SAMPLE_PATTERNS = [
         "rationale": "In-memory sorting causes N+1 queries and OOM risks at scale.",
         "good_example": "Use aggregation pipeline with $lookup and $sort stages",
         "bad_example": "collection.find().toList.sortBy(_.createdAt).head",
+        "steps": [
+            "Identify queries that fetch full collections then filter/sort in memory",
+            "Move sorting to the database query using ORDER BY or $sort",
+            "Move filtering to WHERE clauses or $match stages",
+            "Verify the query plan uses indexes for the sort/filter fields",
+        ],
         "source_prs": ["#47189"],
         "scope": "performance",
         "modules": ["apps", "server"],
