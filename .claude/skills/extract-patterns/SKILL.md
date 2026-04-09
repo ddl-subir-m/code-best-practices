@@ -180,10 +180,13 @@ source .venv/bin/activate && python extract.py merge --input tmp/ --output patte
 ### 4b: Deduplicate patterns
 
 Two-pass dedup: exact ID merge, then LLM semantic grouping (batches of 200).
+Runs 4 parallel Claude calls by default.
 
 ```bash
 source .venv/bin/activate && python extract.py dedup --input patterns.json
 ```
+
+Use `--workers N` to change parallelism.
 
 ### 4c: Reclassify modes
 
@@ -200,13 +203,14 @@ source .venv/bin/activate && python extract.py reclass --input patterns.json
 Sends active patterns (review_count >= 2) to Claude in batches of 50 to decide
 if each is genuinely skill-worthy (multi-step, contextual) or should be demoted
 back to ambient. Adds `skill_worthy` and `skill_rationale` fields.
+Runs 4 parallel Claude calls by default.
 
 ```bash
 source .venv/bin/activate && python extract.py triage --input patterns.json
 ```
 
 Use `--dry-run` to preview results without writing. Use `--force` to re-triage
-patterns that were already triaged.
+patterns that were already triaged. Use `--workers N` to change parallelism.
 
 ### 4e: Enrich skill-worthy patterns
 

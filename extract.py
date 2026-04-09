@@ -662,11 +662,12 @@ def cmd_dedup(args):
 
     final_patterns = []
     llm_merge_count = 0
+    max_workers = getattr(args, 'workers', 4)
 
-    for batch_num, batch in enumerate(batches, 1):
+    def _dedup_batch(batch_num_and_batch):
+        batch_num, batch = batch_num_and_batch
         if len(batch) <= 1:
-            final_patterns.extend(batch)
-            continue
+            return batch_num, batch, None
 
         pattern_list = json.dumps(
             [{"index": i, "id": p["id"], "rule": p["rule"]} for i, p in enumerate(batch)],
@@ -690,7 +691,27 @@ def cmd_dedup(args):
               f"sending {len(batch)} patterns to Claude...", flush=True)
         response = call_claude(prompt)
         groups = parse_json_response(response)
+        return batch_num, batch, groups
 
+    # Run LLM calls in parallel
+    batch_results = []
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {
+            executor.submit(_dedup_batch, (bn, b)): bn
+            for bn, b in enumerate(batches, 1)
+        }
+        for future in concurrent.futures.as_completed(futures):
+            try:
+                batch_results.append(future.result())
+            except Exception as e:
+                bn = futures[future]
+                print(f"  Error in dedup batch {bn}: {e}", file=sys.stderr)
+                batch_results.append((bn, batches[bn - 1], None))
+
+    # Post-process sequentially in batch order
+    batch_results.sort(key=lambda r: r[0])
+
+    for batch_num, batch, groups in batch_results:
         if not groups:
             final_patterns.extend(batch)
             continue
@@ -951,11 +972,13 @@ def cmd_triage(args):
         print("No patterns to triage.")
         return
 
-    # Batch and send to Claude
+    # Batch and send to Claude in parallel
     batches = [candidates[i:i + batch_size] for i in range(0, len(candidates), batch_size)]
     results: dict[str, dict] = {}  # id -> {skill_worthy, skill_rationale}
+    max_workers = getattr(args, 'workers', 4)
 
-    for batch_num, batch in enumerate(batches, 1):
+    def _triage_batch(batch_num_and_batch):
+        batch_num, batch = batch_num_and_batch
         prompt = build_triage_prompt(batch)
         print(f"  Batch {batch_num}/{len(batches)}: sending {len(batch)} patterns to Claude...", flush=True)
         response = call_claude(prompt)
@@ -963,17 +986,31 @@ def cmd_triage(args):
 
         if not parsed:
             print(f"  Warning: batch {batch_num} returned no valid results, skipping", file=sys.stderr)
-            continue
+            return {}
 
+        batch_results = {}
         for item in parsed:
             if not isinstance(item, dict):
                 continue
             pid = item.get("id", "")
             if pid and "skill_worthy" in item:
-                results[pid] = {
+                batch_results[pid] = {
                     "skill_worthy": bool(item["skill_worthy"]),
                     "skill_rationale": item.get("skill_rationale", ""),
                 }
+        return batch_results
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {
+            executor.submit(_triage_batch, (bn, b)): bn
+            for bn, b in enumerate(batches, 1)
+        }
+        for future in concurrent.futures.as_completed(futures):
+            try:
+                batch_results = future.result()
+                results.update(batch_results)
+            except Exception as e:
+                print(f"  Error in triage batch: {e}", file=sys.stderr)
 
     # Report results
     worthy = sum(1 for r in results.values() if r["skill_worthy"])
@@ -1209,12 +1246,14 @@ def main():
     # dedup
     p_dedup = subparsers.add_parser("dedup", help="Deduplicate patterns (exact ID + LLM semantic)")
     p_dedup.add_argument("--input", default="patterns.json", help="Patterns JSON file to deduplicate in-place")
+    p_dedup.add_argument("--workers", type=int, default=4, help="Number of parallel Claude calls")
 
     # triage
     p_triage = subparsers.add_parser("triage", help="Score active patterns on skill-worthiness")
     p_triage.add_argument("--input", default="patterns.json", help="Patterns JSON file to triage in-place")
     p_triage.add_argument("--dry-run", action="store_true", help="Print results without writing to disk")
     p_triage.add_argument("--force", action="store_true", help="Re-triage already-triaged patterns")
+    p_triage.add_argument("--workers", type=int, default=4, help="Number of parallel Claude calls")
 
     # enrich
     p_enrich = subparsers.add_parser("enrich", help="Enrich skill-worthy patterns with steps and examples")
