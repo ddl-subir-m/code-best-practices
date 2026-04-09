@@ -9,7 +9,7 @@ GitHub PR reviews ──→ Extract patterns ──→ patterns.json ──→ C
                         (Claude Code)       (source of truth)              │
                                                                            ├─ .claude/rules/  (ambient)
                                                                            ├─ .claude/skills/ (on-demand)
-                                                                           └─ .cursorrules    (Cursor)
+                                                                           └─ .cursor/rules/  (Cursor)
 ```
 
 1. **Fetch** PR review threads from GitHub via `gh api graphql`
@@ -87,6 +87,18 @@ python extract.py merge --input tmp/ --output patterns.json
 # Auto-detect modules from file paths in patterns
 python extract.py modules --input patterns.json --output modules.yaml
 
+# Reclassify pattern modes (ambient/active)
+python extract.py reclass --input patterns.json
+
+# Deduplicate patterns (exact ID + LLM semantic)
+python extract.py dedup --input patterns.json
+
+# Score active patterns on skill-worthiness
+python extract.py triage --input patterns.json
+
+# Enrich skill-worthy patterns with steps and examples
+python extract.py enrich --input patterns.json
+
 # Generate human-readable validation report
 python extract.py report --input patterns.json --output validation-report.md
 ```
@@ -96,9 +108,6 @@ python extract.py report --input patterns.json --output validation-report.md
 ```bash
 # Generate rules from patterns
 python compile.py --input patterns.json --output output/
-
-# Merge with existing Cursor rules (preserves hand-written rules)
-python compile.py --input patterns.json --output output/ --cursorrules-merge /path/to/.cursorrules
 ```
 
 ## Output Structure
@@ -107,14 +116,17 @@ python compile.py --input patterns.json --output output/ --cursorrules-merge /pa
 output/
 ├── .claude/
 │   ├── rules/
-│   │   ├── global-practices.md          # Cross-cutting rules (3+ modules)
-│   │   ├── apps-practices.md            # Rules specific to /apps/
-│   │   ├── server-practices.md          # Rules specific to /server/
-│   │   ├── extensions-practices.md      # Rules specific to /extensions/
-│   │   └── ...                          # One per module with 5+ patterns
+│   │   ├── mined-global-practices.md    # Cross-cutting rules (3+ modules)
+│   │   ├── mined-apps-practices.md      # Rules specific to /apps/
+│   │   ├── mined-server-practices.md    # Rules specific to /server/
+│   │   └── ...                          # One per module with patterns
 │   └── skills/
-│       └── {topic}/SKILL.md             # On-demand skills (procedural patterns)
-└── .cursorrules                         # Global rules for Cursor (merged)
+│       └── mined-{topic}/SKILL.md       # On-demand skills (procedural patterns)
+└── .cursor/
+    └── rules/
+        ├── mined-global-practices.mdc   # Cross-cutting Cursor rules
+        ├── mined-apps-practices.mdc     # Per-module Cursor rules
+        └── ...                          # One .mdc per module
 ```
 
 ### How Rules Are Scoped
@@ -133,11 +145,11 @@ After running the pipeline:
 ```bash
 # Copy generated rules to your target repo
 cp -r output/.claude/ /path/to/your-repo/.claude/
-cp output/.cursorrules /path/to/your-repo/.cursorrules
+cp -r output/.cursor/ /path/to/your-repo/.cursor/
 
 # Commit and push
 cd /path/to/your-repo
-git add .claude/ .cursorrules
+git add .claude/ .cursor/
 git commit -m "Update AI coding rules from PR review mining"
 git push
 ```
@@ -186,8 +198,10 @@ Each pattern in `patterns.json` follows this schema:
 
 ```
 code-best-practices/
-├── extract.py                    # Extraction pipeline (fetch, analyze, merge)
-├── compile.py                    # Output compiler (JSON -> rules/skills)
+├── extract.py                    # Extraction pipeline (fetch, analyze, merge, dedup, triage, enrich)
+├── compile.py                    # Output compiler (JSON -> rules/skills/mdc)
+├── classify_patterns.py          # LLM-based pattern classification (rule vs skill)
+├── run-historical-extraction.sh  # Batch extraction across month ranges
 ├── patterns.json                 # Source of truth — all mined patterns
 ├── state.json                    # Extraction state (last run date, progress)
 ├── modules.yaml                  # Auto-generated module mapping
@@ -199,14 +213,14 @@ code-best-practices/
 ├── output/                       # Generated rules (copy to target repo)
 ├── tests/
 │   ├── conftest.py               # Shared test fixtures
-│   ├── test_compile.py           # Compiler tests (10 tests)
-│   └── test_extract.py           # Schema validation tests (8 tests)
+│   ├── test_compile.py           # Compiler tests
+│   ├── test_extract.py           # Schema validation tests
+│   ├── test_triage.py            # Triage pipeline tests
+│   └── test_enrich.py            # Enrichment pipeline tests
 ├── .claude/
 │   └── skills/
 │       └── extract-patterns/
 │           └── SKILL.md          # /extract skill for Claude Code
-├── conductor.json                # Conductor workspace config
-├── conductor-prompts.md          # Parallel build prompts for Conductor
 ├── CLAUDE.md                     # Claude Code project context
 └── README.md                     # This file
 ```
@@ -218,18 +232,12 @@ source .venv/bin/activate
 pytest tests/ -v
 ```
 
-18 tests covering:
-- Compiler: module grouping, global patterns, special characters, skills generation, cursor rules merge, schema validation
-- Extract: patterns.json schema, state.json schema, modules.yaml schema
+Tests covering:
+- Compiler: module grouping, global patterns, special characters, skills generation, Cursor .mdc generation, schema validation
+- Extract: patterns.json schema, state.json schema, modules.yaml schema, reclass guard
+- Triage: filtering, demotion, dry-run, error handling
+- Enrich: filtering, field writing, error handling
 
-## How It Was Built
-
-This project was designed and built in a single Claude Code session:
-
-1. **`/office-hours`** — structured the problem, challenged premises, produced the design doc
-2. **`/plan-eng-review`** — reviewed architecture, reduced scope (dropped external dependencies), added module scoping and incremental extraction
-3. **Conductor** — 4 parallel workspaces built extract.py, compile.py, tests, and seed data simultaneously
-4. **Phase 0 validation** — extracted 9 recurring patterns from 20 PRs (2 weeks) to prove the approach before scaling
 
 ## Adapting for Your Repo
 
@@ -239,5 +247,3 @@ To use this for a different GitHub repo:
 2. Run `/extract --full --repo your-org/your-repo --since 2024-01-01`
 3. The pipeline auto-detects modules from your repo's directory structure
 4. Copy `output/` to your target repo
-
-The only thing specific to cerebrotech/domino is `patterns.json` and `state.json` — everything else is repo-agnostic.

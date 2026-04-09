@@ -6,7 +6,7 @@ import pytest
 from compile import (
     generate_claude_rules,
     generate_claude_skills,
-    generate_cursorrules,
+    generate_cursor_mdc,
     load_patterns,
 )
 
@@ -172,44 +172,32 @@ class TestGenerateClaudeSkills:
 # 3. Cursor rules
 # ---------------------------------------------------------------------------
 
-class TestGenerateCursorRules:
-    def test_creates_file(self, sample_patterns, tmp_path):
-        """Generates a valid .cursorrules file with all patterns."""
-        generate_cursorrules(sample_patterns, str(tmp_path), None, {})
+class TestGenerateCursorMdc:
+    def test_creates_per_module_mdc_files(self, sample_patterns, tmp_path):
+        """Generates per-module .mdc files under .cursor/rules/."""
+        generate_cursor_mdc(sample_patterns, str(tmp_path), {})
 
-        cursorrules = tmp_path / ".cursorrules"
-        assert cursorrules.exists(), ".cursorrules file should be created"
+        rules_dir = tmp_path / ".cursor" / "rules"
+        assert rules_dir.exists(), ".cursor/rules/ directory should be created"
 
-        text = cursorrules.read_text()
-        assert len(text) > 0, ".cursorrules should not be empty"
+        mdc_files = list(rules_dir.glob("mined-*-practices.mdc"))
+        assert len(mdc_files) > 0, "At least one .mdc file should be created"
+
         # Only ambient patterns should appear (db-layer-sorting is active, excluded)
         ambient = [p for p in sample_patterns if p["mode"] == "ambient"]
+        all_text = "\n".join(f.read_text() for f in mdc_files)
         for p in ambient:
-            assert p["rule"] in text, f"Ambient pattern '{p['id']}' rule text missing from .cursorrules"
+            assert p["rule"] in all_text, f"Ambient pattern '{p['id']}' rule text missing from .mdc files"
 
-    def test_merges_existing(self, sample_patterns, tmp_path, existing_cursorrules):
-        """Merges auto-generated rules with existing .cursorrules content."""
-        generate_cursorrules(
-            sample_patterns, str(tmp_path), str(existing_cursorrules), {}
-        )
+    def test_mdc_has_frontmatter(self, sample_patterns, tmp_path):
+        """Each .mdc file starts with YAML frontmatter."""
+        generate_cursor_mdc(sample_patterns, str(tmp_path), {})
 
-        cursorrules = tmp_path / ".cursorrules"
-        assert cursorrules.exists()
-
-        text = cursorrules.read_text()
-
-        # Existing content preserved
-        assert "# Team Cursor Rules" in text
-        assert "Use 4-space indentation" in text
-        assert "All public methods must have unit tests" in text
-
-        # Auto-generated section appended
-        assert "## Auto-generated from PR review mining" in text
-
-        # Ambient patterns present (active ones excluded from cursorrules)
-        ambient = [p for p in sample_patterns if p["mode"] == "ambient"]
-        for p in ambient:
-            assert p["rule"] in text
+        rules_dir = tmp_path / ".cursor" / "rules"
+        for mdc_file in rules_dir.glob("mined-*-practices.mdc"):
+            text = mdc_file.read_text()
+            assert text.startswith("---"), f"{mdc_file.name} must start with frontmatter"
+            assert "description:" in text, f"{mdc_file.name} must include description"
 
 
 # ---------------------------------------------------------------------------
