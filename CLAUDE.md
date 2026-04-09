@@ -38,9 +38,6 @@ python extract.py report --input patterns.json --output validation-report.md
 
 # Compile patterns into rules
 python compile.py --input patterns.json --output output/
-
-# Compile with existing cursorrules merge
-python compile.py --input patterns.json --output output/ --cursorrules-merge /path/to/.cursorrules
 ```
 
 ## Output Structure
@@ -49,5 +46,5 @@ python compile.py --input patterns.json --output output/ --cursorrules-merge /pa
 output/
 ├── .claude/rules/{module}-practices.md   — per-module ambient rules
 ├── .claude/skills/{topic}/SKILL.md       — on-demand skills (pass 2)
-└── .cursorrules                          — global rules, merged with existing
+└── .cursor/rules/{module}-practices.mdc  — per-module Cursor rules
 ```

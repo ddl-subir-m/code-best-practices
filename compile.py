@@ -321,62 +321,73 @@ def generate_claude_skills(patterns: list[dict], output_dir: str) -> list[str]:
     return created
 
 
-def generate_cursorrules(patterns: list[dict], output_dir: str, merge_path: str | None, modules_map: dict[str, str]) -> str:
-    """Generate .cursorrules file, merging with existing if provided. Returns path."""
-    # Use only global-scope patterns (in 3+ modules) plus ambient patterns
-    ambient = [p for p in patterns if p["mode"] == "ambient"]
+def generate_cursor_mdc(
+    patterns: list[dict], output_dir: str, modules_map: dict[str, str],
+    globs_map: dict[str, list[str]] | None = None,
+) -> list[str]:
+    """Generate .cursor/rules/{module}-practices.mdc files. Returns list of created paths."""
+    globs_map = globs_map or {}
+    ambient = [p for p in patterns if p.get("review_count", 1) >= MIN_REVIEW_COUNT
+               and p["mode"] == "ambient"
+               and p.get("rule", "").strip()]
+    groups = group_by_module(ambient)
+    rules_dir = os.path.join(output_dir, ".cursor", "rules")
+    os.makedirs(rules_dir, exist_ok=True)
 
+    # Clean up stale mined-* mdc files from previous runs
+    for old in Path(rules_dir).glob("mined-*-practices.mdc"):
+        old.unlink()
+
+    created = []
     today = date.today().isoformat()
-    marker = "## Auto-generated from PR review mining"
 
-    # Group by category for the generated section
-    by_category: dict[str, list[dict]] = defaultdict(list)
-    for p in ambient:
-        cat = p.get("category", p.get("scope", "general"))
-        by_category[cat].append(p)
+    for module, module_patterns in sorted(groups.items()):
+        name = display_name(module, modules_map)
+        filename = f"mined-{module}-practices.mdc"
+        filepath = os.path.join(rules_dir, filename)
 
-    gen_lines = [
-        marker,
-        f"Source: patterns.json | Generated: {today}",
-        "",
-    ]
-    for cat in sorted(by_category.keys()):
-        cat_display = cat.replace("-", " ").replace("_", " ").title()
-        gen_lines.append(f"### {cat_display}")
-        for p in by_category[cat]:
-            gen_lines.append(format_rule_entry(p))
-            gen_lines.append("")
+        ranked = sorted(module_patterns, key=lambda p: p.get("review_count", 1), reverse=True)
+        capped = ranked[:MAX_RULES_PER_FILE]
 
-    generated_section = "\n".join(gen_lines)
+        by_category: dict[str, list[dict]] = defaultdict(list)
+        for p in capped:
+            cat = p.get("category", p.get("scope", "general"))
+            by_category[cat].append(p)
 
-    # Merge with existing cursorrules if provided
-    existing_content = ""
-    if merge_path and os.path.exists(merge_path):
-        with open(merge_path) as f:
-            existing_content = f.read()
+        # Build .mdc frontmatter
+        lines = ["---"]
+        lines.append(f"description: {name} best practices from PR review history")
+        if module != "global" and module in globs_map:
+            glob_list = ", ".join(globs_map[module])
+            lines.append(f"globs: [{glob_list}]")
+            lines.append("alwaysApply: false")
+        else:
+            lines.append("alwaysApply: true" if module == "global" else "alwaysApply: false")
+        lines.append("---")
+        lines.append("")
+        lines.append(f"# {name} Best Practices")
+        lines.append(f"Auto-generated from PR review history. Do not edit manually.")
+        lines.append(f"Source: patterns.json | Generated: {today}")
+        lines.append("")
 
-    if existing_content and marker in existing_content:
-        # Replace the existing auto-generated section
-        before = existing_content.split(marker)[0].rstrip()
-        output_content = before + "\n\n" + generated_section
-    elif existing_content:
-        # Append
-        output_content = existing_content.rstrip() + "\n\n" + generated_section
-    else:
-        output_content = generated_section
+        for cat in sorted(by_category.keys()):
+            cat_display = cat.replace("-", " ").replace("_", " ").title()
+            lines.append(f"## {cat_display}")
+            for p in by_category[cat]:
+                lines.append(format_rule_entry(p))
+                lines.append("")
 
-    filepath = os.path.join(output_dir, ".cursorrules")
-    with open(filepath, "w") as f:
-        f.write(output_content + "\n")
+        with open(filepath, "w") as f:
+            f.write("\n".join(lines))
+        created.append(filepath)
 
-    return filepath
+    return created
 
 
 def main():
     parser = argparse.ArgumentParser(description="Compile patterns.json into AI coding assistant rules")
     parser.add_argument("--input", required=True, help="Path to patterns.json")
     parser.add_argument("--output", required=True, help="Output directory")
-    parser.add_argument("--cursorrules-merge", default=None, help="Path to existing .cursorrules to merge with")
     args = parser.parse_args()
 
     patterns = load_patterns(args.input)
@@ -389,7 +400,7 @@ def main():
     # Generate all outputs
     rules = generate_claude_rules(patterns, args.output, modules_map, globs_map)
     skills = generate_claude_skills(patterns, args.output)
-    cursorrules = generate_cursorrules(patterns, args.output, args.cursorrules_merge, modules_map)
+    mdc_rules = generate_cursor_mdc(patterns, args.output, modules_map, globs_map)
 
     print(f"Generated {len(rules)} Claude rule file(s):")
     for r in rules:
@@ -397,7 +408,9 @@ def main():
     print(f"Generated {len(skills)} Claude skill(s):")
     for s in skills:
         print(f"  {s}")
-    print(f"Generated Cursor rules: {cursorrules}")
+    print(f"Generated {len(mdc_rules)} Cursor .mdc rule file(s):")
+    for m in mdc_rules:
+        print(f"  {m}")
 
 
 if __name__ == "__main__":

@@ -327,7 +327,7 @@ Output files:
   output/.claude/rules/mined-apps-practices.md
   ...
   output/.claude/skills/{topic}/SKILL.md
-  output/.cursorrules
+  output/.cursor/rules/{module}-practices.mdc
 
 All future /extract runs will be incremental (new PRs only).
 Copy output/ to your target repo to deploy.
