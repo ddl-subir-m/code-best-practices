@@ -165,19 +165,70 @@ Wait for each wave of 4 to complete before launching the next wave.
 - Use the exact categories: error-handling, naming, architecture, testing,
   performance, logging, security, api-design, code-organization, documentation
 
-## Step 4: Merge Results and Update State
+**Note on mode assignment:** All new patterns default to `mode: "ambient"`.
+Promotion to `mode: "active"` (skill) happens only via the triage step (4d).
+Do NOT set mode in your extraction output — merge handles this.
 
-Run:
+## Step 4: Merge, Dedup, Classify, Triage, Enrich
+
+### 4a: Merge results
+
 ```bash
 source .venv/bin/activate && python extract.py merge --input tmp/ --output patterns.json
 ```
 
-Then auto-detect modules:
+### 4b: Deduplicate patterns
+
+Two-pass dedup: exact ID merge, then LLM semantic grouping (batches of 200).
+
+```bash
+source .venv/bin/activate && python extract.py dedup --input patterns.json
+```
+
+### 4c: Reclassify modes
+
+Reclassifies all untriaged patterns as ambient or active based on rule wording
+(conditional/multi-step → active, everything else → ambient). Patterns already
+triaged by Step 4d are left untouched.
+
+```bash
+source .venv/bin/activate && python extract.py reclass --input patterns.json
+```
+
+### 4d: Triage skill-worthiness
+
+Sends active patterns (review_count >= 2) to Claude in batches of 50 to decide
+if each is genuinely skill-worthy (multi-step, contextual) or should be demoted
+back to ambient. Adds `skill_worthy` and `skill_rationale` fields.
+
+```bash
+source .venv/bin/activate && python extract.py triage --input patterns.json
+```
+
+Use `--dry-run` to preview results without writing. Use `--force` to re-triage
+patterns that were already triaged.
+
+### 4e: Enrich skill-worthy patterns
+
+Enriches patterns where `skill_worthy=True` with trigger, steps, good/bad
+examples, rationale, and skill_title. Runs 4 parallel Claude calls by default.
+Patterns that fail enrichment are demoted to ambient.
+
+```bash
+source .venv/bin/activate && python extract.py enrich --input patterns.json
+```
+
+Use `--force` to re-enrich already-enriched patterns. Use `--workers N` to
+change parallelism.
+
+### 4f: Auto-detect modules
+
 ```bash
 source .venv/bin/activate && python extract.py modules --input patterns.json --output modules.yaml
 ```
 
-Then regenerate the report:
+### 4g: Regenerate report
+
 ```bash
 source .venv/bin/activate && python extract.py report --input patterns.json --output validation-report.md
 ```
@@ -226,7 +277,7 @@ print(json.dumps(state, indent=2))
 rm -f tmp/batch-*-results.json tmp/review-batch-*.json tmp/prompts/batch-*-prompt.md
 ```
 
-Report: "Month {N}/{total} complete. Merged X new patterns, Y matched existing. Total: Z patterns."
+Report: "Month {N}/{total} complete. Merged X new patterns, Y matched existing. Dedup removed D. Triage: S skill-worthy, A ambient. Total: Z patterns."
 
 ## Step 5: Compile Rules
 
@@ -244,6 +295,9 @@ MONTH {N}/{TOTAL} COMPLETE ({month_name})
 PRs this month:   {N}
 Batches analyzed: {B}
 New patterns:     {new} new, {merged} merged
+Dedup removed:    {D}
+Triage:           {skill} skill-worthy, {ambient} ambient
+Enriched:         {enriched}
 Total patterns:   {total} across {modules} modules
 Progress:         [████████████░░░░░░░░] {pct}%
 
@@ -260,12 +314,15 @@ HISTORICAL EXTRACTION COMPLETE
 Months processed: {total_months}
 Total PRs:        {total_prs}
 Total patterns:   {total_patterns}
+  Ambient (rules): {ambient_count}
+  Active (skills): {skill_count}
 Modules:          {module_list}
 
 Output files:
   output/.claude/rules/mined-global-practices.md
   output/.claude/rules/mined-apps-practices.md
   ...
+  output/.claude/skills/{topic}/SKILL.md
   output/.cursorrules
 
 All future /extract runs will be incremental (new PRs only).
@@ -279,6 +336,9 @@ INCREMENTAL EXTRACTION COMPLETE
 PRs since last run: {N}
 New patterns:       {new}
 Updated patterns:   {merged}
+Dedup removed:      {D}
+Triage:             {skill} skill-worthy, {ambient} ambient
+Enriched:           {enriched}
 Total patterns:     {total}
 
 Next: copy output/ to your target repo
@@ -299,6 +359,10 @@ Every step is resumable:
 - **Fetch**: state.json tracks which month we're on
 - **Analyze**: tmp/ batch results persist — skip batches that already have results
 - **Merge**: idempotent — same input produces same output
+- **Dedup**: idempotent — re-running just finds fewer duplicates
+- **Reclass**: idempotent — skips already-triaged patterns
+- **Triage**: skips patterns that already have `skill_worthy` set (use `--force` to re-triage)
+- **Enrich**: skips patterns that already have `steps` (use `--force` to re-enrich)
 - **Compile**: stateless — always regenerates from patterns.json
 - **Monthly progress**: state.json.historical_run.current_month_index tracks exactly where we are
 
