@@ -29,7 +29,7 @@ GitHub PR reviews ──→ Extract patterns ──→ patterns.json ──→ C
 ### Setup
 
 ```bash
-git clone https://github.com/cerebrotech/code-best-practices.git
+git clone https://github.com/ddl-subir-m/code-best-practices.git
 cd code-best-practices
 python3.11 -m venv .venv
 source .venv/bin/activate
