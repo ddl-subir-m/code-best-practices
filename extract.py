@@ -945,7 +945,15 @@ def build_triage_prompt(batch: list[dict]) -> str:
         "   - The check is mechanically automatable (grep, regex, or AST scan — not judgment calls)\n"
         "   - It's high-severity (security, breaking changes, data loss, or compliance)\n"
         "   - It's tied to a specific file-edit event (e.g., editing shared files, adding endpoints, modifying migrations)\n"
-        "   - It's too important to rely on someone remembering to apply it\n\n"
+        "   - It's too important to rely on someone remembering to apply it\n"
+        "   - **The check can be precise enough to have a low false positive rate.** A grep that "
+        "fires on nearly every edit to common files (e.g., matching any component name, any "
+        "variable removal, any history.push) is NOT hook-worthy — it becomes noise that gets "
+        "ignored. The grep must target a SPECIFIC anti-pattern that is rare in correct code.\n\n"
+        "Examples of NOT hook-worthy (too noisy):\n"
+        "   - 'Guard new features behind feature flags' — would fire on any component, not just flag-gated ones\n"
+        "   - 'Verify backward compat when removing fields' — would fire on any removed variable, not just API fields\n"
+        "   - 'Use history.replace for URL state' — would fire on every navigation, not just state updates\n\n"
         "A pattern can be BOTH skill_worthy and hook_worthy (e.g., a security check that also "
         "benefits from step-by-step guidance). If hook_worthy is true, it takes precedence — "
         "the pattern becomes a hook rather than a skill.\n\n"
@@ -1205,6 +1213,7 @@ def cmd_enrich(args):
 
 HOOK_ENRICHMENT_FIELDS = (
     "hook_event", "hook_tool", "hook_glob", "hook_check", "hook_message", "hook_blocking",
+    "hook_fp_risk",
 )
 
 
@@ -1236,7 +1245,17 @@ def build_enrich_hooks_prompt(pattern: dict) -> str:
         '5. "hook_message": a concise warning message shown when the hook fires. '
         "Include what was detected and what the developer should do.\n"
         '6. "hook_blocking": true if the hook should block the action (security-critical), '
-        "false if it should only warn (advisory).\n\n"
+        "false if it should only warn (advisory).\n"
+        '7. "hook_fp_risk": "LOW", "MEDIUM", or "HIGH" — your honest assessment of how often '
+        "this hook will fire on CORRECT code (false positives).\n"
+        "   - LOW: the grep targets a specific anti-pattern that rarely appears in correct code "
+        "(e.g., `toJson(config.toMap)` in a controller, `Action.async` without authAction)\n"
+        "   - MEDIUM: the grep may occasionally match legitimate code but the signal is still "
+        "valuable (e.g., PII field names near analytics calls)\n"
+        "   - HIGH: the grep matches very common patterns that appear in most correct code "
+        "(e.g., any component name ending in Panel, any removed variable, any history.push). "
+        "If you assess HIGH, this pattern should NOT be a hook — it should be a skill instead. "
+        "Return hook_fp_risk: 'HIGH' and it will be demoted.\n\n"
         "Return ONLY the JSON object, no other text."
     )
 
@@ -1321,6 +1340,13 @@ def enrich_single_hook(pattern: dict) -> dict | None:
     final_warnings = _lint_hook_check(result["hook_check"])
     if final_warnings:
         print(f"  Rejecting {pid}: hook_check still has issues after {MAX_LINT_RETRIES} fix attempts",
+              file=sys.stderr)
+        return None
+
+    # Reject hooks that Claude itself assessed as high false positive risk
+    fp_risk = result.get("hook_fp_risk", "").upper()
+    if fp_risk == "HIGH":
+        print(f"  Rejecting {pid}: Claude assessed hook_fp_risk as HIGH (too noisy)",
               file=sys.stderr)
         return None
 
@@ -1409,14 +1435,16 @@ def build_validate_hooks_prompt(batch: list[dict]) -> str:
             "hook_tool": p.get("hook_tool", ""),
             "hook_blocking": p.get("hook_blocking", False),
             "hook_glob": p.get("hook_glob", ""),
+            "hook_check": p.get("hook_check", ""),
             "hook_message": p.get("hook_message", ""),
+            "hook_fp_risk": p.get("hook_fp_risk", ""),
         } for p in batch],
         indent=2,
     )
     return (
         "You are reviewing automated hook configurations for correctness. "
         "Each hook has hook_event (PreToolUse or PostToolUse), hook_tool (Edit or Write), "
-        "and hook_blocking (true/false).\n\n"
+        "hook_blocking (true/false), and hook_fp_risk (LOW/MEDIUM/HIGH).\n\n"
         "Rules:\n"
         "- PreToolUse runs BEFORE the file edit is written. Use for checks that should "
         "PREVENT bad code from being written: auth gates, secret leakage, credential safety, "
@@ -1430,17 +1458,23 @@ def build_validate_hooks_prompt(batch: list[dict]) -> str:
         '  - "Write" = fires only when creating a brand new file\n'
         '  - Most hooks should use "Edit" because that is where the majority of code changes happen. '
         '"Write" alone misses edits to existing files, which is almost always wrong. '
-        'Use "Write" ONLY if the check genuinely applies only to newly created files.\n\n'
+        'Use "Write" ONLY if the check genuinely applies only to newly created files.\n'
+        "- hook_fp_risk: Look at the hook_check command and the hook_glob together. "
+        "Will this grep fire on almost every file matching the glob? If so, it's HIGH risk "
+        "and should be demoted (set demote: true). A good hook targets a SPECIFIC anti-pattern "
+        "that is rare in correct code.\n\n"
         "For each hook, decide:\n"
         "1. Is hook_event correct? Should a preventive check be PreToolUse instead of PostToolUse?\n"
         "2. Is hook_blocking appropriate? Blocking PostToolUse is a contradiction.\n"
-        '3. Is hook_tool correct? A hook set to "Write" will NOT fire on edits to existing files. '
-        'If the check applies to any file change (not just new files), it should be "Edit".\n\n'
+        '3. Is hook_tool correct? Should "Write" be "Edit"?\n'
+        "4. Is the signal-to-noise ratio acceptable? Look at hook_check + hook_glob: will this "
+        "fire on nearly every edit to matching files? If yes, set demote: true.\n\n"
         f"Hooks to review:\n{hook_summaries}\n\n"
         "Return ONLY a JSON array of corrections. Each correction:\n"
-        '{"id": "pattern-id", "hook_event": "corrected value or omit if unchanged", '
-        '"hook_tool": "corrected value or omit if unchanged", '
-        '"hook_blocking": "corrected bool or omit if unchanged", '
+        '{"id": "pattern-id", "hook_event": "corrected or omit", '
+        '"hook_tool": "corrected or omit", '
+        '"hook_blocking": "corrected or omit", '
+        '"demote": true (if hook should be demoted to skill due to high FP risk — omit if not), '
         '"rationale": "one sentence explaining the change"}\n\n'
         "Only include hooks that NEED changes. If a hook is already correct, omit it.\n"
         "Return an empty array [] if all hooks are correct.\n\n"
@@ -1485,7 +1519,8 @@ def cmd_validate_hooks(args):
             if not isinstance(item, dict):
                 continue
             pid = item.get("id", "")
-            if pid and ("hook_event" in item or "hook_blocking" in item or "hook_tool" in item):
+            if pid and ("hook_event" in item or "hook_blocking" in item
+                        or "hook_tool" in item or item.get("demote")):
                 batch_corrections[pid] = item
         return batch_corrections
 
@@ -1509,13 +1544,23 @@ def cmd_validate_hooks(args):
     for pid, c in sorted(corrections.items()):
         print(f"  {pid}: {c.get('rationale', 'no rationale')}", flush=True)
 
+    demotions = {pid for pid, c in corrections.items() if c.get("demote")}
+    fixes = {pid for pid in corrections if pid not in demotions}
+
     if dry_run:
         print("\n[DRY RUN] No changes written to disk.")
-        for pid, c in sorted(corrections.items()):
-            old_p = next((p for p in hooks if p["id"] == pid), None)
-            if old_p:
-                print(f"  {pid}: {old_p.get('hook_event')}/{old_p.get('hook_blocking')} → "
-                      f"{c.get('hook_event', old_p.get('hook_event'))}/{c.get('hook_blocking', old_p.get('hook_blocking'))}")
+        if demotions:
+            print(f"\nDemotions to skill ({len(demotions)}):")
+            for pid in sorted(demotions):
+                print(f"  {pid}: {corrections[pid].get('rationale', '')}")
+        if fixes:
+            print(f"\nFixes ({len(fixes)}):")
+            for pid in sorted(fixes):
+                c = corrections[pid]
+                old_p = next((p for p in hooks if p["id"] == pid), None)
+                if old_p:
+                    print(f"  {pid}: {old_p.get('hook_event')}/{old_p.get('hook_blocking')} → "
+                          f"{c.get('hook_event', old_p.get('hook_event'))}/{c.get('hook_blocking', old_p.get('hook_blocking'))}")
         return
 
     # Apply corrections
@@ -1523,18 +1568,23 @@ def cmd_validate_hooks(args):
         pid = p.get("id", "")
         if pid in corrections:
             c = corrections[pid]
-            if "hook_event" in c:
-                p["hook_event"] = c["hook_event"]
-            if "hook_tool" in c:
-                p["hook_tool"] = c["hook_tool"]
-            if "hook_blocking" in c:
-                p["hook_blocking"] = c["hook_blocking"]
+            if c.get("demote"):
+                p["mode"] = "active"
+                p["mode_rationale"] = f"Demoted from hook: {c.get('rationale', 'high false positive risk')}"
+                print(f"  Demoted to skill: {pid}", flush=True)
+            else:
+                if "hook_event" in c:
+                    p["hook_event"] = c["hook_event"]
+                if "hook_tool" in c:
+                    p["hook_tool"] = c["hook_tool"]
+                if "hook_blocking" in c:
+                    p["hook_blocking"] = c["hook_blocking"]
             p["hook_validation_rationale"] = c.get("rationale", "")
 
     with open(input_file, "w") as f:
         json.dump(patterns, f, indent=2)
 
-    print(f"Applied {len(corrections)} correction(s) to {input_file}", flush=True)
+    print(f"Applied {len(fixes)} fix(es), {len(demotions)} demotion(s) to {input_file}", flush=True)
 
 
 # ---------------------------------------------------------------------------
