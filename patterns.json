@@ -2039,9 +2039,10 @@
     "hook_event": "PostToolUse",
     "hook_tool": "Edit",
     "hook_glob": "**/apps/**/*.scala",
-    "hook_check": "grep -qE '\\.(getOrElse|orElse|fold)\\s*\\(\\s*\"\"' \"$1\"",
-    "hook_message": "API schema contract violation: A field is silently defaulted to an empty string via getOrElse(\"\"). If the field is truly optional, declare it as Option[T] in the schema. If it is required, validate its presence and return an error instead of masking missing data.",
-    "hook_blocking": false
+    "hook_check": "grep -n 'getOrElse\\s*(\\s*\"\"\\s*)' \"$1\" | grep -iv 'description\\s*=\\s*Option' | grep -q '.'",
+    "hook_message": "Possible silent empty-string default for a required API field. If the schema marks this field as required, do not map missing values to \"\". Either make the field Option[String] in the schema, or fail explicitly when the value is absent. See pattern: api-response-must-match-schema-contract",
+    "hook_blocking": false,
+    "hook_fp_risk": "MEDIUM"
   },
   {
     "id": "api-route-descriptions-specify-types",
@@ -2340,9 +2341,10 @@
     "hook_event": "PostToolUse",
     "hook_tool": "Edit",
     "hook_glob": "**/compute-providers/**/*.scala",
-    "hook_check": "grep -qE '\\.(delete|remove)\\s*\\(' \"$1\" && ! grep -qiE '(archivedAt|softDelete|archive)' \"$1\"",
-    "hook_message": "Hard delete detected in compute-providers. Entities referenced by other records (e.g., resource configs used by deployments) should be archived (set archivedAt) instead of deleted to preserve referential integrity. See pattern: archive-dont-delete-referenced-entities.",
-    "hook_blocking": false
+    "hook_check": "grep -qE '(repo|repository|dao|store)\\.(delete|remove)\\s*\\(' \"$1\"",
+    "hook_message": "Hard delete detected on a repository object in compute-providers. These entities are often referenced by deployments and other records \u2014 use soft-archive (set an archivedAt timestamp and filter with archivedAt.isEmpty) instead of delete to preserve referential integrity.",
+    "hook_blocking": false,
+    "hook_fp_risk": "MEDIUM"
   },
   {
     "id": "aria-label-on-icon-only-buttons",
@@ -2783,9 +2785,11 @@
     "hook_event": "PreToolUse",
     "hook_tool": "Edit",
     "hook_glob": "**/*Controller*.scala",
-    "hook_check": "grep -nE '(config|settings|credentials)\\.(toMap|toJson)\\b|Json\\.toJson\\(\\s*(config|settings|fullConfig)' \"$1\"",
-    "hook_message": "Potential secret leakage: this code serializes a full config/settings object in an API response. Use an allowlist approach \u2014 define a DTO with only the safe fields needed by the client and map them explicitly. Never return raw config maps that may contain secrets (DB_PASSWORD, API_SECRET_KEY, etc.).",
-    "hook_blocking": true
+    "hook_check": "grep -qE '(Json\\.toJson\\(config|config\\.toMap\\b|toJson\\(.*\\.toMap\\)|Ok\\(Json\\.toJson\\(config\\))' \"$1\"",
+    "hook_message": "Potential secret leakage: this controller serializes a full config object directly. Use an allowlist approach \u2014 define a case class (e.g., PublicConfig) with only safe fields and map the full config to it before serialization. Never return getFullConfig results or config.toMap directly from an endpoint.",
+    "hook_blocking": true,
+    "hook_fp_risk": "MEDIUM",
+    "hook_validation_rationale": "Secret leakage prevention is a preventive gate that should block BEFORE the edit is written; PostToolUse+blocking is contradictory since the code is already on disk."
   },
   {
     "id": "audit-build-dependencies-after-code-relocation-refactors",
@@ -6213,10 +6217,11 @@
     "hook_rationale": "A regex scan for config/limit values defaulting to 0 (e.g., getOrElse(0), ?? 0, .getOrDefault(..., 0)) in config-handling code can mechanically flag this high-severity issue that silently blocks operations.",
     "hook_event": "PostToolUse",
     "hook_tool": "Edit",
-    "hook_glob": "**/*.{ts,tsx}",
-    "hook_check": "grep -E '(\\|\\|\\s*0\\b|\\?\\?\\s*0\\b)' \"$1\" | grep -iqE '(config|limit|max|size|threshold|quota|capacity|timeout)'",
-    "hook_message": "Possible zero default for a config-driven limit detected. Defaulting to 0 can silently block all operations (e.g., max file size of 0 rejects every upload). Use a sensible non-zero default and explicitly handle 0 as 'no limit' if intended.",
-    "hook_blocking": false
+    "hook_glob": "**/*.{ts,tsx,js,jsx,scala}",
+    "hook_check": "grep -nE '(max|limit|size|threshold|quota|capacity|timeout|ttl)' \"$1\" | grep -iE '(\\|\\||\\?\\?)\\s*0\\b' | grep -q .",
+    "hook_message": "Unsafe zero default for config-driven limit detected. Defaulting to 0 when a config value is missing can silently block all operations (e.g., max file size of 0 rejects every upload). Use a sensible non-zero default and explicitly document if 0 means 'no limit'. See PRs #44194, #47271.",
+    "hook_blocking": false,
+    "hook_fp_risk": "MEDIUM"
   },
   {
     "id": "avoid-upstream-dependencies-in-e2e-tests",
@@ -6400,11 +6405,11 @@
     "modules": [
       "frontend"
     ],
-    "mode": "hook",
+    "mode": "active",
     "confidence": 0.5,
     "review_count": 5,
     "status": "active",
-    "mode_rationale": "A regex can detect unawaited async calls inside try blocks (e.g., matching a function call without await inside try-catch in .ts files), this is a high-severity bug that silently breaks error handling, and the pattern is rare in correct code.",
+    "mode_rationale": "Demoted from hook: HIGH FP: the awk flags ANY try-catch without await in async files, but async functions routinely wrap synchronous operations (JSON.parse, type coercion, map/filter) in try-catch \u2014 one sync try-catch block in an otherwise async file triggers this on every edit.",
     "skill_worthy": false,
     "skill_rationale": "Single-sentence rule: always await async calls inside try-catch \u2014 no decision tree or multi-step guidance needed.",
     "steps": [
@@ -6416,7 +6421,15 @@
     ],
     "skill_title": "Await async calls inside try-catch blocks to catch errors",
     "hook_worthy": true,
-    "hook_rationale": "A regex can detect unawaited async calls inside try blocks (e.g., matching a function call without await inside try-catch in .ts files), this is a high-severity bug that silently breaks error handling, and the pattern is rare in correct code."
+    "hook_rationale": "A regex can detect unawaited async calls inside try blocks (e.g., matching a function call without await inside try-catch in .ts files), this is a high-severity bug that silently breaks error handling, and the pattern is rare in correct code.",
+    "hook_event": "PostToolUse",
+    "hook_tool": "Edit",
+    "hook_glob": "**/*.{ts,tsx,js,jsx}",
+    "hook_check": "grep -q 'async ' \"$1\" && awk '/try *\\{/{t=1;w=0} t&&/await/{w=1} t&&/catch/{if(!w)f=1;t=0} END{exit(f?0:1)}' \"$1\"",
+    "hook_message": "Try-catch block in async context contains no `await`. Unawaited async calls inside try won't have their rejections caught \u2014 the promise rejects independently and the catch block never executes. Add `await` before Promise-returning calls.",
+    "hook_blocking": false,
+    "hook_fp_risk": "MEDIUM",
+    "hook_validation_rationale": "HIGH FP: the awk flags ANY try-catch without await in async files, but async functions routinely wrap synchronous operations (JSON.parse, type coercion, map/filter) in try-catch \u2014 one sync try-catch block in an otherwise async file triggers this on every edit."
   },
   {
     "id": "await-async-permission-checks",
@@ -6434,11 +6447,11 @@
     "modules": [
       "frontend"
     ],
-    "mode": "hook",
+    "mode": "active",
     "confidence": 0.3,
     "review_count": 3,
     "status": "active",
-    "mode_rationale": "A regex/AST scan can detect permission-check functions (e.g., hasAccess*, canAccess*) used in boolean expressions without await \u2014 high security severity as unawaited Promises are always truthy, bypassing access control.",
+    "mode_rationale": "Demoted from hook: HIGH FP: grep matches any synchronous permission check (hasAccess, canEdit, etc.) that correctly omits await \u2014 many permission checks in TypeScript are sync (e.g., reading from React context/store), so this fires on correct code in most .ts/.tsx files with permission logic.",
     "skill_worthy": false,
     "skill_rationale": "This is a specific instance of the await-in-try-catch rule: always await Promise-returning permission checks before using in boolean context.",
     "steps": [
@@ -6455,10 +6468,11 @@
     "hook_event": "PreToolUse",
     "hook_tool": "Edit",
     "hook_glob": "**/*.{ts,tsx}",
-    "hook_check": "grep -nE 'if\\s*\\(\\s*(has|can|check)(Access|Permission|Auth)[A-Za-z]*\\(' \"$1\" | grep -qv 'await'",
-    "hook_message": "Unawaited async permission check detected. A function like hasAccessToResource() returns a Promise, which is always truthy in a boolean context \u2014 this silently bypasses the authorization check. Add `await` before the call: `if (await hasAccessToResource(...))`.",
+    "hook_check": "grep -nE 'if\\s*\\(\\s*!?(has[A-Z][a-zA-Z]*|can[A-Z][a-zA-Z]*|check(Access|Permission|Auth)[a-zA-Z]*)\\s*\\(' \"$1\" | grep -qv 'await'",
+    "hook_message": "Unawaited async permission check detected. An unresolved Promise is always truthy and will silently bypass the security check. Add 'await' before the permission function call (e.g., 'if (await hasAccessToResource(resourceId))').",
     "hook_blocking": true,
-    "hook_validation_rationale": "Unawaited permission check is an auth bypass \u2014 this is a preventive security gate that should block the edit before it's written, not inspect after."
+    "hook_validation_rationale": "HIGH FP: grep matches any synchronous permission check (hasAccess, canEdit, etc.) that correctly omits await \u2014 many permission checks in TypeScript are sync (e.g., reading from React context/store), so this fires on correct code in most .ts/.tsx files with permission logic.",
+    "hook_fp_risk": "MEDIUM"
   },
   {
     "id": "await-futures-in-tests",
@@ -10340,13 +10354,14 @@
     "hook_worthy": true,
     "hook_rationale": "A grep scan on soft-delete implementations in entity services can flag missing credential cleanup logic when the entity model has associated secret/credential fields \u2014 high security severity.",
     "mode_rationale": "A grep scan on soft-delete implementations in entity services can flag missing credential cleanup logic when the entity model has associated secret/credential fields \u2014 high security severity.",
-    "hook_event": "PreToolUse",
+    "hook_event": "PostToolUse",
     "hook_tool": "Edit",
-    "hook_glob": "**/compute-providers/**/*.scala",
-    "hook_check": "grep -q 'deletedAt\\|softDelete\\|soft_delete' \"$1\" && ! grep -q 'deleteCredentials\\|purgeCredentials\\|removeCredentials\\|credentialRef.*=.*None\\|clearCredentials' \"$1\"",
-    "hook_message": "Soft-delete detected without explicit credential lifecycle handling. When soft-deleting entities with associated secrets, you must explicitly purge or retain credentials \u2014 users expect stored credentials are fully removed when they delete a resource. Add credential cleanup (e.g., secretsService.deleteCredentials) and clear the credentialRef. See PR #41985.",
-    "hook_blocking": true,
-    "hook_validation_rationale": "Credential safety is a preventive concern (credentials left dangling after soft-delete); PreToolUse+blocking prevents the code from landing without explicit credential handling."
+    "hook_glob": "**/*Provider*.scala",
+    "hook_check": "grep -q 'deletedAt' \"$1\" && ! grep -qE '(deleteCredential|purgeCredential|credentialRef\\s*=\\s*None|removeSecret|clearCredential)' \"$1\"",
+    "hook_message": "Soft-delete detected without explicit credential lifecycle handling. When soft-deleting entities with associated secrets, explicitly purge credentials (e.g., secretsService.deleteCredentials) and clear the credentialRef, or document why retention is intentional. Orphaned secrets are a security risk.",
+    "hook_blocking": false,
+    "hook_validation_rationale": "Credential safety is a preventive concern (credentials left dangling after soft-delete); PreToolUse+blocking prevents the code from landing without explicit credential handling.",
+    "hook_fp_risk": "MEDIUM"
   },
   {
     "id": "consider-database-migration-for-field-renames",
@@ -19467,9 +19482,10 @@
     "hook_event": "PostToolUse",
     "hook_tool": "Edit",
     "hook_glob": "**/common-core/**/*.scala",
-    "hook_check": "grep -n 'class.*Exception' \"$1\" | grep 'extends' | grep -v 'cause' | grep -q '.'",
-    "hook_message": "Exception wrapper class missing cause parameter. Custom exceptions must accept `cause: Throwable` and pass it to the parent constructor (e.g., `extends RuntimeException(message, cause)`) to preserve the original stack trace and cause chain. See PR #41111.",
-    "hook_blocking": false
+    "hook_check": "grep -qE 'extends (Runtime)?Exception\\(message\\)' \"$1\"",
+    "hook_message": "Exception wrapper missing cause chain: this class extends Exception with only a message parameter, which loses the original stack trace on re-throw. Add a `cause: Throwable` constructor parameter and pass it to the parent: `extends RuntimeException(message, cause)`.",
+    "hook_blocking": false,
+    "hook_fp_risk": "MEDIUM"
   },
   {
     "id": "exclude-non-analytical-data-from-telemetry-events",
@@ -23880,11 +23896,11 @@
     "modules": [
       "frontend"
     ],
-    "mode": "hook",
+    "mode": "active",
     "confidence": 0.2,
     "review_count": 2,
     "status": "active",
-    "mode_rationale": "A grep for timeout values above a threshold (e.g., jest.setTimeout > 30000 or timeout: 60000 in test files) is precise, rare in correct code, and catches a common anti-pattern.",
+    "mode_rationale": "Hook enrichment failed, fell back to active",
     "skill_worthy": true,
     "skill_rationale": "Engineers benefit from a diagnostic workflow: identify slow tests, check for unmocked calls, add missing mocks, verify speed.",
     "steps": [
@@ -25603,9 +25619,10 @@
     "hook_event": "PostToolUse",
     "hook_tool": "Edit",
     "hook_glob": "**/*Controller*.scala",
-    "hook_check": "if grep -qE '=\\s*Action(\\s*\\{|\\.async|\\s*\\()' \"$1\" && ! grep -qE 'isEnabled|featureFlag|FeatureNotEnabledException' \"$1\"; then exit 0; else exit 1; fi",
-    "hook_message": "This controller defines API endpoints but contains no feature flag guards. If this endpoint corresponds to a feature flag, add an `isEnabled` check that throws a `FeatureNotEnabledException` with a message indicating the feature can be enabled by an administrator. Feature flag definitions and their endpoint guards should land in the same PR. See PRs #39933 and #42133 for examples.",
-    "hook_blocking": false
+    "hook_check": "grep -q 'FeatureFlag\\|featureFlag\\|feature_flag' \"$1\" && grep -q 'Action\\|Action.async' \"$1\" && ! grep -q 'isEnabled\\|isFeatureEnabled\\|featureFlags\\.' \"$1\"",
+    "hook_message": "This controller references a feature flag but no `isEnabled` guard was found on its endpoints. When adding or referencing a feature flag, guard the corresponding API endpoints in the same PR. Throw a FeatureNotEnabledException with a message indicating the feature can be enabled but is not currently active (maps to HTTP 403).",
+    "hook_blocking": false,
+    "hook_fp_risk": "MEDIUM"
   },
   {
     "id": "guard-expensive-calls-with-early-return",
@@ -25703,11 +25720,11 @@
       "frontend",
       "apps"
     ],
-    "mode": "hook",
+    "mode": "active",
     "confidence": 0.2,
     "review_count": 2,
     "status": "active",
-    "mode_rationale": "A grep scan can detect references to feature flag constants in component files without corresponding conditional rendering guards \u2014 mechanically detectable and prevents premature feature exposure.",
+    "mode_rationale": "Demoted from hook: Fires on any page/view/dashboard component with 3+ children that lacks feature flag imports, which matches most stable page components in a mature codebase \u2014 HIGH false-positive rate.",
     "skill_worthy": false,
     "skill_rationale": "This is a straightforward principle: check the feature flag before rendering flag-gated features.",
     "steps": [
@@ -25723,9 +25740,11 @@
     "hook_event": "PostToolUse",
     "hook_tool": "Edit",
     "hook_glob": "**/*.tsx",
-    "hook_check": "grep -q 'useFeatureFlag\\|isFeatureEnabled\\|useFeature' \"$1\" && exit 1; grep -qE '<[A-Z][a-zA-Z]*(Panel|Dashboard|Feature|Monitor|Experiment)' \"$1\"",
-    "hook_message": "This file renders components with feature-gated names (Panel, Dashboard, Monitor, etc.) but does not import useFeatureFlag or similar guards. If this component depends on a feature flag, wrap it in a conditional check so it is not rendered when the flag is disabled.",
-    "hook_blocking": false
+    "hook_check": "echo \"$1\" | grep -qiP '(Page|View|Overview|Layout|Dashboard)\\.' || exit 1; grep -qP 'useFeatureFlag|isFeatureEnabled|@domino/feature-flags' \"$1\" && exit 1; grep -oP '<[A-Z]\\w+' \"$1\" | sort -u | sed -n '3p' | grep -q .",
+    "hook_message": "This page component renders 3+ child components but imports no feature flag utility. New features added to aggregation pages should be gated with useFeatureFlag() so they degrade gracefully when disabled. Import from @domino/feature-flags and wrap flag-dependent components in a conditional render (e.g., {isEnabled && <Component />}).",
+    "hook_blocking": false,
+    "hook_fp_risk": "MEDIUM",
+    "hook_validation_rationale": "Fires on any page/view/dashboard component with 3+ children that lacks feature flag imports, which matches most stable page components in a mature codebase \u2014 HIGH false-positive rate."
   },
   {
     "id": "guard-numeric-overflow-in-retry",
@@ -28781,10 +28800,11 @@
     "hook_rationale": "A regex/grep can detect hardcoded polling intervals (e.g., setInterval/setTimeout with literal numbers, polling config with hardcoded values) in new code and flag them for externalization.",
     "hook_event": "PostToolUse",
     "hook_tool": "Edit",
-    "hook_glob": "**/*.{scala,ts,tsx,js}",
-    "hook_check": "grep -nE '(scheduleAtFixedRate|scheduleWithFixedDelay|setInterval|setTimeout)\\s*\\(.*[0-9]+' \"$1\" | grep -qvE '(config|Config|getInt|getOrElse|centralConfig|CentralConfig|\\.env|ENV|settings|Settings|INTERVAL|interval\\s*=)'",
-    "hook_message": "Hardcoded polling/scheduling interval detected. Expose the interval via Central Config (Scala) or environment variable (frontend) rather than hardcoding it \u2014 this enables tuning without redeployment. Define a config key (e.g., com.cerebro.<module>.<feature>.intervalSeconds), read it at startup with a sensible default, and guard against tight loops with .max(1).",
-    "hook_blocking": false
+    "hook_glob": "**/*.scala",
+    "hook_check": "grep -nE '(scheduleAtFixedRate|scheduleWithFixedDelay|fixedRate|fixedDelay)\\b' \"$1\" | grep -qE '[0-9]+\\.(seconds|minutes|millis|milliseconds|hours)'",
+    "hook_message": "Hardcoded polling/scheduling interval detected. Expose the interval via Central Config (e.g., centralConfig.getInt(\"com.cerebro.<module>.<feature>.intervalSeconds\")) with a sensible default and a min-value guard (`.max(1)`) to prevent tight loops. See pattern: make-polling-intervals-configurable-via-central-config.",
+    "hook_blocking": false,
+    "hook_fp_risk": "MEDIUM"
   },
   {
     "id": "method-names-should-describe-behavior",
@@ -33090,11 +33110,11 @@
     "modules": [
       "frontend"
     ],
-    "mode": "hook",
+    "mode": "active",
     "confidence": 0.2,
     "review_count": 2,
     "status": "active",
-    "mode_rationale": "A grep can detect className usage on styled-components in frontend files and flag violations, preventing style inconsistency.",
+    "mode_rationale": "Demoted from hook: HIGH FP: className is legitimately used alongside styled-components for testing attributes, passing to third-party components, and non-style DOM attributes \u2014 the rule itself acknowledges valid className uses, so this fires on correct code in most styled-component files.",
     "skill_worthy": false,
     "skill_rationale": "The rule is a single clear directive \u2014 use styled-component composition instead of className \u2014 no multi-step guidance needed.",
     "steps": [
@@ -33110,10 +33130,11 @@
     "hook_event": "PostToolUse",
     "hook_tool": "Edit",
     "hook_glob": "**/*.tsx",
-    "hook_check": "grep -q 'styled[.(]' \"$1\" && grep -q 'className=' \"$1\"",
-    "hook_message": "className detected in a styled-components file. Use styled-component composition instead of className for styling. Reserve className only for deeply nested third-party components you cannot reach otherwise.",
+    "hook_check": "grep -q 'styled[.(]' \"$1\" && grep -qE 'className=[{\"]' \"$1\"",
+    "hook_message": "This file uses styled-components but also applies className for styling. Prefer styled-component composition (e.g., styled.span, styled(Component)) over className. Reserve className only for deeply nested third-party components you cannot reach otherwise.",
     "hook_blocking": false,
-    "hook_validation_rationale": "hook_tool is \"Write\" so this hook only fires when creating new .tsx files, missing the far more common case of editing existing files where className misuse with styled-components is introduced."
+    "hook_validation_rationale": "HIGH FP: className is legitimately used alongside styled-components for testing attributes, passing to third-party components, and non-style DOM attributes \u2014 the rule itself acknowledges valid className uses, so this fires on correct code in most styled-component files.",
+    "hook_fp_risk": "MEDIUM"
   },
   {
     "id": "no-commented-out-code-without-tracking",
@@ -36556,11 +36577,11 @@
       "registered-models",
       "apps"
     ],
-    "mode": "hook",
+    "mode": "active",
     "confidence": 0.3,
     "review_count": 3,
     "status": "active",
-    "mode_rationale": "A hook can detect new field additions in model/schema files (migration files, entity definitions) and prompt the developer to confirm a backfill migration exists.",
+    "mode_rationale": "Hook enrichment failed, fell back to active",
     "skill_worthy": true,
     "skill_rationale": "Requires a workflow covering migration planning, backfill script creation, rollback strategy, and testing \u2014 a multi-step process with decision points.",
     "steps": [
@@ -37421,9 +37442,10 @@
     "hook_event": "PostToolUse",
     "hook_tool": "Edit",
     "hook_glob": "**/dataset-rw/**/*.scala",
-    "hook_check": "grep -q '@Named(' \"$1\"",
-    "hook_message": "Detected @Named annotation for dependency injection. Prefer injecting concrete types directly (e.g., legacyStore: LegacyDatasetStore) instead of @Named(\"...\") on the interface. Reserve the interface binding for the facade that other consumers use. See PR #47131.",
-    "hook_blocking": false
+    "hook_check": "grep -qE '@Named\\(|Names\\.named\\(' \"$1\"",
+    "hook_message": "Detected @Named annotation for dependency injection. Prefer injecting concrete types directly (e.g., `legacyStore: LegacyDatasetStore`) instead of using @Named on the interface (e.g., `@Named(\"legacy\") store: DatasetStore`). Reserve the interface binding for the facade that general consumers use. See PR #47131.",
+    "hook_blocking": false,
+    "hook_fp_risk": "MEDIUM"
   },
   {
     "id": "prefer-config-objects-over-many-parameters",
@@ -39677,10 +39699,11 @@
     "hook_rationale": "A hook can detect when route definitions are deleted or modified in API controller files and warn about backward compatibility for external consumers.",
     "hook_event": "PostToolUse",
     "hook_tool": "Edit",
-    "hook_glob": "**/executor/**/*.scala",
-    "hook_check": "git diff -- \"$1\" | grep -qE '^\\-.*@(GET|POST|PUT|DELETE|PATCH)\\b'",
-    "hook_message": "Endpoint removal detected. When modifying or replacing an API endpoint in executor, keep the old endpoint functional for backward compatibility \u2014 external consumers or agents may depend on it. Deprecate the old endpoint and delegate to the new implementation instead of removing it.",
-    "hook_blocking": false
+    "hook_glob": "**/*Resource*.scala",
+    "hook_check": "git diff -- \"$1\" 2>/dev/null | grep -qE '^\\-.*@(GET|POST|PUT|DELETE|PATCH)'",
+    "hook_message": "API endpoint annotation removed from Resource file. When modifying or replacing an endpoint, keep the old endpoint functional (with @Deprecated) for backward compatibility \u2014 external consumers and agents may depend on it. Verify no active callers rely on the removed endpoint before proceeding.",
+    "hook_blocking": false,
+    "hook_fp_risk": "MEDIUM"
   },
   {
     "id": "preserve-old-impl-during-migration",
@@ -41042,13 +41065,14 @@
     "skill_title": "Redact PII fields before sending telemetry events",
     "hook_worthy": true,
     "hook_rationale": "A hook can detect when telemetry/analytics event code is modified and new fields containing user identifiers (username, email, userId) are added without corresponding redaction list updates.",
-    "hook_event": "PreToolUse",
+    "hook_event": "PostToolUse",
     "hook_tool": "Edit",
     "hook_glob": "**/*.scala",
-    "hook_check": "grep -qiE '(analytics|telemetry|\\.track\\(|segment|mixpanel)' \"$1\" && grep -qE '(userName|userEmail|ownerUsername|requestedByUser|\\.email|\\.username)' \"$1\" && ! grep -qiE '(redact|sanitiz|anonymiz)' \"$1\"",
-    "hook_message": "PII field detected in telemetry/analytics code without redaction. Fields like userName, userEmail, or ownerUsername must be added to the redacted fields list (e.g., AnalyticsRedactionConfig.redactedFields) before being sent to third-party analytics platforms. Update the redaction config and verify the event is sanitized before tracking.",
-    "hook_blocking": true,
-    "hook_validation_rationale": "PII leakage to third-party analytics is a data loss prevention concern that should block the edit before it's written, not warn after the leak is already in code."
+    "hook_check": "grep -qEi '\\.(track|send|emit|publish)\\(' \"$1\" && grep -qE '(userName|userEmail|ownerUsername|userIdentity|requestedByUser)' \"$1\" && ! grep -qEi '(redact|sanitiz|RedactionConfig)' \"$1\"",
+    "hook_message": "PII field detected near analytics tracking call without redaction. Fields like userName, userEmail, or ownerUsername must be added to the redacted fields list (e.g., AnalyticsRedactionConfig.redactedFields) before being sent to third-party analytics platforms. See PRs #42922, #42215.",
+    "hook_blocking": false,
+    "hook_validation_rationale": "PII leakage to third-party analytics is a data loss prevention concern that should block the edit before it's written, not warn after the leak is already in code.",
+    "hook_fp_risk": "MEDIUM"
   },
   {
     "id": "reduce-for-transforms-foreach-for-side-effects",
@@ -43943,11 +43967,12 @@
     "hook_rationale": "A hook can detect new or modified endpoint definitions in data access layers and flag them for access control review, especially if no auth annotation/middleware is present.",
     "hook_event": "PreToolUse",
     "hook_tool": "Edit",
-    "hook_glob": "**/*Controller*.scala",
-    "hook_check": "grep -qE '=\\s*Action[\\.\\(\\s{]' \"$1\"",
-    "hook_message": "Security: this endpoint uses Action directly without an auth wrapper. Unauthenticated callers can reach it and may access restricted data. Wrap the endpoint with an auth action (e.g., auth.async) and ensure the service layer filters results by caller identity. See pattern review-access-control-on-data-endpoints (PR #41762).",
+    "hook_glob": "**/dataset*/**/*.scala",
+    "hook_check": "grep -qE '= *Action[.{ ]' \"$1\" && ! grep -qE 'auth\\.|AuthAction|authAction' \"$1\"",
+    "hook_message": "Security: This file uses unauthenticated Action.async without an auth guard. Data endpoints must use an authenticated action (e.g., auth.async) so unauthenticated callers cannot access restricted data. Wrap the endpoint with an auth action or confirm this is intentionally public. (PR #41762)",
     "hook_blocking": true,
-    "hook_validation_rationale": "Unauthenticated endpoint access is an auth gate that should prevent the bad code from being written; blocking PostToolUse is contradictory since the edit is already on disk."
+    "hook_validation_rationale": "Auth gate check identical in purpose to verify-auth-checks-on-new-service-endpoints (which is correctly PreToolUse+blocking) \u2014 unauthenticated endpoint detection is a security prevention check, not a post-hoc inspection.",
+    "hook_fp_risk": "LOW"
   },
   {
     "id": "review-cache-invalidation-on-key-changes",
@@ -44911,9 +44936,10 @@
     "hook_event": "PostToolUse",
     "hook_tool": "Edit",
     "hook_glob": "**/*.scala",
-    "hook_check": "grep -qE 'private\\s+(var\\b|.*mutable\\.)' \"$1\" && ! grep -qE 'synchronized|new\\s+(Reentrant)?Lock|\\.lock\\b|@volatile|@GuardedBy|Atomic(Reference|Integer|Long|Boolean)' \"$1\"",
-    "hook_message": "Shared mutable state without synchronization detected. This file declares private var or mutable collections but has no synchronized block, Lock, @volatile, or Atomic* guard. Protect both reads and writes with a dedicated lock object (e.g., `private val lock = new Object; lock.synchronized { ... }`) or use Atomic* / volatile as appropriate. See PRs #41307, #40505, #42260, #43112.",
-    "hook_blocking": false
+    "hook_check": "grep -q 'mutable\\.\\(HashMap\\|Map\\|Set\\|ArrayBuffer\\|ListBuffer\\)' \"$1\" && ! grep -qE '(synchronized|ReentrantLock|AtomicReference|new Object)' \"$1\"",
+    "hook_message": "Shared mutable state without synchronization: This file uses mutable collections (e.g., mutable.HashMap) but has no synchronization primitives (synchronized/Lock/Atomic). Concurrent reads and writes will cause lost updates and stale reads. Protect both reads and writes with a dedicated lock object or use immutable collections with synchronized swap. See PRs #41307, #40505, #42260.",
+    "hook_blocking": false,
+    "hook_fp_risk": "MEDIUM"
   },
   {
     "id": "show-error-toast-on-api-failure",
@@ -52374,10 +52400,11 @@
     "hook_rationale": "A hook can detect modifications to known shared configuration files and warn that all consuming services must be audited and updated.",
     "hook_event": "PostToolUse",
     "hook_tool": "Edit",
-    "hook_glob": "**/shared/**/resources/*.conf",
-    "hook_check": "basename=$(basename \"$1\") && grep -rl \"include.*${basename}\" --include='*.conf' . | grep -v \"$1\" | grep -q .",
-    "hook_message": "You edited a shared configuration file. Other services include this file \u2014 search for all `include` references to this config across nucleus/, compute-providers/, and other modules, then verify every consumer uses the current key names. Missed consumers cause runtime ConfigException$Missing failures that compile cleanly.",
-    "hook_blocking": false
+    "hook_glob": "**/shared/**/resources/**/*.conf",
+    "hook_check": "basename=$(basename \"$1\") && grep -rl \"include \\\"${basename}\\\"\" --include='*.conf' . 2>/dev/null | grep -qv \"$1\"",
+    "hook_message": "Shared config file modified. Other services include this file \u2014 run `grep -r 'include \"<filename>\"' --include='*.conf'` to find all consumers, then verify every reference to renamed or removed keys is updated. Stale references compile fine but cause runtime ConfigException$Missing failures (see PRs #41449, #43081).",
+    "hook_blocking": false,
+    "hook_fp_risk": "MEDIUM"
   },
   {
     "id": "update-all-related-validation-checks-when-adding-fields",
@@ -55138,21 +55165,23 @@
     "modules": [
       "frontend"
     ],
-    "mode": "hook",
+    "mode": "active",
     "confidence": 0.4,
     "review_count": 4,
     "status": "active",
-    "mode_rationale": "A grep can detect direct theme object access patterns (e.g., theme.colors, theme.tokens) in frontend files and flag them to use the utility hooks instead.",
+    "mode_rationale": "Demoted from hook: useTheme() is the standard React theme access pattern; this fires on every themed component regardless of whether useThemeColor is appropriate, producing near-universal matches on themed files.",
     "skill_worthy": false,
     "skill_rationale": "This is a single-sentence directive to use useThemeColor instead of direct theme access \u2014 no multi-step guidance needed.",
     "hook_worthy": true,
     "hook_rationale": "A grep can detect direct theme object access patterns (e.g., theme.colors, theme.tokens) in frontend files and flag them to use the utility hooks instead.",
     "hook_event": "PostToolUse",
     "hook_tool": "Edit",
-    "hook_glob": "**/*.{tsx,ts}",
-    "hook_check": "grep -nE '(useTheme\\(\\)|theme\\.(colors|palette|spacing|typography|shadows))' \"$1\"",
-    "hook_message": "Direct theme object access detected. Use existing utility hooks (e.g., useThemeColor, useThemeSpacing) instead of accessing theme properties directly. This maintains consistency and simplifies future theme refactors. See PRs #42389, #41878, #44249.",
-    "hook_blocking": false
+    "hook_glob": "**/*.{ts,tsx}",
+    "hook_check": "grep -qE 'useTheme[^A-Za-z]' \"$1\"",
+    "hook_message": "Direct `useTheme()` usage detected. Use the existing utility hooks (e.g., `useThemeColor`) instead of accessing theme objects directly, to maintain consistency and simplify future refactors. (PRs #42389, #41878, #44249)",
+    "hook_blocking": false,
+    "hook_fp_risk": "MEDIUM",
+    "hook_validation_rationale": "useTheme() is the standard React theme access pattern; this fires on every themed component regardless of whether useThemeColor is appropriate, producing near-universal matches on themed files."
   },
   {
     "id": "use-route-links-in-spa",
@@ -55194,11 +55223,11 @@
     "modules": [
       "frontend"
     ],
-    "mode": "hook",
+    "mode": "active",
     "confidence": 0.2,
     "review_count": 2,
     "status": "active",
-    "mode_rationale": "A grep can detect history.push calls with transient state parameters (filters, tabs, selections) in frontend files and suggest using history.replace instead.",
+    "mode_rationale": "Hook enrichment failed, fell back to active",
     "skill_worthy": false,
     "skill_rationale": "This is a single-sentence rule \u2014 use replace instead of push for transient URL state \u2014 no multi-step guidance needed.",
     "hook_worthy": true,
@@ -59186,21 +59215,23 @@
       "server",
       "gates"
     ],
-    "mode": "hook",
+    "mode": "active",
     "confidence": 0.2,
     "review_count": 2,
     "status": "active",
-    "mode_rationale": "A grep can detect API fields or database columns using comma-separated string patterns (e.g., split/join on commas for lists of IDs) and flag them for structured type refactoring.",
+    "mode_rationale": "Demoted from hook: .split(\",\") and .mkString(\",\") are extremely common legitimate Scala string operations; this fires on nearly every Scala file that does any delimiter-based string processing.",
     "skill_worthy": false,
     "skill_rationale": "The rule is straightforward \u2014 use collection types instead of CSV strings \u2014 no multi-step guidance needed.",
     "hook_worthy": true,
     "hook_rationale": "A grep can detect API fields or database columns using comma-separated string patterns (e.g., split/join on commas for lists of IDs) and flag them for structured type refactoring.",
     "hook_event": "PostToolUse",
     "hook_tool": "Edit",
-    "hook_glob": "**/{server,gates}/**/*.scala",
-    "hook_check": "grep -nE '\\.(split|mkString)\\s*\\(\\s*\",' \"$1\"",
-    "hook_message": "Possible CSV-string anti-pattern detected. When a field holds multiple values (user IDs, names, etc.), use a proper collection type (Seq, List, Array) instead of a comma-separated String with .split/.mkString. See PRs #42922, #46039.",
-    "hook_blocking": false
+    "hook_glob": "**/*.scala",
+    "hook_check": "grep -nE '\\.(split|mkString)\\s*\\(\\s*\"[,;|]' \"$1\"",
+    "hook_message": "Possible CSV-string anti-pattern detected. When a field holds multiple values (user IDs, names, tags), use a proper collection type (Seq, List, Array) instead of a comma-separated String with split/mkString. See PRs #42922, #46039.",
+    "hook_blocking": false,
+    "hook_fp_risk": "MEDIUM",
+    "hook_validation_rationale": ".split(\",\") and .mkString(\",\") are extremely common legitimate Scala string operations; this fires on nearly every Scala file that does any delimiter-based string processing."
   },
   {
     "id": "use-styled-components-not-inline-styles",
@@ -59313,11 +59344,11 @@
     "modules": [
       "frontend"
     ],
-    "mode": "hook",
+    "mode": "active",
     "confidence": 0.2,
     "review_count": 2,
     "status": "active",
-    "mode_rationale": "A grep can detect direct color constant imports inside theme function files and flag them to use the function's parameters instead.",
+    "mode_rationale": "Demoted from hook: HIGH FP: a file can import colors for use outside of theme functions (conditional rendering, non-styled JSX, constants) while also containing styled() calls \u2014 the check has no way to verify the import is used inside the theme function, so it fires on any co-occurrence.",
     "skill_worthy": false,
     "skill_rationale": "The rule is a single directive \u2014 use function parameters instead of imports for theme values \u2014 no multi-step guidance needed.",
     "hook_worthy": true,
@@ -59325,9 +59356,11 @@
     "hook_event": "PostToolUse",
     "hook_tool": "Edit",
     "hook_glob": "**/*.tsx",
-    "hook_check": "grep -qE \"import\\s+.*\\b(colors|tokens)\\b.*from\\s+['\\\"]@domino/ui\" \"$1\"",
-    "hook_message": "Direct import of colors/tokens from @domino/ui detected. If the enclosing theme function already receives colors or tokens as parameters, use those parameters instead of importing constants directly \u2014 this ensures theme overrides and dark mode work correctly.",
-    "hook_blocking": false
+    "hook_check": "grep -qE 'import\\s+.*\\bcolors\\b.*from|from\\s+.*/colors' \"$1\" && grep -qE 'makeStyles|createStyles|useTheme|withStyles|styled\\(' \"$1\"",
+    "hook_message": "Direct color constant import detected in a file using theme functions. Use the colors/tokens passed as parameters to makeStyles/useTheme/styled instead of importing color constants directly \u2014 this ensures theme overrides and dark mode work correctly.",
+    "hook_blocking": false,
+    "hook_fp_risk": "MEDIUM",
+    "hook_validation_rationale": "HIGH FP: a file can import colors for use outside of theme functions (conditional rendering, non-styled JSX, constants) while also containing styled() calls \u2014 the check has no way to verify the import is used inside the theme function, so it fires on any co-occurrence."
   },
   {
     "id": "use-theme-helpers-not-raw-values",
@@ -61409,11 +61442,11 @@
       "frontend",
       "remote-file-system"
     ],
-    "mode": "hook",
+    "mode": "active",
     "confidence": 0.8,
     "review_count": 8,
     "status": "active",
-    "mode_rationale": "Edits to shared/base component files can be detected by glob pattern, and a hook can warn the developer to verify consumers \u2014 preventing regressions in widely-used components.",
+    "mode_rationale": "Demoted from hook: Low actionability: PostToolUse non-blocking hook that says 'manually verify interactive behaviors in all consumers and add regression tests' is a reminder identical to the ambient rule \u2014 it provides no specific data (no consumer list, no exact regression) beyond what the developer already knows.",
     "skill_worthy": true,
     "skill_rationale": "Engineers need a regression testing checklist for shared components: identifying consumers, testing interactive behaviors, and a workflow for manual verification across usage sites.",
     "steps": [
@@ -61429,10 +61462,12 @@
     "hook_rationale": "Edits to shared/base component files can be detected by glob pattern, and a hook can warn the developer to verify consumers \u2014 preventing regressions in widely-used components.",
     "hook_event": "PostToolUse",
     "hook_tool": "Edit",
-    "hook_glob": "**/components/**/*.tsx",
-    "hook_check": "component=$(basename \"$1\" .tsx); grep -rl \"$component\" --include='*.tsx' --include='*.jsx' . 2>/dev/null | grep -v \"$(basename \"$1\")\" | awk 'NR>=2{exit 0} END{if(NR<2)exit 1}'",
-    "hook_message": "Shared component modified with 2+ consumers detected. Run `grep -r '<ComponentName' --include='*.tsx' src/` to find all usages and verify no regressions in interactive behaviors (auto-close brackets, tab handling, keyboard shortcuts). Add regression tests for each consumer before merging.",
-    "hook_blocking": false
+    "hook_glob": "**/shared/**/*.tsx",
+    "hook_check": "name=$(basename \"$1\" | sed 's/\\.[^.]*$//'); grep -rl \"import.*${name}\" --include='*.tsx' --include='*.ts' . 2>/dev/null | grep -v \"$(basename \"$1\")\" | sed -n '3p' | grep -q .",
+    "hook_message": "Shared component modified \u2014 this file has 3+ consumers. Find all usages (grep -r '<ComponentName' --include='*.tsx' src/) and verify interactive behaviors (auto-close brackets, tab/focus handling, keydown events) still work in each consumer. Add regression tests covering existing consumer behavior before merging.",
+    "hook_blocking": false,
+    "hook_fp_risk": "MEDIUM",
+    "hook_validation_rationale": "Low actionability: PostToolUse non-blocking hook that says 'manually verify interactive behaviors in all consumers and add regression tests' is a reminder identical to the ambient rule \u2014 it provides no specific data (no consumer list, no exact regression) beyond what the developer already knows."
   },
   {
     "id": "validate-shared-style-changes-with-design-stakeholders",
@@ -61673,10 +61708,11 @@
     "hook_rationale": "Edits to permission/role definition files can be detected by glob, and a hook can flag changes to restricted roles (e.g., grep for limitedAdmin) \u2014 high-severity security concern.",
     "hook_event": "PostToolUse",
     "hook_tool": "Edit",
-    "hook_glob": "**/*Permission*.scala",
-    "hook_check": "grep -qiE '(role|permission).*(check|grant|allow|deny|scope)' \"$1\" && ! grep -qiE '(Denied|mustBe Denied|NOT be able|must not|should not be|forbidden|cannot access)' \"$1\"",
-    "hook_message": "Security: This permission file lacks negative assertions for restricted roles. When modifying role-based permissions, explicitly verify that restricted roles (e.g., limitedAdmin) are DENIED access beyond their intended scope. Add 'mustBe Denied' test cases for each restricted role and action they should not perform.",
-    "hook_blocking": false
+    "hook_glob": "**/*Permission*Spec*.scala",
+    "hook_check": "if grep -q 'mustBe Permitted' \"$1\" && ! grep -q 'mustBe Denied' \"$1\"; then exit 0; else exit 1; fi",
+    "hook_message": "Permission spec has 'mustBe Permitted' but no 'mustBe Denied' assertions. Explicitly verify restricted roles (e.g., limitedAdmin) are denied access beyond their scope \u2014 add negative test cases.",
+    "hook_blocking": false,
+    "hook_fp_risk": "MEDIUM"
   },
   {
     "id": "verify-backward-compatibility-of-data-format-changes",
@@ -61773,10 +61809,11 @@
     "mode_rationale": "Deletions of env vars, scripts, or shared resources in build/.circleci files can be detected via diff, and a hook can warn about potential cross-repo breakage \u2014 high severity.",
     "hook_event": "PostToolUse",
     "hook_tool": "Edit",
-    "hook_glob": "**/{*.sbt,.circleci/*.yml}",
-    "hook_check": "git diff -- \"$1\" | grep -qE '^-.*\\b[A-Z][A-Z0-9_]{3,}\\b'",
-    "hook_message": "Detected removal of an ALL_CAPS identifier (likely an env var or shared resource). Before removing, search for cross-repo usages: `gh search code 'VAR_NAME' --owner cerebrotech`. Check CI pipelines, deploy scripts, and terraform configs. File migration PRs for all consumers before removing from this repo.",
-    "hook_blocking": false
+    "hook_glob": "**/{build.sbt,.circleci/*,Jenkinsfile,Dockerfile,docker-compose*.yml,*.env}",
+    "hook_check": "git diff -- \"$1\" 2>/dev/null | grep -qE '^\\-.*\\b[A-Z][A-Z0-9]*(_[A-Z0-9]+){2,}\\b'",
+    "hook_message": "Cross-repo dependency check needed: You removed an environment variable or shared resource from a build/CI file. Before merging, run `gh search code '<VAR_NAME>' --owner cerebrotech` to verify no downstream repos or pipelines depend on it. File migration PRs for all consumers before removing from this repo.",
+    "hook_blocking": false,
+    "hook_fp_risk": "MEDIUM"
   },
   {
     "id": "verify-test-selectors-before-removal",
@@ -61805,9 +61842,10 @@
     "hook_event": "PostToolUse",
     "hook_tool": "Edit",
     "hook_glob": "**/*.{tsx,jsx}",
-    "hook_check": "git diff -- \"$1\" | grep -qE '^-.*data-(test|testid|cy|qa)'",
-    "hook_message": "Removed data-test selector(s) detected. Before proceeding, search e2e and integration tests (e.g., grep -r the removed selector in **/e2e/**, **/integration/**, **/*.spec.*, **/*.test.*) to confirm no existing tests depend on them.",
-    "hook_blocking": false
+    "hook_check": "git diff -- \"$1\" | grep -qE '^-.*data-test'",
+    "hook_message": "Removed data-test attribute(s) detected. Verify no E2E or integration tests (Cypress, Playwright, etc.) depend on these selectors before proceeding. Search test directories: grep -r '<selector>' tests/ cypress/ e2e/ playwright/",
+    "hook_blocking": false,
+    "hook_fp_risk": "MEDIUM"
   },
   {
     "id": "validation-in-controller-layer",
@@ -61991,9 +62029,10 @@
     "hook_event": "PostToolUse",
     "hook_tool": "Edit",
     "hook_glob": "**/e2e-tests/**/fixtures/**",
-    "hook_check": "filename=$(basename \"$1\") && grep -rl \"$filename\" e2e-tests/src/ 2>/dev/null | grep -q -v \"^$1$\"",
-    "hook_message": "Shared fixture modified. This file is referenced by multiple test specs. Run `grep -r '<filename>' e2e-tests/src/` to find all consumers, then run all affected specs to verify they still pass.",
-    "hook_blocking": false
+    "hook_check": "name=$(basename \"$1\") && consumers=$(grep -rl \"$name\" e2e-tests/ 2>/dev/null | grep -v \"$1\") && [ -n \"$consumers\" ]",
+    "hook_message": "Shared fixture modified. Other tests depend on this file. Run: grep -r '$(basename $1)' e2e-tests/src/ to find all consumers, then verify they still pass after your changes.",
+    "hook_blocking": false,
+    "hook_fp_risk": "MEDIUM"
   },
   {
     "id": "verify-all-related-variables-used",
@@ -62102,10 +62141,11 @@
     "hook_event": "PreToolUse",
     "hook_tool": "Edit",
     "hook_glob": "**/*Controller*.scala",
-    "hook_check": "grep -nE '=\\s*Action(\\s*\\{|\\.async)' \"$1\" | grep -qiv 'auth'",
-    "hook_message": "Security: Endpoint uses unauthenticated Action instead of authAction. New service endpoints must wrap requests with AuthenticatedAction and verify project-level authorization (e.g., projectAuth.withProjectRole) before serving data. See pattern verify-auth-checks-on-new-service-endpoints.",
+    "hook_check": "grep -qE '= *Action[.({ ]' \"$1\"",
+    "hook_message": "Unauthenticated endpoint detected: bare `Action` used without `authAction` wrapper. New service endpoints must use `authAction.async` with project-level authorization checks (e.g., `projectAuth.withProjectRole`). See PR #41485.",
     "hook_blocking": true,
-    "hook_validation_rationale": "Missing auth wrapper on a new endpoint is a security gate that should prevent the code from being written; blocking a PostToolUse check is contradictory."
+    "hook_validation_rationale": "Auth enforcement is a security gate that should prevent unauthenticated endpoints from being written; PostToolUse+blocking is contradictory since the code is already on disk.",
+    "hook_fp_risk": "LOW"
   },
   {
     "id": "verify-auth-enforcement-at-every-layer",
@@ -62282,11 +62322,11 @@
       "jobs",
       "apps"
     ],
-    "mode": "hook",
+    "mode": "active",
     "confidence": 0.3,
     "review_count": 3,
     "status": "active",
-    "mode_rationale": "Field removals from API/DTO files can be detected by diffing for deleted fields in known model files, and a hook can warn about potential client breakage \u2014 high severity.",
+    "mode_rationale": "Demoted from hook: HIGH FP: git diff grep matches any removed line with a typed field pattern (val, parameter, case class field, local variable) across all Scala source files \u2014 routine refactoring (renaming locals, reordering params, removing private fields) triggers this constantly.",
     "skill_worthy": true,
     "skill_rationale": "Engineers need a deprecation workflow: identifying all clients, checking for field usage, planning phased removal, and examples of backward-compatible migration strategies.",
     "steps": [
@@ -62302,10 +62342,12 @@
     "hook_rationale": "Field removals from API/DTO files can be detected by diffing for deleted fields in known model files, and a hook can warn about potential client breakage \u2014 high severity.",
     "hook_event": "PostToolUse",
     "hook_tool": "Edit",
-    "hook_glob": "**/{jobs,apps}/**/*.{scala,ts,tsx}",
-    "hook_check": "git diff -- \"$1\" | grep -E '^-[^-]' | grep -qE '(val |var |def |: (String|Int|Long|Boolean|Option|Seq|string|number|boolean)|\\w+\\??: \\w)'",
-    "hook_message": "Field removal detected in an API/service interface. Before merging, verify all known clients (frontend, other services) do not depend on this field. Consider staged removal: deprecate first (@deprecated or make optional/nullable), then remove in a later version. See PRs #46586 and #47262 for prior incidents.",
-    "hook_blocking": false
+    "hook_glob": "**/src/main/scala/**/*.scala",
+    "hook_check": "git diff -- \"$1\" | grep -E '^\\-' | grep -qE '\\w+\\s*:\\s*(String|Int|Long|Boolean|Option|Seq|List|Map|Set)\\b'",
+    "hook_message": "Field removal detected in a Scala interface. Verify all known clients (Apps frontend, Jobs API consumers) do not depend on this field before merging. Consider staged removal: add @deprecated annotation, make the field Option[T] with a default of None, and ensure deserialization tolerates both old payloads (with the field) and new payloads (without it). See PRs #46586, #47262.",
+    "hook_blocking": false,
+    "hook_fp_risk": "MEDIUM",
+    "hook_validation_rationale": "HIGH FP: git diff grep matches any removed line with a typed field pattern (val, parameter, case class field, local variable) across all Scala source files \u2014 routine refactoring (renaming locals, reordering params, removing private fields) triggers this constantly."
   },
   {
     "id": "verify-behavior-before-consolidating-exception-cases",
@@ -63201,10 +63243,11 @@
     "hook_rationale": "Prop removals from shared/core UI component files can be detected by diffing for deleted props, and a hook can grep for those props across consumers \u2014 preventing breakage.",
     "hook_event": "PostToolUse",
     "hook_tool": "Edit",
-    "hook_glob": "**/shared/**/*.tsx",
-    "hook_check": "git diff -- \"$1\" | grep -v '^---' | grep -qE '^-\\s+\\w+\\??\\s*:'",
-    "hook_message": "Prop removal detected in a shared component. Run a consumer audit (grep for this component across apps/, workspaces/, and features/) before merging. If the prop is still used, add a @deprecated JSDoc annotation with a migration timeline instead of removing it directly. See pattern: verify-shared-component-usage-before-removal.",
-    "hook_blocking": false
+    "hook_glob": "**/shared/**/*.{ts,tsx}",
+    "hook_check": "git diff -- \"$1\" 2>/dev/null | grep -E '^\\-\\s+\\w+\\??\\s*:' | grep -v '^---' | grep -v '^\\-\\s*//' | grep -q .",
+    "hook_message": "Shared component prop removal detected. Before removing or renaming props on shared/core components, audit all consumers (grep the prop name across apps/, workspaces/, and features/). If other consumers still depend on it, add a @deprecated JSDoc annotation with a migration path and timeline instead of removing it. See PRs #42070, #44127 for examples.",
+    "hook_blocking": false,
+    "hook_fp_risk": "MEDIUM"
   },
   {
     "id": "verify-storybook-stories-after-refactoring",
