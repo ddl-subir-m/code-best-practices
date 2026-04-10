@@ -1,4 +1,4 @@
-"""Tests for extract.py — schema validation of generated artifacts."""
+"""Tests for extract package — schema validation of generated artifacts."""
 
 import json
 from pathlib import Path
@@ -136,7 +136,7 @@ class TestReclassGuard:
     def test_reclass_skips_triaged_patterns(self, tmp_path):
         """Patterns with skill_worthy set are not touched by reclass."""
         import json
-        from extract import cmd_reclass
+        from extract.reclass import cmd_reclass
 
         patterns = [
             {

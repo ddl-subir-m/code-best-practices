@@ -61,7 +61,7 @@ print(calendar.monthrange($year, $((10#$month)))[1])
   # Step 1: Fetch PRs (deterministic — no LLM needed)
   echo "  Fetching PRs..."
   rm -rf "$PROJECT_DIR/raw-reviews/"
-  source "$VENV" && python "$PROJECT_DIR/extract.py" fetch \
+  source "$VENV" && python -m extract fetch \
     --repo "$REPO" --since "$since" --until "$until" --batch-size 100 \
     2>&1 | tee "$LOG_DIR/fetch-$m.log"
 
@@ -76,7 +76,7 @@ print(calendar.monthrange($year, $((10#$month)))[1])
 
   # Step 2: Prepare batches (deterministic — no LLM needed)
   echo "  Preparing analysis batches..."
-  source "$VENV" && python "$PROJECT_DIR/extract.py" analyze \
+  source "$VENV" && python -m extract analyze \
     --input raw-reviews/ --output patterns.json \
     2>&1 | tee "$LOG_DIR/analyze-$m.log"
 
@@ -227,14 +227,14 @@ print(f'    Batch $batch_num: {len(data)} patterns')
   result_count=$(ls "$PROJECT_DIR/tmp/"batch-*-results.json 2>/dev/null | wc -l | tr -d ' ')
   if [[ "$result_count" -gt 0 ]]; then
     echo "  Merging $result_count batch results..."
-    source "$VENV" && python "$PROJECT_DIR/extract.py" merge \
+    source "$VENV" && python -m extract merge \
       --input tmp/ --output patterns.json \
       2>&1 | tee "$LOG_DIR/merge-$m.log"
 
     # Update modules and report
-    source "$VENV" && python "$PROJECT_DIR/extract.py" modules \
+    source "$VENV" && python -m extract modules \
       --input patterns.json --output modules.yaml 2>&1
-    source "$VENV" && python "$PROJECT_DIR/extract.py" report \
+    source "$VENV" && python -m extract report \
       --input patterns.json --output validation-report.md 2>&1
   else
     echo "  No batch results to merge."
@@ -473,29 +473,29 @@ if [[ "$SKIP_DEDUP" == "true" ]]; then
   echo "=== Skipping LLM dedup (--skip-dedup) ==="
 else
   echo "=== Deduplicating patterns... ==="
-  source "$VENV" && python "$PROJECT_DIR/extract.py" dedup --input patterns.json
+  source "$VENV" && python -m extract dedup --input patterns.json
 fi
 
 echo "=== Reclassifying modes... ==="
-source "$VENV" && python "$PROJECT_DIR/extract.py" reclass --input patterns.json
+source "$VENV" && python -m extract reclass --input patterns.json
 
 # ── Triage: skill-worthiness + hook-worthiness ──────────────────────────────
 echo "=== Triaging patterns (skill + hook classification)... ==="
-source "$VENV" && python "$PROJECT_DIR/extract.py" triage --input patterns.json --force --workers "$MAX_PARALLEL"
+source "$VENV" && python -m extract triage --input patterns.json --force --workers "$MAX_PARALLEL"
 
 # ── Enrich skills ───────────────────────────────────────────────────────────
 echo "=== Enriching skill-worthy patterns... ==="
-source "$VENV" && python "$PROJECT_DIR/extract.py" enrich --input patterns.json --workers "$MAX_PARALLEL"
+source "$VENV" && python -m extract enrich --input patterns.json --workers "$MAX_PARALLEL"
 
 # ── Enrich hooks ────────────────────────────────────────────────────────────
 hook_count=$(python3 -c "import json; ps=json.load(open('patterns.json')); print(sum(1 for p in ps if p.get('mode')=='hook'))" 2>/dev/null || echo "0")
 
 if [[ "$hook_count" -gt 0 ]]; then
   echo "=== Enriching $hook_count hook-worthy patterns with hook metadata... ==="
-  source "$VENV" && python "$PROJECT_DIR/extract.py" enrich-hooks --input patterns.json --workers "$MAX_PARALLEL"
+  source "$VENV" && python -m extract enrich-hooks --input patterns.json --workers "$MAX_PARALLEL"
 
   echo "=== Validating hook Pre/Post event + blocking consistency... ==="
-  source "$VENV" && python "$PROJECT_DIR/extract.py" validate-hooks --input patterns.json --workers "$MAX_PARALLEL"
+  source "$VENV" && python -m extract validate-hooks --input patterns.json --workers "$MAX_PARALLEL"
 else
   echo "=== No hook-worthy patterns to enrich, skipping. ==="
 fi

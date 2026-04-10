@@ -1,14 +1,13 @@
-"""Tests for extract.py enrich and enrich-hooks subcommands."""
+"""Tests for extract enrich and enrich-hooks subcommands."""
 
 import json
 from unittest.mock import patch
 
 import pytest
 
-from extract import (
-    cmd_enrich, cmd_enrich_hooks, cmd_validate_hooks,
-    enrich_single_pattern, enrich_single_hook, _lint_hook_check,
-)
+from extract.enrich import cmd_enrich, enrich_single_pattern
+from extract.enrich_hooks import cmd_enrich_hooks, enrich_single_hook, _lint_hook_check
+from extract.validate import cmd_validate_hooks
 
 
 def make_test_pattern(pid, **overrides):
@@ -60,7 +59,7 @@ class TestEnrichFiltering:
             enrich_calls.append(prompt)
             return json.dumps({**MOCK_ENRICHMENT, "id": "worthy"})
 
-        with patch("extract.call_claude", side_effect=mock_claude):
+        with patch("extract.enrich.call_claude", side_effect=mock_claude):
             args = type("Args", (), {"input": str(pf), "force": False, "workers": 1})()
             cmd_enrich(args)
 
@@ -79,7 +78,7 @@ class TestEnrichFiltering:
             enrich_calls.append(prompt)
             return json.dumps(MOCK_ENRICHMENT)
 
-        with patch("extract.call_claude", side_effect=mock_claude):
+        with patch("extract.enrich.call_claude", side_effect=mock_claude):
             args = type("Args", (), {"input": str(pf), "force": False, "workers": 1})()
             cmd_enrich(args)
 
@@ -96,7 +95,7 @@ class TestEnrichWritesFields:
         def mock_claude(prompt, timeout=120):
             return json.dumps(MOCK_ENRICHMENT)
 
-        with patch("extract.call_claude", side_effect=mock_claude):
+        with patch("extract.enrich.call_claude", side_effect=mock_claude):
             args = type("Args", (), {"input": str(pf), "force": False, "workers": 1})()
             cmd_enrich(args)
 
@@ -120,7 +119,7 @@ class TestEnrichErrorHandling:
         def mock_claude(prompt, timeout=120):
             return "not valid json"
 
-        with patch("extract.call_claude", side_effect=mock_claude):
+        with patch("extract.enrich.call_claude", side_effect=mock_claude):
             args = type("Args", (), {"input": str(pf), "force": False, "workers": 1})()
             cmd_enrich(args)
 
@@ -162,7 +161,7 @@ class TestEnrichHooksFiltering:
             enrich_calls.append(prompt)
             return json.dumps(MOCK_HOOK_ENRICHMENT)
 
-        with patch("extract.call_claude", side_effect=mock_claude):
+        with patch("extract.enrich_hooks.call_claude", side_effect=mock_claude):
             args = type("Args", (), {"input": str(pf), "force": False, "workers": 1})()
             cmd_enrich_hooks(args)
 
@@ -183,7 +182,7 @@ class TestEnrichHooksFiltering:
             enrich_calls.append(prompt)
             return json.dumps(MOCK_HOOK_ENRICHMENT)
 
-        with patch("extract.call_claude", side_effect=mock_claude):
+        with patch("extract.enrich_hooks.call_claude", side_effect=mock_claude):
             args = type("Args", (), {"input": str(pf), "force": False, "workers": 1})()
             cmd_enrich_hooks(args)
 
@@ -200,7 +199,7 @@ class TestEnrichHooksWritesFields:
         def mock_claude(prompt, timeout=120):
             return json.dumps(MOCK_HOOK_ENRICHMENT)
 
-        with patch("extract.call_claude", side_effect=mock_claude):
+        with patch("extract.enrich_hooks.call_claude", side_effect=mock_claude):
             args = type("Args", (), {"input": str(pf), "force": False, "workers": 1})()
             cmd_enrich_hooks(args)
 
@@ -240,7 +239,7 @@ class TestEnrichHooksWritesFields:
                     "hook_check": 'git diff -- "$1" | grep -E \'^\\+[^+]\' | grep -qE \'= *Action[.{ ]\'',
                 })
 
-        with patch("extract.call_claude", side_effect=mock_claude):
+        with patch("extract.enrich_hooks.call_claude", side_effect=mock_claude):
             args = type("Args", (), {"input": str(pf), "force": False, "workers": 1})()
             cmd_enrich_hooks(args)
 
@@ -261,7 +260,7 @@ class TestEnrichHooksErrorHandling:
         def mock_claude(prompt, timeout=120):
             return "not valid json"
 
-        with patch("extract.call_claude", side_effect=mock_claude):
+        with patch("extract.enrich_hooks.call_claude", side_effect=mock_claude):
             args = type("Args", (), {"input": str(pf), "force": False, "workers": 1})()
             cmd_enrich_hooks(args)
 
@@ -292,7 +291,7 @@ class TestEnrichHooksErrorHandling:
                     "hook_check": 'grep -n "pattern" "$1" | head -5',
                 })
 
-        with patch("extract.call_claude", side_effect=mock_claude):
+        with patch("extract.enrich_hooks.call_claude", side_effect=mock_claude):
             args = type("Args", (), {"input": str(pf), "force": False, "workers": 1})()
             cmd_enrich_hooks(args)
 
@@ -323,7 +322,7 @@ class TestEnrichHooksErrorHandling:
                     "hook_check": 'grep -q "pattern" "$1"',
                 })
 
-        with patch("extract.call_claude", side_effect=mock_claude):
+        with patch("extract.enrich_hooks.call_claude", side_effect=mock_claude):
             args = type("Args", (), {"input": str(pf), "force": False, "workers": 1})()
             cmd_enrich_hooks(args)
 
@@ -402,7 +401,7 @@ class TestValidateHooksCorrections:
                 "rationale": "Security check should block before edit, not after",
             }])
 
-        with patch("extract.call_claude", side_effect=mock_claude):
+        with patch("extract.validate.call_claude", side_effect=mock_claude):
             args = type("Args", (), {"input": str(pf), "dry_run": False})()
             cmd_validate_hooks(args)
 
@@ -428,7 +427,7 @@ class TestValidateHooksCorrections:
         def mock_claude(prompt, timeout=300):
             return "[]"
 
-        with patch("extract.call_claude", side_effect=mock_claude):
+        with patch("extract.validate.call_claude", side_effect=mock_claude):
             args = type("Args", (), {"input": str(pf), "dry_run": False})()
             cmd_validate_hooks(args)
 
@@ -455,7 +454,7 @@ class TestValidateHooksCorrections:
                 "rationale": "should be pre",
             }])
 
-        with patch("extract.call_claude", side_effect=mock_claude):
+        with patch("extract.validate.call_claude", side_effect=mock_claude):
             args = type("Args", (), {"input": str(pf), "dry_run": True})()
             cmd_validate_hooks(args)
 

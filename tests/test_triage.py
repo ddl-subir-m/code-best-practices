@@ -1,11 +1,12 @@
-"""Tests for extract.py triage subcommand."""
+"""Tests for extract triage subcommand."""
 
 import json
 from unittest.mock import patch
 
 import pytest
 
-from extract import cmd_triage, parse_json_response
+from extract.triage import cmd_triage
+from extract.claude import parse_json_response
 
 
 def make_test_pattern(pid, **overrides):
@@ -46,7 +47,7 @@ class TestTriageFiltering:
             triage_calls.append(prompt)
             return json.dumps([{"id": "active-rc3", "skill_worthy": True, "skill_rationale": "multi-step"}])
 
-        with patch("extract.call_claude", side_effect=mock_claude):
+        with patch("extract.triage.call_claude", side_effect=mock_claude):
             args = type("Args", (), {"input": str(pf), "dry_run": False, "force": False})()
             cmd_triage(args)
 
@@ -70,7 +71,7 @@ class TestTriageFiltering:
             triage_calls.append(prompt)
             return json.dumps([{"id": "not-triaged", "skill_worthy": False, "skill_rationale": "simple"}])
 
-        with patch("extract.call_claude", side_effect=mock_claude):
+        with patch("extract.triage.call_claude", side_effect=mock_claude):
             args = type("Args", (), {"input": str(pf), "dry_run": False, "force": False})()
             cmd_triage(args)
 
@@ -90,7 +91,7 @@ class TestTriageDemotion:
             return json.dumps([{"id": "simple-convention", "skill_worthy": False,
                                 "skill_rationale": "single sentence convention"}])
 
-        with patch("extract.call_claude", side_effect=mock_claude):
+        with patch("extract.triage.call_claude", side_effect=mock_claude):
             args = type("Args", (), {"input": str(pf), "dry_run": False, "force": False})()
             cmd_triage(args)
 
@@ -110,7 +111,7 @@ class TestTriageDemotion:
             return json.dumps([{"id": "complex-workflow", "skill_worthy": True,
                                 "skill_rationale": "requires step-by-step guidance"}])
 
-        with patch("extract.call_claude", side_effect=mock_claude):
+        with patch("extract.triage.call_claude", side_effect=mock_claude):
             args = type("Args", (), {"input": str(pf), "dry_run": False, "force": False})()
             cmd_triage(args)
 
@@ -132,7 +133,7 @@ class TestTriageDryRun:
             return json.dumps([{"id": "test-pattern", "skill_worthy": True,
                                 "skill_rationale": "multi-step"}])
 
-        with patch("extract.call_claude", side_effect=mock_claude):
+        with patch("extract.triage.call_claude", side_effect=mock_claude):
             args = type("Args", (), {"input": str(pf), "dry_run": True, "force": False})()
             cmd_triage(args)
 
@@ -156,7 +157,7 @@ class TestTriageHookClassification:
                 "hook_rationale": "mechanical grep for auth wrapper, security-critical",
             }])
 
-        with patch("extract.call_claude", side_effect=mock_claude):
+        with patch("extract.triage.call_claude", side_effect=mock_claude):
             args = type("Args", (), {"input": str(pf), "dry_run": False, "force": False})()
             cmd_triage(args)
 
@@ -181,7 +182,7 @@ class TestTriageHookClassification:
                 "hook_rationale": "automatable security check",
             }])
 
-        with patch("extract.call_claude", side_effect=mock_claude):
+        with patch("extract.triage.call_claude", side_effect=mock_claude):
             args = type("Args", (), {"input": str(pf), "dry_run": False, "force": False})()
             cmd_triage(args)
 
@@ -203,7 +204,7 @@ class TestTriageHookClassification:
                 "hook_rationale": "requires judgment",
             }])
 
-        with patch("extract.call_claude", side_effect=mock_claude):
+        with patch("extract.triage.call_claude", side_effect=mock_claude):
             args = type("Args", (), {"input": str(pf), "dry_run": False, "force": False})()
             cmd_triage(args)
 
@@ -224,7 +225,7 @@ class TestTriageHookClassification:
                 "skill_rationale": "needs steps",
             }])
 
-        with patch("extract.call_claude", side_effect=mock_claude):
+        with patch("extract.triage.call_claude", side_effect=mock_claude):
             args = type("Args", (), {"input": str(pf), "dry_run": False, "force": False})()
             cmd_triage(args)
 
@@ -243,7 +244,7 @@ class TestTriageErrorHandling:
         def mock_claude(prompt, timeout=300):
             return "this is not json at all"
 
-        with patch("extract.call_claude", side_effect=mock_claude):
+        with patch("extract.triage.call_claude", side_effect=mock_claude):
             args = type("Args", (), {"input": str(pf), "dry_run": False, "force": False})()
             cmd_triage(args)  # should not raise
 
@@ -261,7 +262,7 @@ class TestTriageErrorHandling:
         def mock_claude(prompt, timeout=300):
             return ""  # timeout returns empty string
 
-        with patch("extract.call_claude", side_effect=mock_claude):
+        with patch("extract.triage.call_claude", side_effect=mock_claude):
             args = type("Args", (), {"input": str(pf), "dry_run": False, "force": False})()
             cmd_triage(args)  # should not raise
 

@@ -18,7 +18,21 @@ pytest tests/ -v
 
 ## Architecture
 
-- `extract.py` — fetch PR threads via `gh api graphql`, analyze with Claude agents, merge/dedup/triage/enrich/enrich-hooks patterns
+- `extract/` — package split by pipeline stage:
+  - `constants.py` — shared constants (categories, GraphQL query, bot authors)
+  - `claude.py` — `call_claude()` CLI wrapper + JSON response parsers
+  - `fetch.py` — fetch PR threads via `gh api graphql`
+  - `analyze.py` — batch threads + build extraction prompts
+  - `merge.py` — merge extracted patterns + pattern utilities (ID generation, dedup grouping)
+  - `dedup.py` — exact ID + LLM semantic deduplication
+  - `modules.py` — auto-detect module mapping from file paths
+  - `report.py` — generate human-readable validation report
+  - `reclass.py` — reclassify pattern modes (ambient/active)
+  - `triage.py` — score patterns on skill-worthiness and hook-worthiness
+  - `enrich.py` — enrich skill-worthy patterns with steps and examples
+  - `enrich_hooks.py` — enrich hook-worthy patterns with hook metadata + lint/fix
+  - `validate.py` — validate hook_event/hook_blocking consistency
+  - `cli.py` — argparse CLI entry point
 - `compile.py` — read `patterns.json`, generate scoped rule files, skills, hooks for Claude Code and Cursor
 - `classify_patterns.py` — LLM-based pattern classification (ambient rule vs active skill vs hook)
 - `run-historical-extraction.sh` — batch extraction across month ranges with parallel Claude calls
@@ -30,25 +44,25 @@ pytest tests/ -v
 
 ```bash
 # Fetch PR review threads
-python extract.py fetch --repo cerebrotech/domino --since 2024-01-01
+python -m extract fetch --repo cerebrotech/domino --since 2024-01-01
 
 # Analyze threads for patterns
-python extract.py analyze --input raw-reviews/ --output patterns.json
+python -m extract analyze --input raw-reviews/ --output patterns.json
 
 # Deduplicate patterns (exact ID + LLM semantic)
-python extract.py dedup --input patterns.json
+python -m extract dedup --input patterns.json
 
 # Score active patterns on skill-worthiness and hook-worthiness
-python extract.py triage --input patterns.json
+python -m extract triage --input patterns.json
 
 # Enrich skill-worthy patterns with steps and examples
-python extract.py enrich --input patterns.json
+python -m extract enrich --input patterns.json
 
 # Enrich hook-worthy patterns with hook metadata (event, glob, check script, message)
-python extract.py enrich-hooks --input patterns.json
+python -m extract enrich-hooks --input patterns.json
 
 # Generate human-readable report
-python extract.py report --input patterns.json --output validation-report.md
+python -m extract report --input patterns.json --output validation-report.md
 
 # Compile patterns into rules, skills, and hooks
 python compile.py --input patterns.json --output output/
