@@ -479,7 +479,29 @@ fi
 echo "=== Reclassifying modes... ==="
 source "$VENV" && python "$PROJECT_DIR/extract.py" reclass --input patterns.json
 
-echo "=== Compiling rules... ==="
+# ── Triage: skill-worthiness + hook-worthiness ──────────────────────────────
+echo "=== Triaging patterns (skill + hook classification)... ==="
+source "$VENV" && python "$PROJECT_DIR/extract.py" triage --input patterns.json --force --workers "$MAX_PARALLEL"
+
+# ── Enrich skills ───────────────────────────────────────────────────────────
+echo "=== Enriching skill-worthy patterns... ==="
+source "$VENV" && python "$PROJECT_DIR/extract.py" enrich --input patterns.json --workers "$MAX_PARALLEL"
+
+# ── Enrich hooks ────────────────────────────────────────────────────────────
+hook_count=$(python3 -c "import json; ps=json.load(open('patterns.json')); print(sum(1 for p in ps if p.get('mode')=='hook'))" 2>/dev/null || echo "0")
+
+if [[ "$hook_count" -gt 0 ]]; then
+  echo "=== Enriching $hook_count hook-worthy patterns with hook metadata... ==="
+  source "$VENV" && python "$PROJECT_DIR/extract.py" enrich-hooks --input patterns.json --workers "$MAX_PARALLEL"
+
+  echo "=== Validating hook Pre/Post event + blocking consistency... ==="
+  source "$VENV" && python "$PROJECT_DIR/extract.py" validate-hooks --input patterns.json --workers "$MAX_PARALLEL"
+else
+  echo "=== No hook-worthy patterns to enrich, skipping. ==="
+fi
+
+# ── Compile rules, skills, hooks ────────────────────────────────────────────
+echo "=== Compiling rules, skills, and hooks... ==="
 source "$VENV" && python "$PROJECT_DIR/compile.py" --input patterns.json --output output/
 
 echo ""
@@ -488,7 +510,8 @@ echo "Months processed: $total"
 pattern_count=$(python3 -c "import json; print(len(json.load(open('patterns.json'))))" 2>/dev/null || echo "?")
 ambient_count=$(python3 -c "import json; ps=json.load(open('patterns.json')); print(sum(1 for p in ps if p.get('mode')=='ambient'))" 2>/dev/null || echo "?")
 active_count=$(python3 -c "import json; ps=json.load(open('patterns.json')); print(sum(1 for p in ps if p.get('mode')=='active'))" 2>/dev/null || echo "?")
-echo "Total patterns:   $pattern_count ($ambient_count rules, $active_count skills)"
+hook_count=$(python3 -c "import json; ps=json.load(open('patterns.json')); print(sum(1 for p in ps if p.get('mode')=='hook'))" 2>/dev/null || echo "?")
+echo "Total patterns:   $pattern_count ($ambient_count rules, $active_count skills, $hook_count hooks)"
 echo "Output:           output/"
 
 # Final cleanup

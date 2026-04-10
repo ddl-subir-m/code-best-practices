@@ -33108,11 +33108,12 @@
     "hook_worthy": true,
     "hook_rationale": "A grep can detect className usage on styled-components in frontend files and flag violations, preventing style inconsistency.",
     "hook_event": "PostToolUse",
-    "hook_tool": "Write",
+    "hook_tool": "Edit",
     "hook_glob": "**/*.tsx",
     "hook_check": "grep -q 'styled[.(]' \"$1\" && grep -q 'className=' \"$1\" && exit 0 || exit 1",
     "hook_message": "This file uses styled-components but also applies className for styling. Prefer styled-component composition (e.g., styled.span or styled(Component)) instead of className. Reserve className only for deeply nested third-party components you cannot reach otherwise.",
-    "hook_blocking": false
+    "hook_blocking": false,
+    "hook_validation_rationale": "hook_tool is \"Write\" so this hook only fires when creating new .tsx files, missing the far more common case of editing existing files where className misuse with styled-components is introduced."
   },
   {
     "id": "no-commented-out-code-without-tracking",

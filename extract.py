@@ -1335,6 +1335,7 @@ def build_validate_hooks_prompt(batch: list[dict]) -> str:
             "rule": p["rule"],
             "scope": p.get("scope", ""),
             "hook_event": p.get("hook_event", ""),
+            "hook_tool": p.get("hook_tool", ""),
             "hook_blocking": p.get("hook_blocking", False),
             "hook_glob": p.get("hook_glob", ""),
             "hook_message": p.get("hook_message", ""),
@@ -1343,7 +1344,8 @@ def build_validate_hooks_prompt(batch: list[dict]) -> str:
     )
     return (
         "You are reviewing automated hook configurations for correctness. "
-        "Each hook has a hook_event (PreToolUse or PostToolUse) and hook_blocking (true/false).\n\n"
+        "Each hook has hook_event (PreToolUse or PostToolUse), hook_tool (Edit or Write), "
+        "and hook_blocking (true/false).\n\n"
         "Rules:\n"
         "- PreToolUse runs BEFORE the file edit is written. Use for checks that should "
         "PREVENT bad code from being written: auth gates, secret leakage, credential safety, "
@@ -1351,17 +1353,23 @@ def build_validate_hooks_prompt(batch: list[dict]) -> str:
         "- PostToolUse runs AFTER the file edit is written. Use for checks that INSPECT "
         "the result: consumer audits, quality warnings, compatibility checks. "
         "Blocking does NOT make sense here — the edit is already written, blocking just "
-        "forces the developer to address it before continuing.\n\n"
+        "forces the developer to address it before continuing.\n"
+        "- hook_tool determines WHICH tool triggers the hook:\n"
+        '  - "Edit" = fires when modifying an existing file (most common — the vast majority of code changes)\n'
+        '  - "Write" = fires only when creating a brand new file\n'
+        '  - Most hooks should use "Edit" because that is where the majority of code changes happen. '
+        '"Write" alone misses edits to existing files, which is almost always wrong. '
+        'Use "Write" ONLY if the check genuinely applies only to newly created files.\n\n'
         "For each hook, decide:\n"
-        '1. Is the hook_event correct? Should a preventive check be PreToolUse instead of PostToolUse?\n'
-        '2. Is hook_blocking appropriate? Blocking PostToolUse hooks are a contradiction — '
-        "if the code is already written, blocking just nags. Either move to PreToolUse "
-        "or make it non-blocking.\n"
-        '3. Should a security-critical PostToolUse hook be promoted to PreToolUse?\n\n'
+        "1. Is hook_event correct? Should a preventive check be PreToolUse instead of PostToolUse?\n"
+        "2. Is hook_blocking appropriate? Blocking PostToolUse is a contradiction.\n"
+        '3. Is hook_tool correct? A hook set to "Write" will NOT fire on edits to existing files. '
+        'If the check applies to any file change (not just new files), it should be "Edit".\n\n'
         f"Hooks to review:\n{hook_summaries}\n\n"
         "Return ONLY a JSON array of corrections. Each correction:\n"
-        '{"id": "pattern-id", "hook_event": "corrected value", '
-        '"hook_blocking": corrected_bool, '
+        '{"id": "pattern-id", "hook_event": "corrected value or omit if unchanged", '
+        '"hook_tool": "corrected value or omit if unchanged", '
+        '"hook_blocking": "corrected bool or omit if unchanged", '
         '"rationale": "one sentence explaining the change"}\n\n'
         "Only include hooks that NEED changes. If a hook is already correct, omit it.\n"
         "Return an empty array [] if all hooks are correct.\n\n"
@@ -1406,7 +1414,7 @@ def cmd_validate_hooks(args):
             if not isinstance(item, dict):
                 continue
             pid = item.get("id", "")
-            if pid and ("hook_event" in item or "hook_blocking" in item):
+            if pid and ("hook_event" in item or "hook_blocking" in item or "hook_tool" in item):
                 batch_corrections[pid] = item
         return batch_corrections
 
@@ -1446,6 +1454,8 @@ def cmd_validate_hooks(args):
             c = corrections[pid]
             if "hook_event" in c:
                 p["hook_event"] = c["hook_event"]
+            if "hook_tool" in c:
+                p["hook_tool"] = c["hook_tool"]
             if "hook_blocking" in c:
                 p["hook_blocking"] = c["hook_blocking"]
             p["hook_validation_rationale"] = c.get("rationale", "")
