@@ -321,6 +321,94 @@ def generate_claude_skills(patterns: list[dict], output_dir: str) -> list[str]:
     return created
 
 
+def generate_hooks(patterns: list[dict], output_dir: str) -> tuple[list[str], str | None]:
+    """Generate .claude/hooks/*.sh scripts and settings-hooks.json.
+
+    Returns (list of created script paths, path to settings-hooks.json or None).
+    """
+    hook_patterns = [p for p in patterns if p.get("mode") == "hook"
+                     and p.get("hook_check")
+                     and p.get("hook_event")]
+
+    if not hook_patterns:
+        return [], None
+
+    hooks_dir = os.path.join(output_dir, ".claude", "hooks")
+    os.makedirs(hooks_dir, exist_ok=True)
+
+    # Clean up stale mined-* hook scripts from previous runs
+    for old in Path(hooks_dir).glob("mined-*.sh"):
+        old.unlink()
+
+    created_scripts = []
+    settings_hooks: dict[str, list[dict]] = {}
+
+    for p in hook_patterns:
+        # Generate script filename from pattern id
+        script_name = f"mined-{p['id']}.sh"
+        script_path = os.path.join(hooks_dir, script_name)
+
+        hook_event = p.get("hook_event", "PostToolUse")
+        hook_tool = p.get("hook_tool", "Edit")
+        hook_glob = p.get("hook_glob", "**/*")
+        hook_check = p["hook_check"]
+        hook_message = p.get("hook_message", f"Hook triggered: {p['rule']}")
+        hook_blocking = p.get("hook_blocking", False)
+
+        # Escape single quotes in message for shell safety
+        safe_message = hook_message.replace("'", "'\\''")
+        suppress_comment = f"hook-ok: {p['id']}"
+
+        # Write the shell script
+        script_content = (
+            "#!/usr/bin/env bash\n"
+            "# Auto-generated hook script. Do not edit manually.\n"
+            f"# Pattern: {p['id']}\n"
+            f"# Rule: {p['rule']}\n"
+            f"# Sources: {', '.join(p.get('source_prs', []))}\n"
+            "#\n"
+            "# Exit 0 = violation found (hook fires), Exit 1 = no violation\n"
+            f"# Suppress with: // {suppress_comment}\n"
+            "\n"
+            'FILE="${1:?Usage: $0 <file>}"\n'
+            "\n"
+            "# Skip if file contains a suppression comment for this hook\n"
+            f'grep -q "{suppress_comment}" "$FILE" && exit 1\n'
+            "\n"
+            "# Run the check in a subshell so embedded exits don't leak\n"
+            f"if ( {hook_check} ); then\n"
+            f"  echo '{safe_message}'\n"
+            f"  echo 'Suppress: add // {suppress_comment} to the file'\n"
+            "  exit 0\n"
+            "fi\n"
+            "exit 1\n"
+        )
+
+        with open(script_path, "w") as f:
+            f.write(script_content)
+        os.chmod(script_path, 0o755)
+        created_scripts.append(script_path)
+
+        # Build settings entry
+        entry = {
+            "matcher": hook_tool,
+            "command": f".claude/hooks/{script_name} $FILE",
+        }
+        if hook_glob != "**/*":
+            entry["fileGlob"] = hook_glob
+        if hook_blocking:
+            entry["blocking"] = True
+
+        settings_hooks.setdefault(hook_event, []).append(entry)
+
+    # Write settings-hooks.json
+    settings_path = os.path.join(output_dir, ".claude", "settings-hooks.json")
+    with open(settings_path, "w") as f:
+        json.dump({"hooks": settings_hooks}, f, indent=2)
+
+    return created_scripts, settings_path
+
+
 def generate_cursor_mdc(
     patterns: list[dict], output_dir: str, modules_map: dict[str, str],
     globs_map: dict[str, list[str]] | None = None,
@@ -400,6 +488,7 @@ def main():
     # Generate all outputs
     rules = generate_claude_rules(patterns, args.output, modules_map, globs_map)
     skills = generate_claude_skills(patterns, args.output)
+    hooks, hooks_settings = generate_hooks(patterns, args.output)
     mdc_rules = generate_cursor_mdc(patterns, args.output, modules_map, globs_map)
 
     print(f"Generated {len(rules)} Claude rule file(s):")
@@ -408,6 +497,12 @@ def main():
     print(f"Generated {len(skills)} Claude skill(s):")
     for s in skills:
         print(f"  {s}")
+    if hooks:
+        print(f"Generated {len(hooks)} Claude hook script(s):")
+        for h in hooks:
+            print(f"  {h}")
+        if hooks_settings:
+            print(f"Generated hook settings: {hooks_settings}")
     print(f"Generated {len(mdc_rules)} Cursor .mdc rule file(s):")
     for m in mdc_rules:
         print(f"  {m}")

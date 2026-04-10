@@ -430,6 +430,7 @@ def determine_mode(category: str, rule: str) -> str:
 
     Ambient — universal constraints always loaded in context (rules).
     Active  — multi-step processes or triggered guidance surfaced on demand (skills).
+    Hook    — assigned only by LLM triage (cmd_triage), never by this heuristic.
     """
     rule_lower = rule.lower()
 
@@ -932,15 +933,26 @@ def build_triage_prompt(batch: list[dict]) -> str:
         indent=2,
     )
     return (
-        "For each pattern below, determine whether it requires multi-step guidance "
-        "(a workflow, decision tree, or code example) to be useful as a coding assistant skill, "
-        "or whether it's a simple one-sentence convention best served as an ambient rule.\n\n"
+        "For each pattern below, determine TWO things:\n\n"
+        "1. **skill_worthy**: Does this pattern require multi-step guidance "
+        "(a workflow, decision tree, or code example) to be useful as a coding assistant skill? "
         "A pattern is skill-worthy if an engineer would benefit from step-by-step instructions, "
         "concrete code examples, or a decision tree to apply it correctly. "
         "A pattern is NOT skill-worthy if it can be fully communicated in a single sentence.\n\n"
+        "2. **hook_worthy**: Should this pattern be enforced as an automated hook "
+        "(a shell script that runs automatically when files are edited)? "
+        "A pattern is hook-worthy if ALL of the following are true:\n"
+        "   - The check is mechanically automatable (grep, regex, or AST scan — not judgment calls)\n"
+        "   - It's high-severity (security, breaking changes, data loss, or compliance)\n"
+        "   - It's tied to a specific file-edit event (e.g., editing shared files, adding endpoints, modifying migrations)\n"
+        "   - It's too important to rely on someone remembering to apply it\n\n"
+        "A pattern can be BOTH skill_worthy and hook_worthy (e.g., a security check that also "
+        "benefits from step-by-step guidance). If hook_worthy is true, it takes precedence — "
+        "the pattern becomes a hook rather than a skill.\n\n"
         f"Patterns:\n{pattern_list}\n\n"
         'Return ONLY a JSON array: [{"id": "pattern-id", "skill_worthy": true/false, '
-        '"skill_rationale": "one sentence explaining why"}]\n\n'
+        '"skill_rationale": "one sentence", "hook_worthy": true/false, '
+        '"hook_rationale": "one sentence explaining why or why not"}]\n\n'
         "Return ONLY the JSON array, no other text."
     )
 
@@ -997,6 +1009,8 @@ def cmd_triage(args):
                 batch_results[pid] = {
                     "skill_worthy": bool(item["skill_worthy"]),
                     "skill_rationale": item.get("skill_rationale", ""),
+                    "hook_worthy": bool(item.get("hook_worthy", False)),
+                    "hook_rationale": item.get("hook_rationale", ""),
                 }
         return batch_results
 
@@ -1013,15 +1027,21 @@ def cmd_triage(args):
                 print(f"  Error in triage batch: {e}", file=sys.stderr)
 
     # Report results
-    worthy = sum(1 for r in results.values() if r["skill_worthy"])
-    not_worthy = sum(1 for r in results.values() if not r["skill_worthy"])
-    print(f"\nTriage results: {worthy} skill-worthy, {not_worthy} demoted to ambient", flush=True)
+    hooks = sum(1 for r in results.values() if r["hook_worthy"])
+    worthy = sum(1 for r in results.values() if r["skill_worthy"] and not r["hook_worthy"])
+    not_worthy = sum(1 for r in results.values() if not r["skill_worthy"] and not r["hook_worthy"])
+    print(f"\nTriage results: {hooks} hook-worthy, {worthy} skill-worthy, {not_worthy} demoted to ambient", flush=True)
 
     if dry_run:
         print("\n[DRY RUN] No changes written to disk.")
+        if hooks:
+            print(f"\nHook-worthy patterns ({hooks}):")
+            for pid, r in sorted(results.items()):
+                if r["hook_worthy"]:
+                    print(f"  {pid}: {r['hook_rationale']}")
         print(f"\nSkill-worthy patterns ({worthy}):")
         for pid, r in sorted(results.items()):
-            if r["skill_worthy"]:
+            if r["skill_worthy"] and not r["hook_worthy"]:
                 print(f"  {pid}: {r['skill_rationale']}")
         return
 
@@ -1032,7 +1052,13 @@ def cmd_triage(args):
             r = results[pid]
             p["skill_worthy"] = r["skill_worthy"]
             p["skill_rationale"] = r["skill_rationale"]
-            if not r["skill_worthy"]:
+            p["hook_worthy"] = r["hook_worthy"]
+            p["hook_rationale"] = r["hook_rationale"]
+            # Hook-worthy takes precedence over skill-worthy
+            if r["hook_worthy"]:
+                p["mode"] = "hook"
+                p["mode_rationale"] = r["hook_rationale"]
+            elif not r["skill_worthy"]:
                 p["mode"] = "ambient"
                 p["mode_rationale"] = r["skill_rationale"]
 
@@ -1174,6 +1200,263 @@ def cmd_enrich(args):
 
 
 # ---------------------------------------------------------------------------
+# Enrich-hooks subcommand
+# ---------------------------------------------------------------------------
+
+HOOK_ENRICHMENT_FIELDS = (
+    "hook_event", "hook_tool", "hook_glob", "hook_check", "hook_message", "hook_blocking",
+)
+
+
+def build_enrich_hooks_prompt(pattern: dict) -> str:
+    """Build the Claude prompt to generate hook metadata for a pattern."""
+    return (
+        "You are generating automated hook configuration for a coding pattern mined from "
+        "PR review history at Domino Data Lab. This pattern will become a shell script that "
+        "runs automatically when files are edited in Claude Code.\n\n"
+        f"Pattern ID: {pattern['id']}\n"
+        f"Rule: {pattern['rule']}\n"
+        f"Category: {pattern.get('scope', '')}\n"
+        f"Source PRs: {', '.join(pattern.get('source_prs', []))}\n"
+        f"Modules: {', '.join(pattern.get('modules', []))}\n"
+        + (f"Good example:\n{pattern['good_example']}\n" if pattern.get('good_example') else "")
+        + (f"Bad example:\n{pattern['bad_example']}\n" if pattern.get('bad_example') else "")
+        + "\nGenerate a JSON object with these fields:\n"
+        '1. "hook_event": either "PreToolUse" or "PostToolUse"\n'
+        "   - PreToolUse = preventive hooks that warn/block BEFORE the action "
+        "(security gates, auth checks, secret leakage, data safety)\n"
+        "   - PostToolUse = detective hooks that inspect AFTER the action "
+        "(consumer audits, quality warnings, PII checks)\n"
+        '2. "hook_tool": which tool triggers it — usually "Edit" or "Write"\n'
+        '3. "hook_glob": file glob pattern to match (e.g., "**/*Controller*.scala", '
+        '"**/shared/**/*.tsx"). Use patterns appropriate for the modules listed above.\n'
+        '4. "hook_check": a shell command (using grep, awk, or sed) that detects the '
+        "anti-pattern in the file passed as $1. Exit code 0 = violation found, "
+        "exit code 1 = no violation. Keep it simple and portable.\n"
+        '5. "hook_message": a concise warning message shown when the hook fires. '
+        "Include what was detected and what the developer should do.\n"
+        '6. "hook_blocking": true if the hook should block the action (security-critical), '
+        "false if it should only warn (advisory).\n\n"
+        "Return ONLY the JSON object, no other text."
+    )
+
+
+def enrich_single_hook(pattern: dict) -> dict | None:
+    """Enrich a single hook pattern via Claude. Returns hook fields or None on failure."""
+    prompt = build_enrich_hooks_prompt(pattern)
+    response = call_claude(prompt, timeout=120)
+    result = parse_json_object(response)
+    if not result:
+        return None
+
+    # Validate required hook fields
+    if not result.get("hook_event") or not result.get("hook_check"):
+        return None
+
+    return result
+
+
+def cmd_enrich_hooks(args):
+    """Enrich hook-worthy patterns with hook_event, hook_glob, hook_check, etc."""
+    input_file = args.input
+    force = args.force
+    max_workers = args.workers
+
+    with open(input_file) as f:
+        patterns = json.load(f)
+
+    # Filter to hook enrichment population: mode=hook + not already enriched
+    candidates = []
+    candidate_indices = []
+    for i, p in enumerate(patterns):
+        if p.get("mode") != "hook":
+            continue
+        if not force and p.get("hook_event"):
+            continue
+        candidates.append(p)
+        candidate_indices.append(i)
+
+    print(f"Loaded {len(patterns)} patterns, {len(candidates)} eligible for hook enrichment", flush=True)
+
+    if not candidates:
+        print("No hook patterns to enrich.")
+        return
+
+    enriched_count = 0
+    failed_count = 0
+
+    def process(idx_pattern):
+        idx, pattern = idx_pattern
+        result = enrich_single_hook(pattern)
+        return idx, pattern["id"], result
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {
+            executor.submit(process, (candidate_indices[i], c)): i
+            for i, c in enumerate(candidates)
+        }
+        for future in concurrent.futures.as_completed(futures):
+            try:
+                idx, pid, result = future.result()
+                if result:
+                    p = patterns[idx]
+                    for field in HOOK_ENRICHMENT_FIELDS:
+                        if field in result and result[field] is not None:
+                            p[field] = result[field]
+                    enriched_count += 1
+                    print(f"  [{enriched_count}/{len(candidates)}] Enriched hook: {pid}", flush=True)
+                else:
+                    failed_count += 1
+                    print(f"  Warning: hook enrichment failed for {pid}", file=sys.stderr)
+                    # Fall back to active mode (will become a skill instead)
+                    patterns[idx]["mode"] = "active"
+                    patterns[idx]["mode_rationale"] = "Hook enrichment failed, fell back to active"
+            except Exception as e:
+                failed_count += 1
+                print(f"  Error enriching hook pattern: {e}", file=sys.stderr)
+
+    print(f"\nHook enrichment complete: {enriched_count} enriched, {failed_count} failed", flush=True)
+
+    with open(input_file, "w") as f:
+        json.dump(patterns, f, indent=2)
+
+    print(f"Written to {input_file}", flush=True)
+
+
+# ---------------------------------------------------------------------------
+# Validate-hooks subcommand
+# ---------------------------------------------------------------------------
+
+def build_validate_hooks_prompt(batch: list[dict]) -> str:
+    """Build the Claude prompt to validate hook_event/hook_blocking consistency."""
+    hook_summaries = json.dumps(
+        [{
+            "id": p["id"],
+            "rule": p["rule"],
+            "scope": p.get("scope", ""),
+            "hook_event": p.get("hook_event", ""),
+            "hook_blocking": p.get("hook_blocking", False),
+            "hook_glob": p.get("hook_glob", ""),
+            "hook_message": p.get("hook_message", ""),
+        } for p in batch],
+        indent=2,
+    )
+    return (
+        "You are reviewing automated hook configurations for correctness. "
+        "Each hook has a hook_event (PreToolUse or PostToolUse) and hook_blocking (true/false).\n\n"
+        "Rules:\n"
+        "- PreToolUse runs BEFORE the file edit is written. Use for checks that should "
+        "PREVENT bad code from being written: auth gates, secret leakage, credential safety, "
+        "data loss prevention. Blocking makes sense here — it stops the edit.\n"
+        "- PostToolUse runs AFTER the file edit is written. Use for checks that INSPECT "
+        "the result: consumer audits, quality warnings, compatibility checks. "
+        "Blocking does NOT make sense here — the edit is already written, blocking just "
+        "forces the developer to address it before continuing.\n\n"
+        "For each hook, decide:\n"
+        '1. Is the hook_event correct? Should a preventive check be PreToolUse instead of PostToolUse?\n'
+        '2. Is hook_blocking appropriate? Blocking PostToolUse hooks are a contradiction — '
+        "if the code is already written, blocking just nags. Either move to PreToolUse "
+        "or make it non-blocking.\n"
+        '3. Should a security-critical PostToolUse hook be promoted to PreToolUse?\n\n'
+        f"Hooks to review:\n{hook_summaries}\n\n"
+        "Return ONLY a JSON array of corrections. Each correction:\n"
+        '{"id": "pattern-id", "hook_event": "corrected value", '
+        '"hook_blocking": corrected_bool, '
+        '"rationale": "one sentence explaining the change"}\n\n'
+        "Only include hooks that NEED changes. If a hook is already correct, omit it.\n"
+        "Return an empty array [] if all hooks are correct.\n\n"
+        "Return ONLY the JSON array, no other text."
+    )
+
+
+def cmd_validate_hooks(args):
+    """Validate hook_event/hook_blocking consistency via a second Claude pass."""
+    input_file = args.input
+    dry_run = args.dry_run
+    batch_size = 50
+
+    with open(input_file) as f:
+        patterns = json.load(f)
+
+    # Filter to enriched hooks
+    hooks = [p for p in patterns if p.get("mode") == "hook" and p.get("hook_event")]
+
+    print(f"Loaded {len(patterns)} patterns, {len(hooks)} enriched hooks to validate", flush=True)
+
+    if not hooks:
+        print("No hooks to validate.")
+        return
+
+    batches = [hooks[i:i + batch_size] for i in range(0, len(hooks), batch_size)]
+    corrections: dict[str, dict] = {}
+    max_workers = getattr(args, 'workers', 4)
+
+    def _validate_batch(batch_num_and_batch):
+        batch_num, batch = batch_num_and_batch
+        prompt = build_validate_hooks_prompt(batch)
+        print(f"  Batch {batch_num}/{len(batches)}: sending {len(batch)} hooks to Claude...", flush=True)
+        response = call_claude(prompt)
+        parsed = parse_json_response(response)
+
+        if not parsed:
+            return {}
+
+        batch_corrections = {}
+        for item in parsed:
+            if not isinstance(item, dict):
+                continue
+            pid = item.get("id", "")
+            if pid and ("hook_event" in item or "hook_blocking" in item):
+                batch_corrections[pid] = item
+        return batch_corrections
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {
+            executor.submit(_validate_batch, (bn, b)): bn
+            for bn, b in enumerate(batches, 1)
+        }
+        for future in concurrent.futures.as_completed(futures):
+            try:
+                batch_corrections = future.result()
+                corrections.update(batch_corrections)
+            except Exception as e:
+                print(f"  Error in validation batch: {e}", file=sys.stderr)
+
+    if not corrections:
+        print("\nAll hooks validated — no corrections needed.", flush=True)
+        return
+
+    print(f"\nValidation found {len(corrections)} hook(s) to correct:", flush=True)
+    for pid, c in sorted(corrections.items()):
+        print(f"  {pid}: {c.get('rationale', 'no rationale')}", flush=True)
+
+    if dry_run:
+        print("\n[DRY RUN] No changes written to disk.")
+        for pid, c in sorted(corrections.items()):
+            old_p = next((p for p in hooks if p["id"] == pid), None)
+            if old_p:
+                print(f"  {pid}: {old_p.get('hook_event')}/{old_p.get('hook_blocking')} → "
+                      f"{c.get('hook_event', old_p.get('hook_event'))}/{c.get('hook_blocking', old_p.get('hook_blocking'))}")
+        return
+
+    # Apply corrections
+    for p in patterns:
+        pid = p.get("id", "")
+        if pid in corrections:
+            c = corrections[pid]
+            if "hook_event" in c:
+                p["hook_event"] = c["hook_event"]
+            if "hook_blocking" in c:
+                p["hook_blocking"] = c["hook_blocking"]
+            p["hook_validation_rationale"] = c.get("rationale", "")
+
+    with open(input_file, "w") as f:
+        json.dump(patterns, f, indent=2)
+
+    print(f"Applied {len(corrections)} correction(s) to {input_file}", flush=True)
+
+
+# ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
 
@@ -1240,7 +1523,7 @@ def main():
     p_report.add_argument("--output", default="validation-report.md", help="Output report file")
 
     # reclass
-    p_reclass = subparsers.add_parser("reclass", help="Reclassify pattern modes (ambient/active)")
+    p_reclass = subparsers.add_parser("reclass", help="Reclassify pattern modes (ambient/active/hook)")
     p_reclass.add_argument("--input", default="patterns.json", help="Patterns JSON file to reclassify in-place")
 
     # dedup
@@ -1261,6 +1544,18 @@ def main():
     p_enrich.add_argument("--force", action="store_true", help="Re-enrich already-enriched patterns")
     p_enrich.add_argument("--workers", type=int, default=4, help="Number of parallel Claude calls")
 
+    # enrich-hooks
+    p_enrich_hooks = subparsers.add_parser("enrich-hooks", help="Enrich hook-worthy patterns with hook metadata")
+    p_enrich_hooks.add_argument("--input", default="patterns.json", help="Patterns JSON file to enrich in-place")
+    p_enrich_hooks.add_argument("--force", action="store_true", help="Re-enrich already-enriched hook patterns")
+    p_enrich_hooks.add_argument("--workers", type=int, default=4, help="Number of parallel Claude calls")
+
+    # validate-hooks
+    p_validate_hooks = subparsers.add_parser("validate-hooks", help="Validate hook_event/hook_blocking consistency")
+    p_validate_hooks.add_argument("--input", default="patterns.json", help="Patterns JSON file to validate in-place")
+    p_validate_hooks.add_argument("--dry-run", action="store_true", help="Print corrections without writing to disk")
+    p_validate_hooks.add_argument("--workers", type=int, default=4, help="Number of parallel Claude calls")
+
     args = parser.parse_args()
 
     commands = {
@@ -1273,6 +1568,8 @@ def main():
         "dedup": cmd_dedup,
         "triage": cmd_triage,
         "enrich": cmd_enrich,
+        "enrich-hooks": cmd_enrich_hooks,
+        "validate-hooks": cmd_validate_hooks,
     }
     commands[args.command](args)
 

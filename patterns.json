@@ -44,7 +44,7 @@
     "status": "active",
     "mode_rationale": "Single rule: always surface errors to the user",
     "skill_worthy": true,
-    "skill_rationale": "Engineers benefit from a code example showing the pattern of error state handling with toast notifications alongside conditional rendering.",
+    "skill_rationale": "Engineers benefit from step-by-step guidance on where to add error boundaries, toast notifications, and loading/error state patterns for API-dependent components.",
     "steps": [
       "Identify every API call whose response controls what the component renders (conditional rendering, feature gates, data-driven UI).",
       "Add an error state variable (or use the error state from your data-fetching hook) alongside loading and data states.",
@@ -53,7 +53,9 @@
       "Include a retry action (button or link) in the error state so users can recover without refreshing the page.",
       "Log the raw error details to the console or your observability layer for debugging, separate from the user-facing message."
     ],
-    "skill_title": "Surface error feedback for every API-dependent render path"
+    "skill_title": "Surface error feedback for every API-dependent render path",
+    "hook_worthy": false,
+    "hook_rationale": "Detecting whether a component properly handles API errors requires understanding render logic and data flow, which is a judgment call beyond simple grep or AST scan."
   },
   {
     "id": "add-tests-for-new-behavior-paths",
@@ -123,11 +125,15 @@
       "system-tests",
       "common-core"
     ],
-    "mode": "active",
+    "mode": "ambient",
     "confidence": 0.2,
     "review_count": 2,
     "status": "active",
-    "mode_rationale": "Naming convention to match upstream library terminology"
+    "mode_rationale": "This is a straightforward naming principle that can be communicated in a single sentence without multi-step guidance.",
+    "skill_worthy": false,
+    "skill_rationale": "This is a straightforward naming principle that can be communicated in a single sentence without multi-step guidance.",
+    "hook_worthy": false,
+    "hook_rationale": "Determining whether parameter names match upstream library conventions requires semantic understanding of which library is being wrapped, not a mechanical check."
   },
   {
     "id": "audit-all-usages-when-fixing-a-utility-misuse",
@@ -155,7 +161,7 @@
     "status": "active",
     "mode_rationale": "Single-sentence thoroughness rule about fixing all call sites",
     "skill_worthy": true,
-    "skill_rationale": "Requires a multi-step workflow: identify the misuse pattern, search all call sites, verify each one, and fix systematically.",
+    "skill_rationale": "Engineers benefit from a step-by-step workflow for systematically finding all call sites, verifying each for the same misuse pattern, and applying fixes consistently.",
     "steps": [
       "Identify the utility function or helper that was misused and understand the correct usage pattern.",
       "Use grep or your IDE's 'Find All References' to locate every call site of that utility across the entire codebase, not just the file under review.",
@@ -164,7 +170,9 @@
       "If the misuse is widespread, consider whether the utility's API is misleading and add a clarifying scaladoc/JSDoc comment or rename the method to make correct usage obvious.",
       "Add or update tests covering the corrected usage pattern to prevent regression."
     ],
-    "skill_title": "Audit all call sites when fixing a utility misuse"
+    "skill_title": "Audit all call sites when fixing a utility misuse",
+    "hook_worthy": false,
+    "hook_rationale": "Detecting whether a utility is being misused requires understanding the intended API contract, which varies per utility and is a judgment call."
   },
   {
     "id": "assert-result-in-valid-set",
@@ -181,11 +189,15 @@
     "modules": [
       "server"
     ],
-    "mode": "active",
+    "mode": "ambient",
     "confidence": 0.2,
     "review_count": 2,
     "status": "active",
-    "mode_rationale": "Simple testing convention about set membership assertions"
+    "mode_rationale": "This is a simple assertion pattern (use assertIn or assert x in valid_set) that doesn't require multi-step guidance.",
+    "skill_worthy": false,
+    "skill_rationale": "This is a simple assertion pattern (use assertIn or assert x in valid_set) that doesn't require multi-step guidance.",
+    "hook_worthy": false,
+    "hook_rationale": "Detecting whether an assertion checks set membership vs. non-null requires understanding the test's intent and valid value domain, which is context-dependent."
   },
   {
     "id": "assess-shared-component-impact",
@@ -209,7 +221,7 @@
     "status": "active",
     "mode_rationale": "Simple rule to assess consumer impact before modifying shared components",
     "skill_worthy": true,
-    "skill_rationale": "Requires a decision tree/checklist: identify all consumers, assess behavior changes per consumer, and determine safe modification strategy.",
+    "skill_rationale": "Engineers benefit from a checklist/decision tree for identifying all consumers, assessing behavioral changes, and planning safe rollout of shared component modifications.",
     "steps": [
       "Search the codebase for all import sites of the component you're about to change (e.g., `grep -r 'import.*ComponentName' src/`).",
       "For each consumer, identify which props, behaviors, or styling the consumer relies on \u2014 pay special attention to default values, callback signatures, and conditional rendering paths.",
@@ -218,7 +230,9 @@
       "If the change is universally beneficial, update all consumer call sites in the same PR to reflect the new behavior and verify each one renders correctly.",
       "Add or update unit tests that cover the shared component's contract with its consumers, not just the immediate use case driving the change."
     ],
-    "skill_title": "Audit all consumers before modifying a shared component"
+    "skill_title": "Audit all consumers before modifying a shared component",
+    "hook_worthy": false,
+    "hook_rationale": "Assessing behavioral impact on consumers requires understanding component semantics and usage context, not a mechanical file scan."
   },
   {
     "id": "authz-checks-even-when-stubbed",
@@ -292,7 +306,7 @@
     "review_count": 2,
     "status": "active",
     "skill_worthy": true,
-    "skill_rationale": "Engineers benefit from a code example showing the generalized-parameter-to-provider-specific-field mapping pattern.",
+    "skill_rationale": "Engineers benefit from examples showing how to design a generalized API layer with internal provider mapping, including code patterns for parameter translation.",
     "steps": [
       "Define a unified, provider-agnostic request model with generalized parameter names (e.g., `maxTokens` instead of `max_tokens` for OpenAI or `maxOutputTokens` for Google)",
       "Create an internal mapping layer or adapter per provider that translates generalized parameters to the provider-specific field names and formats",
@@ -300,7 +314,9 @@
       "Document which generalized parameters map to which provider-specific fields, and note any provider-specific constraints (e.g., token limits, unsupported parameters) in the API docs or error responses",
       "When adding a new provider, extend only the internal mapping layer \u2014 never add provider-prefixed fields to the user-facing API contract"
     ],
-    "skill_title": "Abstract provider-specific details behind a unified API contract"
+    "skill_title": "Abstract provider-specific details behind a unified API contract",
+    "hook_worthy": false,
+    "hook_rationale": "Detecting whether an API properly abstracts provider details requires understanding the domain and provider-specific fields, which is a design judgment."
   },
   {
     "id": "access-global-stores-in-consuming-components",
@@ -407,7 +423,7 @@
     "status": "active",
     "mode_rationale": "Single-sentence typing convention for component prop forwarding",
     "skill_worthy": true,
-    "skill_rationale": "Engineers benefit from code examples showing Pick usage vs rest operator patterns for prop forwarding.",
+    "skill_rationale": "Engineers benefit from concrete code examples showing Pick, Omit, and rest-operator patterns for correctly typing wrapper component props.",
     "steps": [
       "Identify exactly which props your wrapper component forwards to the inner component.",
       "Use Pick<OriginalProps, 'prop1' | 'prop2'> to select only the forwarded props in your wrapper's type definition.",
@@ -416,7 +432,9 @@
       "Remove any props from your type definition that your wrapper intercepts and does not forward.",
       "Verify that consumers of your wrapper cannot pass props that silently get dropped \u2014 the type system should catch these at compile time."
     ],
-    "skill_title": "Restrict wrapper prop types to only forwarded props"
+    "skill_title": "Restrict wrapper prop types to only forwarded props",
+    "hook_worthy": false,
+    "hook_rationale": "Detecting prop type accuracy requires understanding which props are actually forwarded vs. consumed, which needs semantic analysis beyond AST scanning."
   },
   {
     "id": "accurate-error-messages",
@@ -2000,13 +2018,13 @@
     "modules": [
       "apps"
     ],
-    "mode": "active",
+    "mode": "hook",
     "confidence": 0.5,
     "review_count": 5,
     "status": "active",
-    "mode_rationale": "Single API correctness convention",
-    "skill_worthy": true,
-    "skill_rationale": "Requires a decision tree: when fields are missing, decide whether to make them optional in the schema or ensure they're populated, with code examples for each approach.",
+    "mode_rationale": "A schema linter or AST scan can mechanically compare API response construction against schema definitions to flag required fields mapped to empty defaults \u2014 high severity as it breaks API contracts.",
+    "skill_worthy": false,
+    "skill_rationale": "The rule is clear in one sentence: don't silently default required fields; either provide them or make the schema optional.",
     "steps": [
       "Review the API schema (OpenAPI/Swagger or case class) and identify every field marked as required.",
       "Trace each required field back to its data source and verify it is guaranteed to be populated in all code paths.",
@@ -2015,7 +2033,15 @@
       "Add a test case that exercises the missing-data path and asserts the response either omits the field (if optional) or returns a meaningful error (if required).",
       "Verify that downstream consumers (frontend, other services) handle the updated optionality correctly."
     ],
-    "skill_title": "Enforce schema contracts instead of silently defaulting missing API fields"
+    "skill_title": "Enforce schema contracts instead of silently defaulting missing API fields",
+    "hook_worthy": true,
+    "hook_rationale": "A schema linter or AST scan can mechanically compare API response construction against schema definitions to flag required fields mapped to empty defaults \u2014 high severity as it breaks API contracts.",
+    "hook_event": "PostToolUse",
+    "hook_tool": "Edit",
+    "hook_glob": "**/apps/**/*.scala",
+    "hook_check": "grep -qE 'getOrElse\\s*\\(\\s*\"\"\\s*\\)|\\.getOrDefault\\s*\\(.*,\\s*\"\"\\s*\\)|Option\\(.*\\)\\.getOrElse\\s*\\(\\s*\"\"' \"$1\"",
+    "hook_message": "Silent empty-string defaulting detected for a potentially required API field. If the schema marks this field as required, do not map missing values to \"\". Either validate presence and return an error, or change the schema to Option[T] to reflect true optionality.",
+    "hook_blocking": false
   },
   {
     "id": "api-route-descriptions-specify-types",
@@ -2293,13 +2319,13 @@
     "modules": [
       "compute-providers"
     ],
-    "mode": "active",
+    "mode": "hook",
     "confidence": 0.2,
     "review_count": 2,
     "status": "active",
-    "mode_rationale": "Single rule about archiving vs deleting referenced records",
+    "mode_rationale": "A grep/AST scan on migration files and repository classes can flag DELETE operations on tables with known foreign key references \u2014 high severity as it risks data loss and broken references.",
     "skill_worthy": true,
-    "skill_rationale": "Engineers benefit from a workflow showing soft-delete/archive pattern implementation with referential integrity checks.",
+    "skill_rationale": "Engineers benefit from a decision tree and code examples for implementing soft-delete/archive patterns with referential integrity checks.",
     "steps": [
       "Identify all foreign-key or soft-reference relationships pointing to the entity you want to remove.",
       "Add an `archived` or `isActive` boolean field (or an `archivedAt` timestamp) to the entity's schema if one doesn't already exist.",
@@ -2308,7 +2334,15 @@
       "Ensure existing references (e.g., running deployments) continue to resolve the archived entity's data without errors.",
       "Optionally surface archived entities in an admin view with a restore option for reversibility."
     ],
-    "skill_title": "Archive referenced entities instead of deleting them"
+    "skill_title": "Archive referenced entities instead of deleting them",
+    "hook_worthy": true,
+    "hook_rationale": "A grep/AST scan on migration files and repository classes can flag DELETE operations on tables with known foreign key references \u2014 high severity as it risks data loss and broken references.",
+    "hook_event": "PostToolUse",
+    "hook_tool": "Edit",
+    "hook_glob": "**/compute-providers/**/*.scala",
+    "hook_check": "grep -nE '\\b(repo|repository|dao)\\.(delete|remove)\\b' \"$1\" | grep -ivE 'archive|soft.?delete|mark.?as.?deleted' > /dev/null 2>&1",
+    "hook_message": "Hard delete detected in a compute-providers entity service. Entities referenced by other records (e.g., resource configs referenced by deployments) should be soft-archived (set archivedAt timestamp) instead of deleted to preserve referential integrity. Use an archive pattern with an archivedAt field and filter active records with archivedAt.isEmpty.",
+    "hook_blocking": false
   },
   {
     "id": "aria-label-on-icon-only-buttons",
@@ -2728,13 +2762,13 @@
     "modules": [
       "internal-info"
     ],
-    "mode": "active",
+    "mode": "hook",
     "confidence": 0.3,
     "review_count": 3,
     "status": "active",
-    "mode_rationale": "Single-sentence security review reminder",
+    "mode_rationale": "A grep scan for patterns like secret, password, credential, apiKey, token in API response DTOs or serialization code can catch potential leakage \u2014 high security severity tied to endpoint file edits.",
     "skill_worthy": true,
-    "skill_rationale": "Requires a multi-step audit checklist: identify exposed fields, trace data flow, verify security boundaries, and apply redaction.",
+    "skill_rationale": "Engineers benefit from a step-by-step audit checklist for identifying sensitive fields in API responses and code examples for filtering them.",
     "steps": [
       "Inventory every field returned by the endpoint and classify each as public, internal, or secret.",
       "Strip or redact any field classified as secret before serialization \u2014 never rely on the caller to ignore sensitive fields.",
@@ -2743,7 +2777,15 @@
       "Add integration tests that assert known secret keys are absent from API response bodies.",
       "Review whether the endpoint's authentication and authorization scope matches the sensitivity of the data it exposes."
     ],
-    "skill_title": "Audit API endpoints for secret leakage"
+    "skill_title": "Audit API endpoints for secret leakage",
+    "hook_worthy": true,
+    "hook_rationale": "A grep scan for patterns like secret, password, credential, apiKey, token in API response DTOs or serialization code can catch potential leakage \u2014 high security severity tied to endpoint file edits.",
+    "hook_event": "PreToolUse",
+    "hook_tool": "Edit",
+    "hook_glob": "**/*Controller*.scala",
+    "hook_check": "grep -qE '\\.(toMap|asMap|toProperties)\\s*\\)|toJson\\(\\s*(config|settings|credentials)\\b' \"$1\"",
+    "hook_message": "Potential secret leakage: this controller serializes a full config/settings object directly (via .toMap or raw toJson). Use an allowlist approach \u2014 create a dedicated case class with only safe fields and serialize that instead of exposing the entire object.",
+    "hook_blocking": true
   },
   {
     "id": "audit-build-dependencies-after-code-relocation-refactors",
@@ -6152,13 +6194,13 @@
       "frontend",
       "personalaccesstoken"
     ],
-    "mode": "active",
+    "mode": "hook",
     "confidence": 0.4,
     "review_count": 4,
     "status": "active",
-    "mode_rationale": "Single convention about safe default values",
-    "skill_worthy": true,
-    "skill_rationale": "Requires a decision tree: what to default to when config is undefined (sentinel value, error, or explicit disable), with examples of the zero-default bug.",
+    "mode_rationale": "A regex scan for config/limit values defaulting to 0 (e.g., getOrElse(0), ?? 0, .getOrDefault(..., 0)) in config-handling code can mechanically flag this high-severity issue that silently blocks operations.",
+    "skill_worthy": false,
+    "skill_rationale": "The rule is a simple principle: don't default limit configs to 0; use a sensible fallback or require explicit configuration.",
     "steps": [
       "Identify every config-driven limit in the code path and trace what happens when the value is undefined or missing.",
       "Choose a sensible non-zero default that represents a safe, permissive fallback \u2014 not 0, which silently disables the feature.",
@@ -6166,7 +6208,15 @@
       "Add a validation check at config load time that warns or throws when a limit value is unexpected (e.g., negative, zero when not explicitly allowed).",
       "Write a unit test that verifies behavior when the config key is absent, confirming operations are not silently blocked."
     ],
-    "skill_title": "Use safe non-zero defaults for config-driven limits"
+    "skill_title": "Use safe non-zero defaults for config-driven limits",
+    "hook_worthy": true,
+    "hook_rationale": "A regex scan for config/limit values defaulting to 0 (e.g., getOrElse(0), ?? 0, .getOrDefault(..., 0)) in config-handling code can mechanically flag this high-severity issue that silently blocks operations.",
+    "hook_event": "PostToolUse",
+    "hook_tool": "Edit",
+    "hook_glob": "**/*.{ts,tsx,js,jsx}",
+    "hook_check": "grep -nE '\\|\\|\\s*0\\b|\\?\\?\\s*0\\b' \"$1\" | grep -iE 'config|limit|max|size|threshold|quota|capacity' | head -1",
+    "hook_message": "Potential unsafe zero default for a config-driven limit detected. Defaulting to 0 when a config value is missing can silently block all operations (e.g., max file size of 0 rejects every upload). Use a sensible non-zero default and explicitly document if 0 means 'no limit'. See PRs #44194, #47271.",
+    "hook_blocking": false
   },
   {
     "id": "avoid-upstream-dependencies-in-e2e-tests",
@@ -6354,9 +6404,9 @@
     "confidence": 0.5,
     "review_count": 5,
     "status": "active",
-    "mode_rationale": "Single coding convention about async/await in error handling",
-    "skill_worthy": true,
-    "skill_rationale": "Engineers benefit from a code example showing the subtle bug where unawaited async in try-catch silently bypasses error handling.",
+    "mode_rationale": "Hook enrichment failed, fell back to active",
+    "skill_worthy": false,
+    "skill_rationale": "This is a single well-known rule: always await async calls in try-catch; no multi-step guidance needed.",
     "steps": [
       "Identify every async function call inside a try-catch block.",
       "Ensure each call is preceded by the `await` keyword so the promise is resolved inline.",
@@ -6364,7 +6414,9 @@
       "Verify that the catch block handles the expected error types from the awaited call.",
       "If you intentionally want fire-and-forget behavior, move the call outside the try-catch and attach a `.catch()` handler directly on the promise instead."
     ],
-    "skill_title": "Await async calls inside try-catch blocks to catch errors"
+    "skill_title": "Await async calls inside try-catch blocks to catch errors",
+    "hook_worthy": true,
+    "hook_rationale": "An AST scan or regex can detect async function calls inside try-catch blocks missing the await keyword \u2014 high severity as it silently bypasses error handling, and mechanically detectable on JS/TS file edits."
   },
   {
     "id": "await-async-permission-checks",
@@ -6382,13 +6434,13 @@
     "modules": [
       "frontend"
     ],
-    "mode": "active",
+    "mode": "hook",
     "confidence": 0.3,
     "review_count": 3,
     "status": "active",
-    "mode_rationale": "Single rule about awaiting async results before boolean checks",
-    "skill_worthy": true,
-    "skill_rationale": "Engineers benefit from a code example showing the subtle bug where an unawaited Promise is truthy, plus the correct await pattern.",
+    "mode_rationale": "A regex/AST scan can detect permission-check functions (e.g., hasAccess*, canAccess*) used in boolean expressions without await \u2014 high security severity as unawaited Promises are always truthy, bypassing access control.",
+    "skill_worthy": false,
+    "skill_rationale": "This is a specific instance of the await-in-try-catch rule: always await Promise-returning permission checks before using in boolean context.",
     "steps": [
       "Identify all permission-checking functions used in conditional expressions (if statements, ternaries, logical operators).",
       "Check the return type of each function \u2014 if it returns Promise<boolean> or could be async, it must be awaited.",
@@ -6397,7 +6449,16 @@
       "Add TypeScript strict checks or an ESLint rule (e.g., @typescript-eslint/no-floating-promises) to catch unawaited promises in boolean contexts.",
       "Write a test case that verifies access is actually denied when the permission check returns false."
     ],
-    "skill_title": "Await async permission checks before evaluating access"
+    "skill_title": "Await async permission checks before evaluating access",
+    "hook_worthy": true,
+    "hook_rationale": "A regex/AST scan can detect permission-check functions (e.g., hasAccess*, canAccess*) used in boolean expressions without await \u2014 high security severity as unawaited Promises are always truthy, bypassing access control.",
+    "hook_event": "PreToolUse",
+    "hook_tool": "Edit",
+    "hook_glob": "**/*.{ts,tsx}",
+    "hook_check": "grep -En '(hasAccess|hasPermission|canAccess|isAuthorized|checkPermission)[A-Za-z]*\\(' \"$1\" | grep -v 'await'",
+    "hook_message": "Unawaited async permission check detected. Functions like hasAccessToResource() return a Promise, which is always truthy \u2014 this silently bypasses the authorization check. Add 'await' before the call. (Source PRs: #45191, #44497, #44141)",
+    "hook_blocking": true,
+    "hook_validation_rationale": "Unawaited permission checks silently bypass authorization \u2014 this is a security gate that must prevent the bad code from being written, not inspect it after the fact."
   },
   {
     "id": "await-futures-in-tests",
@@ -6534,7 +6595,7 @@
     "status": "active",
     "mode_rationale": "Simple performance guideline to prefer batch queries over per-item queries",
     "skill_worthy": true,
-    "skill_rationale": "Engineers benefit from before/after code examples showing the N+1 query anti-pattern replaced with batch lookup and in-memory filtering.",
+    "skill_rationale": "Engineers benefit from code examples showing how to refactor per-item queries into batch lookups with in-memory filtering, including common patterns across different ORMs.",
     "steps": [
       "Collect all the IDs or keys you need to look up into a single collection before making any database call.",
       "Use a batch query method (e.g., `findByIds`, `WHERE id IN (...)`, or equivalent bulk API) to fetch all needed records in one round-trip.",
@@ -6542,7 +6603,9 @@
       "Filter or match the batch results against your original collection in memory rather than issuing per-item queries.",
       "If the batch size could be very large, chunk the IDs into reasonable batches (e.g., 500-1000) and issue a small number of batch queries rather than N individual ones."
     ],
-    "skill_title": "Batch database lookups instead of per-item queries"
+    "skill_title": "Batch database lookups instead of per-item queries",
+    "hook_worthy": false,
+    "hook_rationale": "Detecting N+1 query patterns requires understanding data flow and loop context, which is a judgment call beyond simple regex matching."
   },
   {
     "id": "batch-endpoint-over-multiple-calls",
@@ -6584,7 +6647,7 @@
     "status": "active",
     "mode_rationale": "Simple performance convention for write batching",
     "skill_worthy": true,
-    "skill_rationale": "Engineers benefit from code examples showing batching strategies (count-based, time-window) for stream-to-database write patterns.",
+    "skill_rationale": "Engineers benefit from code examples showing write-batching strategies (count-based, time-windowed, hybrid) for event stream consumers.",
     "steps": [
       "Identify the event stream and measure its expected frequency \u2014 if events can arrive faster than once per second, batching is warranted.",
       "Introduce a bounded buffer (by count or time window) that accumulates events before flushing to the database.",
@@ -6593,7 +6656,9 @@
       "Ensure the flush logic runs on shutdown or stream completion so no buffered events are lost.",
       "Add metrics or logging around batch size and flush frequency so you can tune the thresholds over time."
     ],
-    "skill_title": "Batch high-frequency event-driven database writes"
+    "skill_title": "Batch high-frequency event-driven database writes",
+    "hook_worthy": false,
+    "hook_rationale": "Determining whether a database write is high-frequency enough to warrant batching requires understanding event volume and write patterns, which is a design judgment."
   },
   {
     "id": "batch-large-requests",
@@ -6940,13 +7005,13 @@
     "modules": [
       "executor"
     ],
-    "mode": "active",
+    "mode": "ambient",
     "confidence": 0.2,
     "review_count": 2,
     "status": "active",
-    "mode_rationale": "Coding convention about precise conditional branching",
-    "skill_worthy": true,
-    "skill_rationale": "Engineers benefit from a code example showing the wrong (broad state) vs right (specific signal) branching pattern for process termination.",
+    "mode_rationale": "This is a clear principle that can be communicated in one sentence: check the specific signal, not the broad state.",
+    "skill_worthy": false,
+    "skill_rationale": "This is a clear principle that can be communicated in one sentence: check the specific signal, not the broad state.",
     "steps": [
       "Identify every distinct signal or event that can trigger the state transition (e.g., user-initiated stop, timeout, crash, scaling event).",
       "Branch on the specific signal or causal property rather than the resulting broad state enum.",
@@ -6954,7 +7019,9 @@
       "Ensure each branch handles only the cases it was designed for \u2014 avoid catch-all matches on broad state that silently swallow unrelated transitions.",
       "Add explicit handling or logging for unexpected signals so new transition reasons surface immediately rather than hiding behind a broad state check."
     ],
-    "skill_title": "Branch on specific termination signals instead of broad state checks"
+    "skill_title": "Branch on specific termination signals instead of broad state checks",
+    "hook_worthy": false,
+    "hook_rationale": "Detecting whether a state branch is too broad vs. specific requires understanding the domain's state machine semantics, which is a judgment call."
   },
   {
     "id": "break-long-lines-for-readability",
@@ -7082,7 +7149,7 @@
     "status": "active",
     "mode_rationale": "Performance guideline about caching strategy",
     "skill_worthy": true,
-    "skill_rationale": "Engineers benefit from code examples showing caching strategies and check-before-fetch patterns for rarely-changing upstream data.",
+    "skill_rationale": "Engineers benefit from a decision tree for choosing caching strategies and code examples for check-before-fetch patterns with TTL and invalidation.",
     "steps": [
       "Identify whether the upstream data actually changes on every request or only on specific write operations (e.g., project config updates, model deployments).",
       "Introduce a cache layer (e.g., Caffeine, Guava LoadingCache, or a Redis-backed cache) with a TTL appropriate to the data's change frequency.",
@@ -7091,7 +7158,9 @@
       "Add metrics or logging to track cache hit/miss ratios so you can tune TTL values and verify the caching is effective.",
       "Write tests that cover both the cache-hit path (returns cached data without DB call) and the cache-miss/invalidation path (fetches fresh data after a write)."
     ],
-    "skill_title": "Cache infrequently changing data instead of fetching on every request"
+    "skill_title": "Cache infrequently changing data instead of fetching on every request",
+    "hook_worthy": false,
+    "hook_rationale": "Determining whether data changes infrequently enough to cache requires domain knowledge about data volatility, not a mechanical check."
   },
   {
     "id": "cache-mutable-collection-lookups-to-prevent-toctou-bugs",
@@ -7133,7 +7202,7 @@
     "status": "active",
     "mode_rationale": "Single guideline about caching redundant lookups in event streams",
     "skill_worthy": true,
-    "skill_rationale": "Engineers benefit from a code example showing how to add a simple cache layer in an event processing loop to avoid linear-scaling lookups.",
+    "skill_rationale": "Engineers benefit from code examples showing how to add an in-process cache to event processing loops, including cache eviction strategies.",
     "steps": [
       "Identify which lookups in the event processing loop are repeated across events with the same key (e.g., user ID, project ID, run ID).",
       "Introduce a local in-memory cache scoped to the processing batch or time window \u2014 a simple mutable.Map or Caffeine cache is sufficient.",
@@ -7142,7 +7211,9 @@
       "Add a metric or log to track cache hit rate so you can validate the optimization is effective in production.",
       "Ensure the cache is not shared across threads unsafely \u2014 use a ConcurrentHashMap or thread-local cache if events are processed in parallel."
     ],
-    "skill_title": "Cache repeated lookups in event processing pipelines"
+    "skill_title": "Cache repeated lookups in event processing pipelines",
+    "hook_worthy": false,
+    "hook_rationale": "Detecting repeated lookups in event processing requires understanding data flow through the pipeline, which is beyond simple pattern matching."
   },
   {
     "id": "call-hooks-at-top-level-not-inside-data-structures",
@@ -7571,13 +7642,13 @@
     "modules": [
       "projects"
     ],
-    "mode": "active",
+    "mode": "ambient",
     "confidence": 0.2,
     "review_count": 2,
     "status": "active",
-    "mode_rationale": "Single-sentence DRY principle for domain object transformations",
-    "skill_worthy": true,
-    "skill_rationale": "Engineers benefit from a before/after code example showing scattered sanitization logic moved onto the domain object.",
+    "mode_rationale": "This is a standard DRY refactoring principle that can be stated in one sentence.",
+    "skill_worthy": false,
+    "skill_rationale": "This is a standard DRY refactoring principle that can be stated in one sentence.",
     "steps": [
       "Identify all locations where the same sanitization or transformation is applied to a given field (e.g., grep for .trim, .toLowerCase, .replaceAll on the same domain field).",
       "Move the sanitization logic into the domain object's constructor, apply method, or a smart constructor (e.g., a companion object factory method) so it runs exactly once at creation time.",
@@ -7585,7 +7656,9 @@
       "Add or update unit tests on the domain object to verify the sanitization is applied correctly, including edge cases like empty strings, whitespace-only input, and already-sanitized values.",
       "Search the codebase one more time for any remaining raw construction of the domain object that bypasses the sanitized factory method, and route those through the centralized path."
     ],
-    "skill_title": "Centralize duplicated sanitization logic on domain objects"
+    "skill_title": "Centralize duplicated sanitization logic on domain objects",
+    "hook_worthy": false,
+    "hook_rationale": "Detecting duplicated sanitization logic requires semantic understanding of what constitutes the same transformation, which is a judgment call."
   },
   {
     "id": "centralize-encoding-utilities",
@@ -8085,7 +8158,7 @@
     "status": "active",
     "mode_rationale": "Multi-step procedure: trace references through config bindings, injection modules, and test fixtures",
     "skill_worthy": true,
-    "skill_rationale": "Requires a multi-step checklist: trace config bindings, injection modules, test fixtures, and all references when removing a feature.",
+    "skill_rationale": "Engineers benefit from a step-by-step checklist for tracing and removing all references \u2014 config bindings, DI modules, test fixtures, imports \u2014 when removing a feature.",
     "steps": [
       "Identify the top-level class or trait being removed and all files that import or reference it directly.",
       "Trace the dependency injection chain: remove Guice module bindings, provider methods, and @Inject references that wire the removed class.",
@@ -8094,7 +8167,9 @@
       "Clean up test fixtures: remove mock bindings, test module overrides, factory methods, and test data builders that exist solely to support the removed feature.",
       "Run a project-wide search for the removed class/trait name, config keys, and route paths to catch any remaining references the compiler won't flag (e.g., string-based lookups, reflection, documentation)."
     ],
-    "skill_title": "Remove the entire dependency chain when deleting a feature"
+    "skill_title": "Remove the entire dependency chain when deleting a feature",
+    "hook_worthy": false,
+    "hook_rationale": "Detecting incomplete removal requires understanding the full dependency chain of the removed feature, which varies per feature and is a judgment call."
   },
   {
     "id": "complete-react-hook-dependency-arrays",
@@ -8158,11 +8233,15 @@
     "modules": [
       "frontend"
     ],
-    "mode": "active",
+    "mode": "ambient",
     "confidence": 0.2,
     "review_count": 2,
     "status": "active",
-    "mode_rationale": "Single state management convention"
+    "mode_rationale": "This is a simple architectural directive: use the store directly in the component that needs it instead of prop-drilling.",
+    "skill_worthy": false,
+    "skill_rationale": "This is a simple architectural directive: use the store directly in the component that needs it instead of prop-drilling.",
+    "hook_worthy": false,
+    "hook_rationale": "Detecting unnecessary prop-drilling of global stores requires understanding component hierarchy and data flow, which is beyond mechanical checks."
   },
   {
     "id": "composition-over-modification",
@@ -8183,7 +8262,11 @@
     "confidence": 0.2,
     "review_count": 2,
     "status": "active",
-    "mode_rationale": "Single architectural preference for composition"
+    "mode_rationale": "Single architectural preference for composition",
+    "skill_worthy": true,
+    "skill_rationale": "Engineers benefit from code examples showing how to create wrapper components that compose the original rather than modifying its internals.",
+    "hook_worthy": false,
+    "hook_rationale": "Determining whether a component change should be a wrapper vs. modification requires understanding the component's usage and the change's scope, which is a design judgment."
   },
   {
     "id": "consistent-api-naming-across-services",
@@ -8201,11 +8284,15 @@
       "gen-ai",
       "apps"
     ],
-    "mode": "active",
+    "mode": "ambient",
     "confidence": 0.2,
     "review_count": 2,
     "status": "active",
-    "mode_rationale": "Simple convention to reuse field names across parallel APIs"
+    "mode_rationale": "This is a straightforward naming consistency principle that can be stated in one sentence.",
+    "skill_worthy": false,
+    "skill_rationale": "This is a straightforward naming consistency principle that can be stated in one sentence.",
+    "hook_worthy": false,
+    "hook_rationale": "Detecting naming inconsistencies across services requires knowledge of existing API conventions in parallel services, which is a cross-service judgment call."
   },
   {
     "id": "consistent-search-query-parameter-naming",
@@ -10064,7 +10151,7 @@
     "status": "active",
     "mode_rationale": "Simple discipline rule about checking downstream consumers",
     "skill_worthy": true,
-    "skill_rationale": "Requires a multi-step workflow to enumerate consumers, verify contract compatibility, and coordinate updates across services.",
+    "skill_rationale": "Engineers benefit from a systematic workflow for identifying all API consumers, assessing contract changes, and coordinating updates across services.",
     "steps": [
       "Search the codebase for all call sites that reference the endpoint path or its client method (grep for the route pattern across nucleus, apps, frontend, and SDK repos).",
       "List every consumer: UI fetch calls, service-to-service REST clients, CLI commands, SDK wrappers, and integration tests.",
@@ -10073,7 +10160,9 @@
       "If a simultaneous update isn't feasible, introduce a backward-compatible migration path: keep the old field alongside the new one, add a deprecation annotation, and remove the old field in a follow-up PR.",
       "Add or update integration tests that exercise the endpoint from each consumer's perspective to catch contract drift."
     ],
-    "skill_title": "Audit all consumers before changing a shared API contract"
+    "skill_title": "Audit all consumers before changing a shared API contract",
+    "hook_worthy": false,
+    "hook_rationale": "Identifying all consumers of an API and whether they've been updated requires cross-service knowledge that can't be mechanically checked from file edits alone."
   },
   {
     "id": "consider-audit-event-volume-for-high-frequency-operations",
@@ -10233,12 +10322,12 @@
     "modules": [
       "compute-providers"
     ],
-    "mode": "active",
+    "mode": "hook",
     "confidence": 0.2,
     "review_count": 2,
     "status": "active",
     "skill_worthy": true,
-    "skill_rationale": "Requires a decision tree weighing user expectations, compliance requirements, and recovery scenarios for credential purge vs retain.",
+    "skill_rationale": "Engineers benefit from a decision tree covering credential purge vs. retain on soft-delete, including security implications and implementation patterns.",
     "steps": [
       "Identify all credential or secret fields associated with the entity being soft-deleted (e.g., access keys, tokens, passwords, certificates).",
       "Decide explicitly whether credentials should be purged immediately on soft-delete or retained until hard-delete, and document the decision in a code comment or ADR.",
@@ -10247,7 +10336,17 @@
       "Add a test that verifies credential state after soft-delete matches the chosen policy \u2014 either fully purged or provably inaccessible.",
       "Update any restore/undelete flow to handle the chosen credential state: if purged, require the user to re-enter credentials on restore; if retained, re-enable access atomically."
     ],
-    "skill_title": "Handle credential lifecycle explicitly on soft-delete"
+    "skill_title": "Handle credential lifecycle explicitly on soft-delete",
+    "hook_worthy": true,
+    "hook_rationale": "A grep scan on soft-delete implementations in entity services can flag missing credential cleanup logic when the entity model has associated secret/credential fields \u2014 high security severity.",
+    "mode_rationale": "A grep scan on soft-delete implementations in entity services can flag missing credential cleanup logic when the entity model has associated secret/credential fields \u2014 high security severity.",
+    "hook_event": "PreToolUse",
+    "hook_tool": "Edit",
+    "hook_glob": "**/compute-providers/**/*.scala",
+    "hook_check": "grep -q 'deletedAt' \"$1\" && ! grep -qE '(deleteCredentials|purgeCredentials|credentialRef\\s*=\\s*None|removeSecret|purgeSecret)' \"$1\"",
+    "hook_message": "Soft-delete detected without credential cleanup. When soft-deleting entities with associated secrets, explicitly purge or retain credentials \u2014 don't leave orphaned secrets in the store. Add a deleteCredentials/purgeSecrets call and clear the credentialRef.",
+    "hook_blocking": true,
+    "hook_validation_rationale": "Orphaned credentials after soft-delete is a security risk; blocking PostToolUse is contradictory since the edit is already written \u2014 promote to PreToolUse to prevent the incomplete pattern from landing."
   },
   {
     "id": "consider-database-migration-for-field-renames",
@@ -10289,7 +10388,7 @@
     "status": "active",
     "mode_rationale": "Single API change management principle",
     "skill_worthy": true,
-    "skill_rationale": "Requires multi-step assessment: identify consumers, detect workarounds, design a migration path, and plan rollout.",
+    "skill_rationale": "Engineers benefit from a step-by-step migration planning workflow: identifying consumers with workarounds, designing backward-compatible fixes, and phased rollout.",
     "steps": [
       "Identify all known consumers of the affected API endpoint by searching for usages across services, SDKs, CLI tools, and external integrations.",
       "Catalog the specific buggy behavior and determine which consumers may have built workarounds or parsing logic that depends on it.",
@@ -10298,7 +10397,9 @@
       "Provide a migration window with documentation explaining the old vs. new behavior and how to adapt client code.",
       "Monitor API access logs during the migration period to confirm all consumers have transitioned before removing the legacy behavior."
     ],
-    "skill_title": "Assess downstream consumer impact before fixing API bugs"
+    "skill_title": "Assess downstream consumer impact before fixing API bugs",
+    "hook_worthy": false,
+    "hook_rationale": "Assessing whether consumers depend on buggy behavior requires understanding consumer codebases and their workarounds, which is a judgment call."
   },
   {
     "id": "consider-extending-existing-endpoints-before-creating-new-ones",
@@ -10459,7 +10560,7 @@
     "review_count": 3,
     "status": "active",
     "skill_worthy": true,
-    "skill_rationale": "Evaluating race conditions in dynamic module loading requires step-by-step analysis of load ordering, timing windows, and mitigation strategies.",
+    "skill_rationale": "Engineers benefit from examples showing race condition scenarios in dynamic module loading and patterns for safe dependency injection ordering.",
     "steps": [
       "Identify all dynamically injected helpers or dependencies and trace their initialization lifecycle relative to the modules that consume them.",
       "Check whether any consumer module can be invoked before its injected dependency has finished initializing \u2014 especially during application startup or lazy module loading.",
@@ -10468,7 +10569,9 @@
       "Add integration tests that exercise the startup sequence under realistic conditions, including concurrent module loading, to surface race windows.",
       "Document the required initialization order in the module's companion object or binding configuration so future contributors don't accidentally reorder it."
     ],
-    "skill_title": "Guard against race conditions in dynamic module injection"
+    "skill_title": "Guard against race conditions in dynamic module injection",
+    "hook_worthy": false,
+    "hook_rationale": "Detecting race conditions in module injection requires understanding module loading order and timing, which is beyond static analysis."
   },
   {
     "id": "consider-real-world-data-volumes-for-pagination",
@@ -10652,7 +10755,7 @@
     "status": "active",
     "mode_rationale": "Single convention to use consistent audit event patterns",
     "skill_worthy": true,
-    "skill_rationale": "Requires a decision tree comparing unified-event vs separate-event patterns with code examples showing schema design trade-offs.",
+    "skill_rationale": "Engineers benefit from a decision tree for choosing unified vs. per-action events and concrete naming convention examples for audit trail design.",
     "steps": [
       "Survey existing audit events in the codebase to identify the current convention (unified event with a changes field vs. separate events per action).",
       "If a unified convention exists (e.g., a single 'EntityUpdated' event with a 'changes' map), follow it consistently for your new events rather than introducing separate per-action events.",
@@ -10661,7 +10764,9 @@
       "Name events using a consistent grammatical pattern: prefer past-tense verbs (e.g., 'OrganizationSettingsUpdated') and namespace them by domain module.",
       "Add the new event types to any shared event enum or registry so downstream consumers (audit log UI, analytics) can handle them without special-casing."
     ],
-    "skill_title": "Apply a consistent audit event naming and structure convention"
+    "skill_title": "Apply a consistent audit event naming and structure convention",
+    "hook_worthy": false,
+    "hook_rationale": "Enforcing naming consistency across audit events requires understanding the existing convention and whether a new event follows it, which is a judgment call."
   },
   {
     "id": "consistent-authorization-layer",
@@ -12236,7 +12341,7 @@
     "status": "active",
     "mode_rationale": "Simple convention: review all fields when implementing copy/clone operations",
     "skill_worthy": true,
-    "skill_rationale": "Requires a field-by-field audit workflow: enumerate source model fields, verify each is transferred, and handle edge cases like generated IDs or timestamps.",
+    "skill_rationale": "Engineers benefit from a field-by-field review checklist and code patterns for implementing complete clone/copy operations that don't miss attributes.",
     "steps": [
       "Enumerate every field on the source model's case class or schema definition before writing the copy logic.",
       "Explicitly map each field from the source to the target -- do not rely on partial constructors or default values to fill gaps.",
@@ -12245,7 +12350,9 @@
       "If certain fields should intentionally differ (e.g., new ID, reset timestamps), document each exclusion with an inline comment explaining why.",
       "Consider adding a compile-time or test-time check that flags when new fields are added to the model but not accounted for in the copy method."
     ],
-    "skill_title": "Copy all model attributes when implementing clone or fork operations"
+    "skill_title": "Copy all model attributes when implementing clone or fork operations",
+    "hook_worthy": false,
+    "hook_rationale": "Detecting missing attributes in a clone operation requires comparing the clone logic against the source model's fields, which varies per model and needs semantic understanding."
   },
   {
     "id": "core-package-must-not-know-feature-specific-inner-routes",
@@ -12611,13 +12718,13 @@
     "modules": [
       "dataset-rw"
     ],
-    "mode": "active",
+    "mode": "ambient",
     "confidence": 0.4,
     "review_count": 4,
     "status": "active",
-    "mode_rationale": "Single API design principle for service consistency",
-    "skill_worthy": true,
-    "skill_rationale": "Requires multi-step evaluation: identify related services, compare endpoint surfaces, and decide which corresponding endpoints to create.",
+    "mode_rationale": "This is a straightforward reminder to check related services when adding endpoints; no multi-step guidance needed.",
+    "skill_worthy": false,
+    "skill_rationale": "This is a straightforward reminder to check related services when adding endpoints; no multi-step guidance needed.",
     "steps": [
       "Identify all services that expose the same or related resource (e.g., datasets, project files, model assets) by searching for existing route definitions across service modules.",
       "For each related service, check whether it already has an equivalent endpoint for the operation you're adding (GET, POST, DELETE, etc.).",
@@ -12626,7 +12733,9 @@
       "Ensure the new endpoints across services share consistent naming conventions, query parameter semantics, and error response structures.",
       "Add integration tests that verify both endpoints return equivalent results for the same underlying resource."
     ],
-    "skill_title": "Maintain API endpoint parity across related services"
+    "skill_title": "Maintain API endpoint parity across related services",
+    "hook_worthy": false,
+    "hook_rationale": "Determining whether a corresponding endpoint is needed in another service requires understanding cross-service architecture, which is a design judgment."
   },
   {
     "id": "cross-team-changes-require-explicit-owner-approval",
@@ -13560,7 +13669,7 @@
     "status": "active",
     "mode_rationale": "Single coding convention: delay render until async data is ready",
     "skill_worthy": true,
-    "skill_rationale": "Engineers benefit from code examples showing loading-state gating patterns and the pitfalls of rendering with incomplete async data.",
+    "skill_rationale": "Engineers benefit from code examples showing Suspense boundaries, loading states, and conditional render patterns for async-dependent components.",
     "steps": [
       "Identify all async dependencies the component needs before it can render meaningfully (e.g., locale config, translations, remote feature flags).",
       "Add a loading state that gates the component render until all async dependencies have resolved.",
@@ -13568,7 +13677,9 @@
       "Use a top-level provider or wrapper component to centralize the async loading logic so individual components don't each manage their own loading states for shared dependencies.",
       "Handle error states for failed async loads with a fallback UI rather than silently rendering with incomplete data."
     ],
-    "skill_title": "Delay render until async dependencies are loaded"
+    "skill_title": "Delay render until async dependencies are loaded",
+    "hook_worthy": false,
+    "hook_rationale": "Detecting whether a component renders before its async dependencies are loaded requires understanding the component's data flow and lifecycle, which is a judgment call."
   },
   {
     "id": "delegate-unmatched-cases-to-super-implementation-in-pattern-matching",
@@ -13634,7 +13745,7 @@
     "status": "active",
     "mode_rationale": "Ordering convention for cleanup operations",
     "skill_worthy": true,
-    "skill_rationale": "Requires understanding an ordering workflow: attempt external cleanup first, handle failures, only then delete the DB record, with retry considerations.",
+    "skill_rationale": "Engineers benefit from code examples showing the correct ordering pattern: external cleanup first, then database deletion, with retry-on-failure strategies.",
     "steps": [
       "Identify all external resources (Kubernetes objects, cloud resources, message queues) that depend on the database record being deleted.",
       "Perform all external cleanup operations first, propagating errors if any step fails.",
@@ -13643,7 +13754,9 @@
       "Log the failure with enough context (resource IDs, external object names) to support manual or automated retry.",
       "Consider adding a status field (e.g., `DELETING`) to mark the record as pending deletion, so background reconciliation loops can pick up incomplete deletions."
     ],
-    "skill_title": "Delete database records only after dependent external resources are cleaned up"
+    "skill_title": "Delete database records only after dependent external resources are cleaned up",
+    "hook_worthy": false,
+    "hook_rationale": "Detecting incorrect deletion ordering requires understanding the relationship between database records and external resources, which varies by context."
   },
   {
     "id": "delete-references-to-removed-files",
@@ -13838,7 +13951,7 @@
     "status": "active",
     "mode_rationale": "Single React performance convention",
     "skill_worthy": true,
-    "skill_rationale": "Engineers benefit from before/after code examples showing the anti-pattern (useEffect+useState sync) vs the correct approach (direct computation or useMemo).",
+    "skill_rationale": "Engineers benefit from before/after code examples showing how to replace useEffect+useState sync patterns with direct computation or useMemo.",
     "steps": [
       "Identify any useState + useEffect pairs where the effect's sole purpose is to derive a value from props or existing state.",
       "Replace the useState + useEffect pair with a direct calculation in the render body (const derived = computeValue(props.x)).",
@@ -13847,7 +13960,9 @@
       "Verify that the derived value updates correctly when its source props or state change, with no stale-value flicker.",
       "Check for downstream effects that depended on the removed state setter and refactor them to use the derived value directly."
     ],
-    "skill_title": "Derive state from props instead of syncing with useEffect"
+    "skill_title": "Derive state from props instead of syncing with useEffect",
+    "hook_worthy": false,
+    "hook_rationale": "Detecting unnecessary useEffect+useState pairs requires understanding whether the derived state can be computed from props, which needs semantic analysis."
   },
   {
     "id": "derive-state-from-url-when-available",
@@ -14881,7 +14996,7 @@
     "status": "active",
     "mode_rationale": "Single type design principle for optional collections",
     "skill_worthy": true,
-    "skill_rationale": "Requires code examples and a decision tree showing when None means 'unknown/legacy' vs Some(empty) means 'explicitly none' and how to preserve the distinction.",
+    "skill_rationale": "Engineers benefit from code examples showing how to model and handle the semantic difference between None (absent/unknown) and Some(empty) in APIs and data models.",
     "steps": [
       "Identify whether the field's absence (None) and its empty state (Some(empty)) have distinct semantic meanings in the domain model.",
       "Document the distinction in a comment or scaladoc on the field: e.g., 'None = legacy/unknown, Some(Seq.empty) = user explicitly set no items'.",
@@ -14890,7 +15005,9 @@
       "When writing match expressions or conditionals, handle all three cases explicitly: None, Some(empty), and Some(nonEmpty).",
       "Add unit tests that assert None and Some(Seq.empty) produce different behavior at the API and persistence layers."
     ],
-    "skill_title": "Preserve None-vs-empty semantics in optional collections"
+    "skill_title": "Preserve None-vs-empty semantics in optional collections",
+    "hook_worthy": false,
+    "hook_rationale": "Determining whether None and empty have distinct semantics requires domain-specific understanding of the data model, which is a judgment call."
   },
   {
     "id": "distinguish-service-failures-from-empty-results-in-logging",
@@ -15626,13 +15743,13 @@
     "modules": [
       "frontend"
     ],
-    "mode": "active",
+    "mode": "ambient",
     "confidence": 0.2,
     "review_count": 2,
     "status": "active",
-    "mode_rationale": "Single-sentence rule about respecting migration status",
-    "skill_worthy": true,
-    "skill_rationale": "Requires a multi-step verification workflow: check migration status, identify migration owner, and consult before modifying.",
+    "mode_rationale": "This is a simple process rule: check migration status before modifying migrated components.",
+    "skill_worthy": false,
+    "skill_rationale": "This is a simple process rule: check migration status before modifying migrated components.",
     "steps": [
       "Check the component's git history and any migration tracking docs to determine if it was intentionally migrated to a new pattern.",
       "If the component has already been migrated, do not revert it to the legacy approach\u2014even if the legacy code seems simpler or more familiar.",
@@ -15641,7 +15758,9 @@
       "If a bug exists in the migrated component, fix it within the new pattern rather than rolling back to the old one.",
       "Document any fixes or adjustments you make so the migration tracking stays accurate."
     ],
-    "skill_title": "Preserve completed migrations instead of reverting to legacy patterns"
+    "skill_title": "Preserve completed migrations instead of reverting to legacy patterns",
+    "hook_worthy": false,
+    "hook_rationale": "Detecting whether a change reverts a completed migration requires understanding the migration's before/after states and whether the new code matches the old pattern, which is a judgment call."
   },
   {
     "id": "do-not-set-default-css-property-values-explicitly",
@@ -16296,11 +16415,15 @@
       "e2e-tests",
       "server"
     ],
-    "mode": "active",
+    "mode": "ambient",
     "confidence": 0.2,
     "review_count": 2,
     "status": "active",
-    "mode_rationale": "Single guideline about extracting shared setup, not a multi-step procedure"
+    "mode_rationale": "This is a standard DRY testing practice that can be communicated in one sentence.",
+    "skill_worthy": false,
+    "skill_rationale": "This is a standard DRY testing practice that can be communicated in one sentence.",
+    "hook_worthy": false,
+    "hook_rationale": "Detecting duplicated test setup requires understanding semantic equivalence of setup code across tests, which is beyond pattern matching."
   },
   {
     "id": "explicit-waits-after-ui-state-changes",
@@ -16360,11 +16483,15 @@
       "common",
       "frontend"
     ],
-    "mode": "active",
+    "mode": "ambient",
     "confidence": 0.2,
     "review_count": 2,
     "status": "active",
-    "mode_rationale": "Architecture convention to extend rather than duplicate utilities"
+    "mode_rationale": "This is a straightforward DRY principle: extend existing utilities rather than copying them.",
+    "skill_worthy": false,
+    "skill_rationale": "This is a straightforward DRY principle: extend existing utilities rather than copying them.",
+    "hook_worthy": false,
+    "hook_rationale": "Detecting whether new code duplicates an existing utility requires understanding functional equivalence, which is a judgment call."
   },
   {
     "id": "externalize-polling-intervals-to-central-config",
@@ -16403,11 +16530,15 @@
     "modules": [
       "frontend"
     ],
-    "mode": "active",
+    "mode": "ambient",
     "confidence": 0.3,
     "review_count": 3,
     "status": "active",
-    "mode_rationale": "Code organization: keep components focused on rendering"
+    "mode_rationale": "This is a standard code organization principle that can be stated in one sentence.",
+    "skill_worthy": false,
+    "skill_rationale": "This is a standard code organization principle that can be stated in one sentence.",
+    "hook_worthy": false,
+    "hook_rationale": "Determining when calculations are complex enough to extract is a subjective judgment, not a mechanical check."
   },
   {
     "id": "extract-common-test-logic-into-shared-assertion-functions",
@@ -16423,11 +16554,15 @@
     "modules": [
       "system-tests"
     ],
-    "mode": "active",
+    "mode": "ambient",
     "confidence": 0.3,
     "review_count": 3,
     "status": "active",
-    "mode_rationale": "Testing best practice about reducing duplication via shared helpers"
+    "mode_rationale": "This is a standard DRY testing practice that can be communicated in one sentence.",
+    "skill_worthy": false,
+    "skill_rationale": "This is a standard DRY testing practice that can be communicated in one sentence.",
+    "hook_worthy": false,
+    "hook_rationale": "Detecting duplicated assertion logic requires semantic understanding of test similarity, which is beyond pattern matching."
   },
   {
     "id": "extract-complex-boolean-logic",
@@ -16490,11 +16625,15 @@
     "modules": [
       "frontend"
     ],
-    "mode": "active",
+    "mode": "ambient",
     "confidence": 0.2,
     "review_count": 2,
     "status": "active",
-    "mode_rationale": "Standard refactoring guideline for React components"
+    "mode_rationale": "This is a standard React refactoring principle that can be stated in one sentence.",
+    "skill_worthy": false,
+    "skill_rationale": "This is a standard React refactoring principle that can be stated in one sentence.",
+    "hook_worthy": false,
+    "hook_rationale": "Determining when JSX is complex enough to extract into sub-components is a subjective judgment about readability, not a mechanical check."
   },
   {
     "id": "document-maintenance-requirements-for-extensible-patterns",
@@ -17063,7 +17202,7 @@
     "status": "active",
     "mode_rationale": "Single API documentation convention",
     "skill_worthy": true,
-    "skill_rationale": "Requires both API documentation and writing unit tests to cover destructive absent-field behavior, a multi-step process.",
+    "skill_rationale": "Engineers benefit from examples showing how to document destructive None semantics in API docs and write unit tests that verify the behavior.",
     "steps": [
       "Audit every optional field in your API model to determine what happens when the field is absent vs. explicitly set to null vs. omitted entirely.",
       "If absence of a field causes a destructive action (e.g., clearing an existing value), document this behavior explicitly in the API schema, Scaladoc/Javadoc, and any relevant API documentation.",
@@ -17072,7 +17211,9 @@
       "Add integration tests that simulate a partial update payload (with the field omitted) and assert the existing value is preserved or cleared as documented.",
       "Review calling code to ensure no caller accidentally omits the field expecting a no-op when the server interprets it as a clear operation."
     ],
-    "skill_title": "Document destructive None semantics in optional API fields"
+    "skill_title": "Document destructive None semantics in optional API fields",
+    "hook_worthy": false,
+    "hook_rationale": "Detecting whether an API field has surprising None semantics requires understanding the business logic behind field absence, which is a judgment call."
   },
   {
     "id": "document-testing-evidence-in-pr",
@@ -18029,7 +18170,7 @@
     "status": "active",
     "mode_rationale": "Single performance convention about batching queries",
     "skill_worthy": true,
-    "skill_rationale": "Requires identifying the N+1 pattern, choosing between batch query or join strategies, and restructuring data access code with examples.",
+    "skill_rationale": "Engineers benefit from code examples showing how to identify N+1 patterns and refactor them into batch queries or joins across different ORMs.",
     "steps": [
       "Identify loops or map/flatMap operations that execute a query per element (look for database calls inside .map, .foreach, or for-comprehensions over collections).",
       "Collect all required IDs or keys upfront into a single collection before querying.",
@@ -18038,7 +18179,9 @@
       "Verify the batch query has appropriate database indexes on the lookup column to avoid a full table scan on the IN clause.",
       "Add a safeguard for very large collections by chunking the batch into groups (e.g., 500 IDs per query) to avoid exceeding query parameter limits."
     ],
-    "skill_title": "Replace per-item queries with batch lookups"
+    "skill_title": "Replace per-item queries with batch lookups",
+    "hook_worthy": false,
+    "hook_rationale": "Reliably detecting N+1 query patterns requires understanding data access within loops and method call chains, which is beyond simple regex or AST scan."
   },
   {
     "id": "eliminate-redundant-configuration-keys",
@@ -18443,7 +18586,7 @@
     "status": "active",
     "mode_rationale": "Single type design convention for required fields",
     "skill_worthy": true,
-    "skill_rationale": "Multi-step pattern: define a strict interface, validate at the boundary, and throw on missing fields, requiring code examples.",
+    "skill_rationale": "Engineers benefit from code examples showing how to create operation-specific interfaces with non-optional fields and boundary validation patterns.",
     "steps": [
       "Identify which fields the operation truly requires versus which are optional in the broader data model.",
       "Define a dedicated request or command type for the operation where required fields are declared as non-optional (e.g., String instead of Option[String]).",
@@ -18451,7 +18594,9 @@
       "Throw a descriptive error or return a validation failure if any required field is missing, rather than silently defaulting or propagating None downstream.",
       "Use the non-optional operation type throughout the business logic so the compiler enforces presence guarantees, eliminating defensive .getOrElse or .isDefined checks deeper in the code."
     ],
-    "skill_title": "Encode non-optionality in operation types with boundary validation"
+    "skill_title": "Encode non-optionality in operation types with boundary validation",
+    "hook_worthy": false,
+    "hook_rationale": "Detecting mismatches between data model optionality and operation requirements requires understanding domain constraints, which is a judgment call."
   },
   {
     "id": "encode-type-relationships-in-the-data-model",
@@ -19116,11 +19261,15 @@
       "audit_trail",
       "server"
     ],
-    "mode": "active",
+    "mode": "ambient",
     "confidence": 0.2,
     "review_count": 2,
     "status": "active",
-    "mode_rationale": "Single-sentence reminder to consider logging volume before adding audit events"
+    "mode_rationale": "This is a simple reminder to consider event volume before adding audit events; no multi-step guidance needed.",
+    "skill_worthy": false,
+    "skill_rationale": "This is a simple reminder to consider event volume before adding audit events; no multi-step guidance needed.",
+    "hook_worthy": false,
+    "hook_rationale": "Evaluating whether an audit event fires too frequently requires understanding the triggering action's call frequency, which varies by context."
   },
   {
     "id": "evaluate-backward-compatibility-of-api-field-renames",
@@ -19298,13 +19447,13 @@
     "modules": [
       "common-core"
     ],
-    "mode": "active",
+    "mode": "hook",
     "confidence": 0.2,
     "review_count": 2,
     "status": "active",
-    "mode_rationale": "Single-sentence rule about preserving exception cause chains",
+    "mode_rationale": "A grep/AST scan can detect exception constructors that don't pass the cause parameter to the parent Throwable \u2014 high severity as it loses stack traces needed for debugging, tied to exception class file edits.",
     "skill_worthy": true,
-    "skill_rationale": "Requires code examples showing correct custom exception definitions that preserve message and cause across SDK versions.",
+    "skill_rationale": "Engineers benefit from code examples showing how to properly define custom exceptions that preserve message and cause chain across SDK versions.",
     "steps": [
       "Define custom exception classes that extend the appropriate base (e.g., RuntimeException or Exception) and accept both a message and a cause in the constructor.",
       "Always call the super constructor with both message and cause: super(message, cause).",
@@ -19312,7 +19461,15 @@
       "Never discard the original exception by constructing a wrapper with only a message string.",
       "Verify in tests that getCause() on your wrapped exception returns the original exception and that the full stack trace is preserved."
     ],
-    "skill_title": "Preserve cause chain when wrapping exceptions across SDK boundaries"
+    "skill_title": "Preserve cause chain when wrapping exceptions across SDK boundaries",
+    "hook_worthy": true,
+    "hook_rationale": "A grep/AST scan can detect exception constructors that don't pass the cause parameter to the parent Throwable \u2014 high severity as it loses stack traces needed for debugging, tied to exception class file edits.",
+    "hook_event": "PostToolUse",
+    "hook_tool": "Edit",
+    "hook_glob": "**/common-core/**/*.scala",
+    "hook_check": "grep -n 'extends.*Exception(message)' \"$1\" | grep -qv 'cause' && exit 0; grep -n 'class.*Exception.*message.*String' \"$1\" | grep -qv 'cause' && exit 0; exit 1",
+    "hook_message": "Exception wrapper loses the cause chain. Custom exceptions must accept `cause: Throwable` and pass it to the parent constructor (e.g., `extends RuntimeException(message, cause)`). At throw sites, always pass the caught exception as the cause argument to preserve the original stack trace.",
+    "hook_blocking": false
   },
   {
     "id": "exclude-non-analytical-data-from-telemetry-events",
@@ -23723,13 +23880,13 @@
     "modules": [
       "frontend"
     ],
-    "mode": "active",
+    "mode": "hook",
     "confidence": 0.2,
     "review_count": 2,
     "status": "active",
-    "mode_rationale": "Single-sentence testing convention against timeout workarounds",
-    "skill_worthy": true,
-    "skill_rationale": "Requires a diagnostic workflow: identify why tests are slow, check for unmocked calls, trace network dependencies, then fix the underlying cause.",
+    "mode_rationale": "A regex scan can flag test timeout values above a threshold (e.g., timeout > 30000ms) in test files \u2014 mechanically detectable and prevents masking real test issues.",
+    "skill_worthy": false,
+    "skill_rationale": "This is a simple principle: investigate test slowness rather than increasing timeouts.",
     "steps": [
       "Identify which specific operation in the test is causing the slowness or flakiness (network calls, timers, unmocked dependencies).",
       "Check whether external API calls or service dependencies are being made without mocks \u2014 these are the most common cause of slow frontend tests.",
@@ -23738,7 +23895,15 @@
       "Remove or reduce the inflated timeout back to the default, confirming the test passes reliably without it.",
       "Run the test in a loop (e.g., 10 iterations) to verify the flakiness is resolved, not just masked."
     ],
-    "skill_title": "Fix root causes of slow tests instead of increasing timeouts"
+    "skill_title": "Fix root causes of slow tests instead of increasing timeouts",
+    "hook_worthy": true,
+    "hook_rationale": "A regex scan can flag test timeout values above a threshold (e.g., timeout > 30000ms) in test files \u2014 mechanically detectable and prevents masking real test issues.",
+    "hook_event": "PostToolUse",
+    "hook_tool": "Edit",
+    "hook_glob": "**/*.{test,spec}.{ts,tsx,js,jsx}",
+    "hook_check": "grep -niE 'timeout.{0,20}[0-9]{5,}|\\}, *[0-9]{5,} *\\)' \"$1\"",
+    "hook_message": "Long test timeout detected (>=10s). This usually masks an unmocked API call or missing test fixture. Fix the root cause \u2014 add proper mocks (MSW, jest.mock) so the test runs fast and deterministically \u2014 instead of increasing the timeout. See PRs #43827, #44298.",
+    "hook_blocking": false
   },
   {
     "id": "fix-root-cause-instead-of-workaround",
@@ -24391,7 +24556,7 @@
     "status": "active",
     "mode_rationale": "Defensive coding convention for null/missing entity handling",
     "skill_worthy": true,
-    "skill_rationale": "Requires a decision tree to choose between cleanup, fallback behavior, or null defense depending on the entity type and access context.",
+    "skill_rationale": "Engineers benefit from code examples showing null-handling patterns: fallback values, stale reference cleanup, and defensive coding for missing entities.",
     "steps": [
       "Identify every lookup that resolves an entity reference (e.g., findById, getByName, foreign key join) and determine whether absence is a valid runtime state.",
       "Return Option/Optional instead of throwing on missing entities \u2014 let callers decide the appropriate response.",
@@ -24400,7 +24565,9 @@
       "Log a warning with the missing entity ID and the referencing context so stale data can be tracked and cleaned up over time.",
       "Add defensive checks at API boundaries \u2014 validate that referenced entities still exist before performing mutations that depend on them."
     ],
-    "skill_title": "Handle absent entities with explicit fallback and cleanup"
+    "skill_title": "Handle absent entities with explicit fallback and cleanup",
+    "hook_worthy": false,
+    "hook_rationale": "Detecting whether code properly handles absent entities requires understanding which lookups can return null and what the correct fallback is, which varies by context."
   },
   {
     "id": "follow-styled-import-convention",
@@ -25224,7 +25391,7 @@
     "status": "active",
     "mode_rationale": "Single rule: apply timeouts to prevent request queuing on external calls",
     "skill_worthy": true,
-    "skill_rationale": "Requires a decision tree for choosing timeout strategies, circuit breakers, or backpressure mechanisms depending on the call pattern.",
+    "skill_rationale": "Engineers benefit from code examples showing timeout configuration, circuit breaker patterns, and async strategies for inter-service calls.",
     "steps": [
       "Identify every outbound HTTP or RPC call in the new code path and verify each has an explicit connect timeout and read/response timeout configured.",
       "Set timeouts proportional to the call's criticality: short timeouts (1-5s) for non-critical periodic checks, moderate timeouts (5-15s) for important synchronous operations.",
@@ -25233,7 +25400,9 @@
       "Ensure timeout and failure scenarios are logged with enough context (target service, endpoint, elapsed time) to diagnose issues in production.",
       "Verify that the thread pool or execution context used for these calls is isolated from the main request-serving pool so that blocked outbound calls cannot starve inbound request handling."
     ],
-    "skill_title": "Apply timeouts and circuit breakers to inter-service calls"
+    "skill_title": "Apply timeouts and circuit breakers to inter-service calls",
+    "hook_worthy": false,
+    "hook_rationale": "Detecting whether inter-service calls can queue requires understanding call frequency, concurrency, and blocking behavior, which is beyond static analysis."
   },
   {
     "id": "guard-against-state-changes-during-async",
@@ -25413,13 +25582,13 @@
       "server",
       "frontend"
     ],
-    "mode": "active",
+    "mode": "hook",
     "confidence": 0.2,
     "review_count": 2,
     "status": "active",
-    "mode_rationale": "Convention to guard endpoints when adding feature flags",
+    "mode_rationale": "A grep scan can detect new endpoint definitions in files that also reference feature flags but lack a flag guard on the endpoint itself \u2014 mechanically checkable and prevents ungated feature access.",
     "skill_worthy": true,
-    "skill_rationale": "Requires a multi-step checklist coordinating feature flag creation, endpoint guarding, and exception messaging across frontend and backend in the same PR.",
+    "skill_rationale": "Engineers benefit from code examples showing how to guard endpoints with feature flags and return proper error responses when flags are disabled.",
     "steps": [
       "Identify every API endpoint that serves data or accepts mutations for the flagged feature.",
       "Add a feature flag check at the entry point of each endpoint, before any business logic executes.",
@@ -25428,7 +25597,15 @@
       "Include the endpoint guards in the same PR as the feature flag definition \u2014 do not defer to a follow-up PR.",
       "Add tests verifying that endpoints return the correct error response when the flag is disabled."
     ],
-    "skill_title": "Guard API endpoints with feature flags in the same PR"
+    "skill_title": "Guard API endpoints with feature flags in the same PR",
+    "hook_worthy": true,
+    "hook_rationale": "A grep scan can detect new endpoint definitions in files that also reference feature flags but lack a flag guard on the endpoint itself \u2014 mechanically checkable and prevents ungated feature access.",
+    "hook_event": "PostToolUse",
+    "hook_tool": "Edit",
+    "hook_glob": "**/*Controller*.scala",
+    "hook_check": "grep -qiE '(FeatureFlag|feature.flag|feature_flag)' \"$1\" && ! grep -qE '(isEnabled|isActive|isFeatureEnabled)' \"$1\"",
+    "hook_message": "This controller references a feature flag but no guard check (isEnabled/isActive) was found. When adding or referencing a feature flag, guard the corresponding API endpoints in the same PR. The guarded path should throw a descriptive exception indicating the feature could be enabled but is not currently active (e.g., FeatureNotEnabledException mapped to HTTP 403).",
+    "hook_blocking": false
   },
   {
     "id": "guard-expensive-calls-with-early-return",
@@ -25526,13 +25703,13 @@
       "frontend",
       "apps"
     ],
-    "mode": "active",
+    "mode": "hook",
     "confidence": 0.2,
     "review_count": 2,
     "status": "active",
-    "mode_rationale": "Single convention about feature flag correctness",
-    "skill_worthy": true,
-    "skill_rationale": "Requires a checklist approach: verify behavior in both flag-on and flag-off states across rendering, data fetching, and side effects.",
+    "mode_rationale": "A grep scan can detect references to feature flag constants in component files without corresponding conditional rendering guards \u2014 mechanically detectable and prevents premature feature exposure.",
+    "skill_worthy": false,
+    "skill_rationale": "This is a straightforward principle: check the feature flag before rendering flag-gated features.",
     "steps": [
       "Identify the feature flag that controls the new functionality and confirm its default state (enabled or disabled).",
       "Wrap all rendering of the new feature in a conditional check against the feature flag \u2014 never render flag-gated components unconditionally.",
@@ -25540,7 +25717,15 @@
       "Verify that disabling the flag produces a clean UI with no empty containers, broken layouts, or orphaned headings left behind by the hidden feature.",
       "Add a test case that explicitly sets the flag to disabled and asserts the feature's UI and side effects are completely absent."
     ],
-    "skill_title": "Guard new features behind feature flag checks"
+    "skill_title": "Guard new features behind feature flag checks",
+    "hook_worthy": true,
+    "hook_rationale": "A grep scan can detect references to feature flag constants in component files without corresponding conditional rendering guards \u2014 mechanically detectable and prevents premature feature exposure.",
+    "hook_event": "PostToolUse",
+    "hook_tool": "Edit",
+    "hook_glob": "**/*.{tsx,jsx}",
+    "hook_check": "grep -qE '<[A-Z][a-zA-Z]+(Panel|Dashboard|Monitor|Feature|Widget|Section)' \"$1\" && ! grep -qE '(useFeatureFlag|isFeatureEnabled|featureFlag|FeatureGate)' \"$1\"",
+    "hook_message": "This file renders feature components (Panel/Dashboard/Monitor/Widget/Section) without any feature flag guard. If this is new functionality, wrap it with useFeatureFlag() and conditional rendering so the feature behaves correctly when the flag is disabled. See: guard-new-features-behind-feature-flags (PRs #44730, #45002).",
+    "hook_blocking": false
   },
   {
     "id": "guard-numeric-overflow-in-retry",
@@ -25835,7 +26020,7 @@
     "status": "active",
     "mode_rationale": "Standard React async handling convention",
     "skill_worthy": true,
-    "skill_rationale": "Requires a multi-step React pattern involving useState for loading/error, try/catch/finally, and conditional rendering with concrete code examples.",
+    "skill_rationale": "Engineers benefit from a code example showing the correct pattern for combining error boundaries, loading states, and try/catch in React async calls.",
     "steps": [
       "Add `isLoading` and `error` state variables (or use a data-fetching hook that provides them) alongside your data state.",
       "Set `isLoading` to true before the async call begins and false in a `finally` block so it resets on both success and failure.",
@@ -25844,7 +26029,9 @@
       "Render an actionable error banner when `error` is set, including a retry button or guidance on how to resolve the issue.",
       "Disable submit/action buttons while the request is in flight to prevent duplicate submissions."
     ],
-    "skill_title": "Catch async errors and show loading feedback in React components"
+    "skill_title": "Catch async errors and show loading feedback in React components",
+    "hook_worthy": false,
+    "hook_rationale": "Detecting missing error handling or loading states in async React code requires understanding component semantics, not a simple grep."
   },
   {
     "id": "handle-cache-miss-gracefully",
@@ -25888,7 +26075,7 @@
     "status": "active",
     "mode_rationale": "Single principle about accounting for race conditions in uniqueness checks",
     "skill_worthy": true,
-    "skill_rationale": "Requires a decision tree across multiple mitigation strategies (DB constraints, optimistic locking, distributed locks) depending on system architecture.",
+    "skill_rationale": "Requires a decision tree for choosing the right concurrency control strategy (optimistic locking, database constraints, distributed locks) with code examples for each.",
     "steps": [
       "Identify every uniqueness or singleton invariant your endpoint enforces and map the read-check-write sequence for each.",
       "Push the constraint into the database layer using a unique index or conditional INSERT/UPDATE (e.g., INSERT ... ON CONFLICT, UPDATE ... WHERE) so the database enforces atomicity.",
@@ -25897,7 +26084,9 @@
       "Add integration tests that simulate concurrent requests (e.g., parallel Future/IO executions) to verify the constraint holds under contention.",
       "Return an idempotent, client-friendly error (HTTP 409 Conflict) when the race is detected, so callers can safely retry."
     ],
-    "skill_title": "Push uniqueness constraints to the database to prevent race conditions"
+    "skill_title": "Push uniqueness constraints to the database to prevent race conditions",
+    "hook_worthy": false,
+    "hook_rationale": "Race condition detection requires understanding distributed system semantics and cannot be caught by static file scanning."
   },
   {
     "id": "handle-edge-cases-in-reusable-methods",
@@ -26083,7 +26272,7 @@
     "status": "active",
     "mode_rationale": "Simple convention: distinguish fatal from non-fatal in catch handling",
     "skill_worthy": true,
-    "skill_rationale": "Requires a decision tree to categorize errors as fatal vs non-fatal and code examples for correct try-catch-finally structuring.",
+    "skill_rationale": "Engineers need guidance on classifying errors and structuring try-catch-finally blocks to distinguish fatal from recoverable failures with concrete examples.",
     "steps": [
       "Classify errors into fatal (NonFatal extractor misses, OutOfMemoryError, StackOverflowError, system-level exceptions) and non-fatal (expected business/IO exceptions) categories before writing catch blocks.",
       "Use Scala's NonFatal extractor in catch blocks to explicitly handle only recoverable exceptions, letting fatal errors propagate immediately.",
@@ -26092,7 +26281,9 @@
       "Reserve finally blocks exclusively for resource cleanup that is safe regardless of failure type (closing streams, releasing locks, logging).",
       "Add explicit handling for fatal errors at the outermost boundary (e.g., supervisor or health-check layer) to trigger process restart or alerting rather than silent continuation."
     ],
-    "skill_title": "Separate fatal from non-fatal errors in try-catch-finally blocks"
+    "skill_title": "Separate fatal from non-fatal errors in try-catch-finally blocks",
+    "hook_worthy": false,
+    "hook_rationale": "Distinguishing fatal from non-fatal errors is a judgment call about exception semantics, not mechanically automatable."
   },
   {
     "id": "handle-input-normalization-at-the-controller-level",
@@ -26135,7 +26326,7 @@
     "status": "active",
     "mode_rationale": "Single convention: handle loading/error states when async data guards destructive actions",
     "skill_worthy": true,
-    "skill_rationale": "Requires understanding the interaction between async states and destructive action guards, with code examples for correct state handling.",
+    "skill_rationale": "Requires a step-by-step pattern showing how to gate destructive actions on explicit loading/error/success states rather than falsy defaults, with code examples.",
     "steps": [
       "Identify every place where async data controls whether a destructive button or action is enabled.",
       "Ensure the action is disabled while the guard data is still loading \u2014 never allow a falsy loading default to pass through as a permissive signal.",
@@ -26144,7 +26335,9 @@
       "Add a visible loading indicator or disabled tooltip explaining why the action is temporarily unavailable.",
       "Write a test that asserts the destructive action is disabled during loading and on fetch failure, not just when the guard value is explicitly false."
     ],
-    "skill_title": "Gate destructive actions on explicit loading and error states"
+    "skill_title": "Gate destructive actions on explicit loading and error states",
+    "hook_worthy": false,
+    "hook_rationale": "Detecting that async data guards a destructive action and checking its loading/error handling requires semantic understanding of the component logic."
   },
   {
     "id": "handle-navigation-concerns-at-the-router-level",
@@ -26272,7 +26465,7 @@
     "status": "active",
     "mode_rationale": "Single guideline about graceful partial failure handling",
     "skill_worthy": true,
-    "skill_rationale": "Requires a multi-step strategy covering rollback, state refetch, and UI feedback when sequential service calls partially fail.",
+    "skill_rationale": "Engineers benefit from a workflow showing how to structure sequential service calls with rollback, partial state recovery, and UI refetch on failure.",
     "steps": [
       "Identify all sequential service calls that form a logical transaction and list which partial states are possible if any call fails mid-sequence.",
       "Wrap each call individually so you can detect exactly which step failed, rather than catching errors at the outer level only.",
@@ -26280,7 +26473,9 @@
       "Display a specific error message that tells the user which step failed and what state the system is now in (e.g., 'Project was created but collaborators could not be added').",
       "Provide a recovery path in the UI \u2014 either a retry button scoped to the failed step or navigation to where the user can manually complete the remaining steps."
     ],
-    "skill_title": "Handle partial failures in multi-call sequences with refetch and scoped error reporting"
+    "skill_title": "Handle partial failures in multi-call sequences with refetch and scoped error reporting",
+    "hook_worthy": false,
+    "hook_rationale": "Detecting partial failure handling gaps in multi-call sequences requires understanding the relationship between calls, not a static pattern match."
   },
   {
     "id": "handle-special-chars-in-quoted-strings",
@@ -27715,7 +27910,7 @@
     "status": "active",
     "mode_rationale": "Design pattern convention for cross-cutting concerns",
     "skill_worthy": true,
-    "skill_rationale": "Requires a code example demonstrating the null object pattern and guidance on when to apply it versus other isolation strategies for cross-cutting concerns.",
+    "skill_rationale": "Requires a code example showing how to implement a no-op/null object for a cross-cutting policy and when to apply this pattern vs alternatives.",
     "steps": [
       "Define a trait or interface for the cross-cutting behavior (e.g., `PolicyEnforcer`).",
       "Implement the real behavior in a concrete class for modules that need it.",
@@ -27724,7 +27919,9 @@
       "Verify that the null implementation is truly inert \u2014 no logging side effects, no metric emissions, no state mutations.",
       "Add a test confirming the null implementation does not alter behavior in exempt modules."
     ],
-    "skill_title": "Isolate cross-cutting concerns with null object implementations"
+    "skill_title": "Isolate cross-cutting concerns with null object implementations",
+    "hook_worthy": false,
+    "hook_rationale": "Determining when a null object pattern is needed requires architectural judgment about which modules should be affected by a cross-cutting concern."
   },
   {
     "id": "isolate-di-framework-dependencies-in-injection-modules",
@@ -28530,11 +28727,15 @@
     "modules": [
       "frontend"
     ],
-    "mode": "active",
+    "mode": "ambient",
     "confidence": 0.3,
     "review_count": 3,
     "status": "active",
-    "mode_rationale": "Single convention about checking existing component APIs before custom workarounds"
+    "mode_rationale": "This is a single-sentence reminder to check existing component APIs before writing custom workarounds \u2014 no multi-step guidance needed.",
+    "skill_worthy": false,
+    "skill_rationale": "This is a single-sentence reminder to check existing component APIs before writing custom workarounds \u2014 no multi-step guidance needed.",
+    "hook_worthy": false,
+    "hook_rationale": "Detecting whether a custom workaround duplicates an existing component API requires understanding the component library's capabilities, not a grep."
   },
   {
     "id": "make-polling-intervals-configurable-via-central-config",
@@ -28560,13 +28761,13 @@
       "frontend",
       "repoman"
     ],
-    "mode": "active",
+    "mode": "hook",
     "confidence": 0.6,
     "review_count": 6,
     "status": "active",
-    "mode_rationale": "Single guideline: expose polling intervals as configurable parameters",
-    "skill_worthy": true,
-    "skill_rationale": "Requires multi-step guidance on defining the config key, wiring it through central config, setting defaults, and using it at the call site across multiple modules.",
+    "mode_rationale": "A regex/grep can detect hardcoded polling intervals (e.g., setInterval/setTimeout with literal numbers, polling config with hardcoded values) in new code and flag them for externalization.",
+    "skill_worthy": false,
+    "skill_rationale": "The rule is straightforward: extract hardcoded intervals into configuration \u2014 no decision tree or multi-step guidance needed.",
     "steps": [
       "Identify every polling or periodic interval in your change and give each a descriptive Central Config key (e.g., `com.cerebro.projects.statusPoll.intervalSeconds`).",
       "Register the config key with a sensible default value that matches current behavior, so the change is backward-compatible.",
@@ -28575,7 +28776,15 @@
       "Ensure the interval is validated on read (e.g., minimum 1 second, maximum bounded) to prevent misconfiguration from causing tight loops or excessive delays.",
       "If the service supports dynamic config reload, verify the new interval takes effect without a restart; otherwise document that a restart is required."
     ],
-    "skill_title": "Expose polling intervals as configurable parameters via Central Config"
+    "skill_title": "Expose polling intervals as configurable parameters via Central Config",
+    "hook_worthy": true,
+    "hook_rationale": "A regex/grep can detect hardcoded polling intervals (e.g., setInterval/setTimeout with literal numbers, polling config with hardcoded values) in new code and flag them for externalization.",
+    "hook_event": "PostToolUse",
+    "hook_tool": "Edit",
+    "hook_glob": "**/*.scala",
+    "hook_check": "grep -nE '(scheduleAtFixedRate|scheduleWithFixedDelay)\\s*\\(\\s*[0-9]+\\.(seconds|minutes|millis)' \"$1\" | grep -qvE '[Cc]onfig|getInt|getOrElse'",
+    "hook_message": "Hardcoded polling interval detected in scheduler call. Expose the interval via Central Config (e.g., centralConfig.getInt(configKey).getOrElse(defaultVal).max(1)) so it can be tuned without redeployment. See PRs #41485, #39994, #45083.",
+    "hook_blocking": false
   },
   {
     "id": "method-names-should-describe-behavior",
@@ -28673,11 +28882,15 @@
     "modules": [
       "server"
     ],
-    "mode": "active",
+    "mode": "ambient",
     "confidence": 0.2,
     "review_count": 2,
     "status": "active",
-    "mode_rationale": "Simple naming convention about descriptive variable names"
+    "mode_rationale": "This is a single-sentence naming guideline that doesn't require step-by-step instructions or decision trees.",
+    "skill_worthy": false,
+    "skill_rationale": "This is a single-sentence naming guideline that doesn't require step-by-step instructions or decision trees.",
+    "hook_worthy": false,
+    "hook_rationale": "Evaluating whether a variable name is sufficiently descriptive is a judgment call, not a mechanical check."
   },
   {
     "id": "log-messages-must-reflect-actual-operation",
@@ -29749,11 +29962,15 @@
       "system-tests",
       "run"
     ],
-    "mode": "active",
+    "mode": "ambient",
     "confidence": 0.2,
     "review_count": 2,
     "status": "active",
-    "mode_rationale": "Logging convention for failure visibility"
+    "mode_rationale": "The rule is a simple reminder to pair failure recording with log statements \u2014 no multi-step guidance needed.",
+    "skill_worthy": false,
+    "skill_rationale": "The rule is a simple reminder to pair failure recording with log statements \u2014 no multi-step guidance needed.",
+    "hook_worthy": false,
+    "hook_rationale": "Detecting that a failure is recorded without a corresponding log requires understanding the semantic relationship between data recording and logging calls."
   },
   {
     "id": "log-matched-pattern-in-inference-logic",
@@ -30565,7 +30782,7 @@
     "status": "active",
     "mode_rationale": "Defensive coding rule for retry specificity",
     "skill_worthy": true,
-    "skill_rationale": "Engineers benefit from code examples showing specific-message matching vs broad-exception catching and a decision tree for retryable vs non-retryable errors.",
+    "skill_rationale": "Engineers benefit from examples showing how to match specific error messages vs broad exception types in retry logic, with a decision tree for retryable vs non-retryable errors.",
     "steps": [
       "Identify the specific error messages or message substrings that correspond to known transient failures (e.g., connection reset, timeout, resource temporarily unavailable).",
       "Define a whitelist of retryable error message patterns as constants or a dedicated collection, not inline string literals scattered across catch blocks.",
@@ -30574,7 +30791,9 @@
       "Add a log statement at WARN level when retrying, including the matched error message pattern, attempt count, and backoff delay.",
       "Write a test that verifies non-retryable exceptions with the same broad type but a different message are NOT retried."
     ],
-    "skill_title": "Match specific error messages in retry logic instead of broad exception types"
+    "skill_title": "Match specific error messages in retry logic instead of broad exception types",
+    "hook_worthy": false,
+    "hook_rationale": "Detecting overly broad catch blocks in retry logic requires understanding the exception hierarchy and retry semantics, not a simple pattern match."
   },
   {
     "id": "match-types-precisely-to-prevent-lossy-conversions",
@@ -31010,7 +31229,7 @@
     "status": "active",
     "mode_rationale": "Performance guideline to consolidate IO",
     "skill_worthy": true,
-    "skill_rationale": "Engineers benefit from concrete examples of bulk-operation strategies (batch upsert, remove-and-reinsert) and guidance on choosing between them.",
+    "skill_rationale": "Engineers benefit from step-by-step guidance on refactoring per-record IO into bulk operations, including the remove-all-and-reinsert strategy with tradeoff analysis.",
     "steps": [
       "Identify all per-record database calls in the sync loop (findById, insert, update, delete) and count the total IO operations per sync cycle.",
       "Evaluate whether a remove-all-and-reinsert strategy is viable \u2014 if the dataset is small enough and there are no foreign key constraints or concurrent readers that would break, this is the simplest bulk approach.",
@@ -31019,7 +31238,9 @@
       "Wrap the bulk operations in a single transaction to maintain consistency and avoid partial-sync states.",
       "Add logging that reports the count of inserts, updates, and deletes per sync cycle so you can monitor sync health without per-record log noise."
     ],
-    "skill_title": "Consolidate per-record sync queries into bulk operations"
+    "skill_title": "Consolidate per-record sync queries into bulk operations",
+    "hook_worthy": false,
+    "hook_rationale": "Detecting per-record IO in synchronization logic requires understanding data flow patterns, not a simple file scan."
   },
   {
     "id": "minimize-redundant-parameters-at-api-boundaries",
@@ -32869,13 +33090,13 @@
     "modules": [
       "frontend"
     ],
-    "mode": "active",
+    "mode": "hook",
     "confidence": 0.2,
     "review_count": 2,
     "status": "active",
-    "mode_rationale": "Single styling convention for styled-components",
-    "skill_worthy": true,
-    "skill_rationale": "Engineers benefit from code examples showing styled-component composition patterns vs className, including the exception case for deeply nested third-party components.",
+    "mode_rationale": "A grep can detect className usage on styled-components in frontend files and flag violations, preventing style inconsistency.",
+    "skill_worthy": false,
+    "skill_rationale": "The rule is a single clear directive \u2014 use styled-component composition instead of className \u2014 no multi-step guidance needed.",
     "steps": [
       "Identify the element or component you need to style and create a new styled-component for it using styled.div, styled(Component), etc.",
       "Move all CSS that would have gone into a className-based rule into the styled-component's template literal.",
@@ -32883,7 +33104,15 @@
       "If you need to style a child of a third-party component you cannot wrap, first try styled(ThirdPartyComponent) or targeting its rendered elements via nested selectors in the parent styled-component.",
       "Only as a last resort for deeply nested third-party DOM nodes you cannot reach through composition, use className with a corresponding CSS rule."
     ],
-    "skill_title": "Use styled-component composition instead of className for styling"
+    "skill_title": "Use styled-component composition instead of className for styling",
+    "hook_worthy": true,
+    "hook_rationale": "A grep can detect className usage on styled-components in frontend files and flag violations, preventing style inconsistency.",
+    "hook_event": "PostToolUse",
+    "hook_tool": "Write",
+    "hook_glob": "**/*.tsx",
+    "hook_check": "grep -q 'styled[.(]' \"$1\" && grep -q 'className=' \"$1\" && exit 0 || exit 1",
+    "hook_message": "This file uses styled-components but also applies className for styling. Prefer styled-component composition (e.g., styled.span or styled(Component)) instead of className. Reserve className only for deeply nested third-party components you cannot reach otherwise.",
+    "hook_blocking": false
   },
   {
     "id": "no-commented-out-code-without-tracking",
@@ -35337,7 +35566,7 @@
     "status": "active",
     "mode_rationale": "Single performance guideline about parallel execution",
     "skill_worthy": true,
-    "skill_rationale": "Engineers benefit from before/after code examples showing sequential-to-parallel conversion patterns across different async contexts (Promise.all, Future.sequence, etc.).",
+    "skill_rationale": "Engineers benefit from code examples showing Promise.all/Promise.allSettled patterns and guidance on identifying which operations are safe to parallelize.",
     "steps": [
       "Identify all async calls in the block and map their data dependencies \u2014 if call B doesn't need the result of call A, they are independent.",
       "Group independent calls together using Promise.all (TypeScript) or Future.sequence/parallel combinators (Scala).",
@@ -35346,7 +35575,9 @@
       "Add individual error handling or use Promise.allSettled if partial failure is acceptable and the UI can render with incomplete data.",
       "Verify that downstream services can handle the concurrent load \u2014 check rate limits and connection pool sizes before parallelizing large batches."
     ],
-    "skill_title": "Parallelize independent async operations with Promise.all"
+    "skill_title": "Parallelize independent async operations with Promise.all",
+    "hook_worthy": false,
+    "hook_rationale": "Determining whether sequential awaits are independent and safe to parallelize requires understanding data dependencies between the operations."
   },
   {
     "id": "parameterize-limits-for-testability",
@@ -36324,13 +36555,13 @@
       "registered-models",
       "apps"
     ],
-    "mode": "active",
+    "mode": "hook",
     "confidence": 0.3,
     "review_count": 3,
     "status": "active",
-    "mode_rationale": "Single reminder to backfill existing records when adding fields",
+    "mode_rationale": "A hook can detect new field additions in model/schema files (migration files, entity definitions) and prompt the developer to confirm a backfill migration exists.",
     "skill_worthy": true,
-    "skill_rationale": "Engineers benefit from a multi-step workflow covering migration planning, backfill strategies, rollback considerations, and batch-size guidance for existing records.",
+    "skill_rationale": "Requires a workflow covering migration planning, backfill script creation, rollback strategy, and testing \u2014 a multi-step process with decision points.",
     "steps": [
       "Identify every existing record in the collection/table that lacks the new field or has no value for it.",
       "Write a data migration (e.g., a Mongo changeSet or SQL migration script) that backfills the new field on all existing records with a sensible default.",
@@ -36339,7 +36570,15 @@
       "Update all read paths to handle both the migrated default and any new values, avoiding assumptions that the field was always present.",
       "Test the migration against a representative data snapshot to confirm edge cases (e.g., soft-deleted records, records with null references) are handled correctly."
     ],
-    "skill_title": "Plan a backfill migration when adding fields to existing entities"
+    "skill_title": "Plan a backfill migration when adding fields to existing entities",
+    "hook_worthy": true,
+    "hook_rationale": "A hook can detect new field additions in model/schema files (migration files, entity definitions) and prompt the developer to confirm a backfill migration exists.",
+    "hook_event": "PostToolUse",
+    "hook_tool": "Edit",
+    "hook_glob": "**/{registered-models,apps}/**/*Model*.scala",
+    "hook_check": "grep -qE 'case class .+\\(' \"$1\" && grep -qE '\\w+:\\s+\\w+(\\[.*\\])?\\s*=\\s*.+' \"$1\" && ! grep -qiE '(migration|changeset|backfill|ChangeSet)' \"$1\"",
+    "hook_message": "New field with default value detected in a model class, but no migration reference found. When adding a field to an existing entity, plan a migration to backfill the value on all existing records \u2014 a constructor default only applies to newly created objects. Create a ChangeSet migration that queries records missing the field and sets the default. See pattern: plan-data-migrations-for-new-fields-on-existing-records (PRs #46347, #47189).",
+    "hook_blocking": false
   },
   {
     "id": "pluralize-rest-resource-paths",
@@ -36474,7 +36713,7 @@
     "status": "active",
     "mode_rationale": "Single refactoring principle to carry over validation",
     "skill_worthy": true,
-    "skill_rationale": "Engineers benefit from a systematic audit checklist for identifying and carrying over validation steps, permission checks, and guardrails when creating parallel code paths.",
+    "skill_rationale": "Engineers benefit from a checklist workflow for auditing the original code path's validation steps and ensuring each is carried over to the new path.",
     "steps": [
       "Identify the original code path being replaced or paralleled and trace it end-to-end, noting every validation step, permission check, and guardrail.",
       "Create a checklist of all discovered validations: auth checks, ownership verification, input sanitization, state preconditions, feature flags, and rate limits.",
@@ -36483,7 +36722,9 @@
       "Write tests that exercise the new path with invalid inputs, unauthorized users, and edge-case states to confirm each guardrail rejects as expected.",
       "Diff the old and new paths side-by-side in review to explicitly confirm no validation was dropped."
     ],
-    "skill_title": "Preserve all validation steps when creating parallel code paths"
+    "skill_title": "Preserve all validation steps when creating parallel code paths",
+    "hook_worthy": false,
+    "hook_rationale": "Detecting missing validation in refactored code paths requires understanding the original code's validation logic, which isn't mechanically scannable."
   },
   {
     "id": "prefer-pattern-matching-over-conditional-chains",
@@ -36552,11 +36793,15 @@
       "projects",
       "frontend"
     ],
-    "mode": "active",
+    "mode": "ambient",
     "confidence": 0.2,
     "review_count": 2,
     "status": "active",
-    "mode_rationale": "Single guideline to check for existing APIs first"
+    "mode_rationale": "This is a single-sentence reminder to check for existing APIs before reimplementing \u2014 no multi-step guidance needed.",
+    "skill_worthy": false,
+    "skill_rationale": "This is a single-sentence reminder to check for existing APIs before reimplementing \u2014 no multi-step guidance needed.",
+    "hook_worthy": false,
+    "hook_rationale": "Detecting reimplementation of existing APIs requires understanding the full service API surface, which isn't a mechanical check."
   },
   {
     "id": "prefer-functional-combinators-over-manual-pattern-matching",
@@ -37154,13 +37399,13 @@
     "modules": [
       "dataset-rw"
     ],
-    "mode": "active",
+    "mode": "hook",
     "confidence": 0.4,
     "review_count": 4,
     "status": "active",
-    "mode_rationale": "Simple DI convention about injection style",
+    "mode_rationale": "A grep can detect @Named annotations in dependency injection bindings and flag them for review against the preferred concrete-type injection pattern.",
     "skill_worthy": true,
-    "skill_rationale": "Engineers benefit from code examples contrasting @Named annotation patterns with concrete-type injection and guidance on when the interface binding is appropriate.",
+    "skill_rationale": "Engineers benefit from code examples showing the correct DI binding pattern vs the @Named anti-pattern, with guidance on when each approach applies.",
     "steps": [
       "Identify which concrete implementation the consuming class actually needs.",
       "Inject the concrete type directly into the constructor instead of the interface with a @Named qualifier.",
@@ -37169,7 +37414,15 @@
       "If multiple classes need different implementations, inject each concrete type directly rather than creating multiple @Named bindings of the same interface.",
       "Verify that the interface binding still serves general consumers who don't need a specific implementation."
     ],
-    "skill_title": "Inject concrete types instead of using @Named annotations"
+    "skill_title": "Inject concrete types instead of using @Named annotations",
+    "hook_worthy": true,
+    "hook_rationale": "A grep can detect @Named annotations in dependency injection bindings and flag them for review against the preferred concrete-type injection pattern.",
+    "hook_event": "PostToolUse",
+    "hook_tool": "Edit",
+    "hook_glob": "**/dataset-rw/**/*.scala",
+    "hook_check": "grep -n '@Named' \"$1\" | grep -q '@Inject'; if [ $? -ne 0 ]; then grep -qE '@Named\\s*\\(' \"$1\"; else exit 0; fi",
+    "hook_message": "Detected @Named annotation for dependency injection. Prefer injecting concrete types directly instead of using @Named(\"...\") on interfaces \u2014 reserve the interface binding for the facade that general consumers use. See pattern: prefer-concrete-type-injection-over-@named-annotations.",
+    "hook_blocking": false
   },
   {
     "id": "prefer-config-objects-over-many-parameters",
@@ -39403,13 +39656,13 @@
     "modules": [
       "executor"
     ],
-    "mode": "active",
+    "mode": "hook",
     "confidence": 0.3,
     "review_count": 3,
     "status": "active",
-    "mode_rationale": "Single backward compatibility guideline",
+    "mode_rationale": "A hook can detect when route definitions are deleted or modified in API controller files and warn about backward compatibility for external consumers.",
     "skill_worthy": true,
-    "skill_rationale": "Engineers benefit from a deprecation workflow covering endpoint versioning, backward-compatible response shaping, deprecation headers, and sunset timelines.",
+    "skill_rationale": "Requires a workflow for deprecating endpoints safely: keeping the old endpoint, adding deprecation headers, versioning strategy, and consumer notification.",
     "steps": [
       "Identify all consumers of the existing endpoint by searching for usages across services, agents, and client code.",
       "Keep the old endpoint functional and routed, even if the underlying implementation changes.",
@@ -39418,7 +39671,15 @@
       "Log usage of the deprecated endpoint to track when it is safe to remove.",
       "Document the migration path and timeline in the API changelog or service README."
     ],
-    "skill_title": "Preserve old endpoints when introducing replacements"
+    "skill_title": "Preserve old endpoints when introducing replacements",
+    "hook_worthy": true,
+    "hook_rationale": "A hook can detect when route definitions are deleted or modified in API controller files and warn about backward compatibility for external consumers.",
+    "hook_event": "PostToolUse",
+    "hook_tool": "Edit",
+    "hook_glob": "**/executor/**/*.scala",
+    "hook_check": "git diff -- \"$1\" | grep -E '^\\-.*@(GET|POST|PUT|DELETE|PATCH)\\b' | grep -qv '^\\-\\-\\-'",
+    "hook_message": "Endpoint removal detected in executor module. When modifying or replacing an API endpoint, keep the old endpoint functional (e.g., delegate to new implementation) for backward compatibility \u2014 external consumers and agents may depend on it. Add the new endpoint alongside the old one instead of removing it.",
+    "hook_blocking": false
   },
   {
     "id": "preserve-old-impl-during-migration",
@@ -39440,7 +39701,7 @@
     "status": "active",
     "mode_rationale": "Single-sentence rule about keeping old code unchanged behind feature flags",
     "skill_worthy": true,
-    "skill_rationale": "Engineers benefit from a workflow showing the feature-flag migration pattern: how to structure old/new paths, avoid contaminating the fallback, and safely cut over.",
+    "skill_rationale": "Engineers benefit from a step-by-step guide on structuring feature-flagged migrations to keep old and new implementations cleanly separated.",
     "steps": [
       "Introduce a feature flag that cleanly branches between the old and new SDK paths at the entry point.",
       "Implement the new SDK integration in a separate method or class \u2014 never inline it into the existing implementation.",
@@ -39449,7 +39710,9 @@
       "Ensure the feature flag defaults to the old path so rollback requires zero code changes.",
       "Document in the PR description which flag controls the migration and the rollback procedure."
     ],
-    "skill_title": "Preserve the old implementation unchanged during feature-flagged migrations"
+    "skill_title": "Preserve the old implementation unchanged during feature-flagged migrations",
+    "hook_worthy": false,
+    "hook_rationale": "Detecting whether the old implementation path was accidentally modified during a migration requires understanding the feature flag boundaries, not a simple scan."
   },
   {
     "id": "preserve-test-coverage-during-refactors",
@@ -40761,13 +41024,13 @@
       "server",
       "model-serving"
     ],
-    "mode": "active",
+    "mode": "hook",
     "confidence": 0.2,
     "review_count": 2,
     "status": "active",
-    "mode_rationale": "Single security/privacy rule",
+    "mode_rationale": "A hook can detect when telemetry/analytics event code is modified and new fields containing user identifiers (username, email, userId) are added without corresponding redaction list updates.",
     "skill_worthy": true,
-    "skill_rationale": "Engineers benefit from a checklist of PII field types to audit, platform-specific redaction mechanisms, and a verification workflow for analytics pipelines.",
+    "skill_rationale": "Engineers need a checklist for identifying PII fields, locating the redaction config, and verifying the redaction is applied \u2014 a multi-step security workflow.",
     "steps": [
       "Identify all user-identifying fields (username, email, userId, accountName, etc.) in the telemetry event payload being added or modified.",
       "Check the redacted fields configuration (e.g., RedactedFields or AnalyticsRedactionConfig) to verify whether each PII field is already listed.",
@@ -40775,7 +41038,16 @@
       "Verify that the redaction logic runs before the event is dispatched to the analytics client, not after.",
       "Write a test that asserts the redacted fields list includes the newly added fields and that serialized event output does not contain raw PII values."
     ],
-    "skill_title": "Redact PII fields before sending telemetry events"
+    "skill_title": "Redact PII fields before sending telemetry events",
+    "hook_worthy": true,
+    "hook_rationale": "A hook can detect when telemetry/analytics event code is modified and new fields containing user identifiers (username, email, userId) are added without corresponding redaction list updates.",
+    "hook_event": "PreToolUse",
+    "hook_tool": "Edit",
+    "hook_glob": "**/{server,model-serving}/**/*.scala",
+    "hook_check": "grep -qEi '(analyticsClient|track\\(|\\.track|telemetry|Segment|Mixpanel|amplitude)' \"$1\" && grep -qEi '(userName|userEmail|user\\.email|user\\.name|ownerUsername|requestedByUser|userId)' \"$1\" && ! grep -qEi '(redact|sanitize|RedactionService|redactedFields)' \"$1\"",
+    "hook_message": "PII field detected in telemetry/analytics code without redaction. Fields like userName, userEmail, or userId must be added to the redacted fields list (e.g., AnalyticsRedactionConfig.redactedFields) and passed through RedactionService.redact() before tracking. See PRs #42922, #42215.",
+    "hook_blocking": true,
+    "hook_validation_rationale": "PII leakage to third-party analytics is a data loss prevention concern that should block before the code is written, not nag after unredacted fields are already in place."
   },
   {
     "id": "reduce-for-transforms-foreach-for-side-effects",
@@ -40811,11 +41083,15 @@
     "modules": [
       "server"
     ],
-    "mode": "active",
+    "mode": "ambient",
     "confidence": 0.2,
     "review_count": 2,
     "status": "active",
-    "mode_rationale": "Simple convention to encapsulate repeated logic in domain methods"
+    "mode_rationale": "This is a straightforward refactoring principle \u2014 encapsulate repeated logic into a method \u2014 no multi-step guidance needed.",
+    "skill_worthy": false,
+    "skill_rationale": "This is a straightforward refactoring principle \u2014 encapsulate repeated logic into a method \u2014 no multi-step guidance needed.",
+    "hook_worthy": false,
+    "hook_rationale": "Detecting duplicated logic that should be extracted into a domain method requires semantic understanding of code duplication across call sites."
   },
   {
     "id": "refactor-fat-clients-into-minimal-clients-plus-helper-classes",
@@ -42355,7 +42631,7 @@
     "status": "active",
     "mode_rationale": "Simple convention to reset dependent state in error handlers",
     "skill_worthy": true,
-    "skill_rationale": "Engineers benefit from before/after code examples showing which dependent state variables to reset in error handlers alongside the fetch result.",
+    "skill_rationale": "Engineers benefit from a code example showing the correct pattern for resetting all dependent state variables in error handlers alongside the happy path.",
     "steps": [
       "Identify every setState call made in the success path of the fetch operation.",
       "In the catch/error handler, explicitly reset each of those state variables to their empty or default values (e.g., null, false, empty array).",
@@ -42363,7 +42639,9 @@
       "If using a reducer, dispatch a dedicated failure action that resets the entire relevant slice of state, not just the error field.",
       "Verify that any derived or dependent state (e.g., pagination info, selected items, computed flags) is also cleared on error so downstream components don't render against stale data."
     ],
-    "skill_title": "Reset all dependent UI state in error handlers"
+    "skill_title": "Reset all dependent UI state in error handlers",
+    "hook_worthy": false,
+    "hook_rationale": "Detecting missing state resets in error handlers requires understanding which state variables are dependent on the fetched data, not a mechanical check."
   },
   {
     "id": "resolve-and-persist-runtime-dependencies",
@@ -43645,13 +43923,13 @@
     "modules": [
       "dataset-rw"
     ],
-    "mode": "active",
+    "mode": "hook",
     "confidence": 0.2,
     "review_count": 2,
     "status": "active",
-    "mode_rationale": "Security convention: verify access control on filtered endpoints",
+    "mode_rationale": "A hook can detect new or modified endpoint definitions in data access layers and flag them for access control review, especially if no auth annotation/middleware is present.",
     "skill_worthy": true,
-    "skill_rationale": "Security review requires a multi-step checklist covering authenticated, unauthenticated, and cross-tenant access scenarios to apply correctly.",
+    "skill_rationale": "Requires a security review checklist for verifying authentication, authorization, and data filtering on endpoints \u2014 a multi-step audit process.",
     "steps": [
       "Identify every data-returning endpoint and confirm it requires authentication before any query execution.",
       "Verify that the permission filter is applied at the query/repository layer, not just at the controller or serialization layer, so no code path can bypass it.",
@@ -43659,7 +43937,16 @@
       "Write integration tests that call the endpoint as an unauthenticated user, a user without access, and a user with access, asserting correct status codes and empty bodies for denied callers.",
       "If the endpoint is also reachable via internal service-to-service calls, verify that the internal caller cannot inadvertently escalate permissions by omitting the user context."
     ],
-    "skill_title": "Enforce authentication before permission-filtered data queries"
+    "skill_title": "Enforce authentication before permission-filtered data queries",
+    "hook_worthy": true,
+    "hook_rationale": "A hook can detect new or modified endpoint definitions in data access layers and flag them for access control review, especially if no auth annotation/middleware is present.",
+    "hook_event": "PreToolUse",
+    "hook_tool": "Edit",
+    "hook_glob": "**/*Controller*.scala",
+    "hook_check": "grep -qE '=\\s*Action(\\.[a-zA-Z]+)?\\s*[{(]' \"$1\"",
+    "hook_message": "Endpoint uses Action directly without an auth wrapper \u2014 unauthenticated callers may access restricted data. Wrap with an auth action (e.g. auth.async) and ensure the service layer filters by caller identity. See PR #41762.",
+    "hook_blocking": true,
+    "hook_validation_rationale": "Unauthenticated data endpoints are a security gate \u2014 blocking PostToolUse is contradictory since the unprotected endpoint is already written; promote to PreToolUse to prevent it."
   },
   {
     "id": "review-cache-invalidation-on-key-changes",
@@ -43867,7 +44154,7 @@
     "status": "active",
     "mode_rationale": "Single rule about defaulting to backward-compatible values",
     "skill_worthy": true,
-    "skill_rationale": "Requires a two-PR workflow with specific steps: ship safe default first, then change in follow-up, which benefits from a step-by-step guide.",
+    "skill_rationale": "Engineers benefit from a workflow showing how to introduce new config values with safe defaults and plan the staged rollout across PRs.",
     "steps": [
       "Identify the current production behavior that the new config value will eventually replace.",
       "Set the default value of the new config to match the existing production behavior exactly, so that deployments without the config explicitly set behave identically to today.",
@@ -43876,7 +44163,9 @@
       "Merge the PR that introduces the config with the backward-compatible default.",
       "In a follow-up PR, update the config value to the new desired value, enabling a clean rollback point if issues arise."
     ],
-    "skill_title": "Default new config values to backward-compatible behavior for staged rollout"
+    "skill_title": "Default new config values to backward-compatible behavior for staged rollout",
+    "hook_worthy": false,
+    "hook_rationale": "Determining whether a new config value defaults to the safe/backward-compatible option requires understanding the domain semantics of the value."
   },
   {
     "id": "scala-curly-brace-style",
@@ -44600,13 +44889,13 @@
       "common",
       "server"
     ],
-    "mode": "active",
+    "mode": "hook",
     "confidence": 0.9,
     "review_count": 9,
     "status": "active",
-    "mode_rationale": "Single rule: add explicit synchronization for shared mutable state",
+    "mode_rationale": "A grep can detect mutable shared state patterns (e.g., non-volatile/non-synchronized fields accessed from multiple threads, shared collections without locks) in concurrency-sensitive modules.",
     "skill_worthy": true,
-    "skill_rationale": "Engineers need code examples showing different synchronization patterns (dedicated lock object, volatile+synchronized) and a decision tree for choosing between them.",
+    "skill_rationale": "Engineers benefit from examples of correct synchronization patterns (lock objects, volatile+synchronized, concurrent collections) and guidance on choosing the right one.",
     "steps": [
       "Identify every mutable field that can be read or written from more than one thread.",
       "Declare a private lock object (e.g., `private val lock = new Object`) dedicated to guarding that state \u2014 never synchronize on `this` or on the mutable field itself.",
@@ -44615,7 +44904,15 @@
       "Prefer immutable snapshots when exposing state to callers \u2014 return a `List` copy or an immutable case class rather than handing out a reference to the mutable collection.",
       "Add a comment above the lock object listing which fields it guards, so future contributors maintain the invariant."
     ],
-    "skill_title": "Guard shared mutable state with explicit synchronization"
+    "skill_title": "Guard shared mutable state with explicit synchronization",
+    "hook_worthy": true,
+    "hook_rationale": "A grep can detect mutable shared state patterns (e.g., non-volatile/non-synchronized fields accessed from multiple threads, shared collections without locks) in concurrency-sensitive modules.",
+    "hook_event": "PostToolUse",
+    "hook_tool": "Edit",
+    "hook_glob": "**/{*health*,*executor*,*common*,*server*}/**/*.scala",
+    "hook_check": "grep -qE '\\b(var\\s|mutable\\.)' \"$1\" && ! grep -qE '(synchronized|\\.lock|ReentrantLock|@volatile|Atomic)' \"$1\"",
+    "hook_message": "Shared mutable state without thread-safety controls. Found `var` or `mutable.` collections with no `synchronized`, lock object, `@volatile`, or `Atomic*` type. Protect both reads and writes with a dedicated lock object (see PRs #41307, #40505, #42260, #43112).",
+    "hook_blocking": false
   },
   {
     "id": "show-error-toast-on-api-failure",
@@ -44719,11 +45016,15 @@
     "modules": [
       "frontend"
     ],
-    "mode": "active",
+    "mode": "ambient",
     "confidence": 0.8,
     "review_count": 8,
     "status": "active",
-    "mode_rationale": "Simple organizational rule: separate utils, sub-components, and main component"
+    "mode_rationale": "This is a straightforward organizational rule \u2014 split large files \u2014 no multi-step decision tree needed.",
+    "skill_worthy": false,
+    "skill_rationale": "This is a straightforward organizational rule \u2014 split large files \u2014 no multi-step decision tree needed.",
+    "hook_worthy": false,
+    "hook_rationale": "While file size can be checked mechanically, deciding what to split and how requires architectural judgment about component boundaries."
   },
   {
     "id": "styled-components-over-plain-css-with-data-test-for-selectors",
@@ -44787,11 +45088,15 @@
       "frontend",
       "gen-ai"
     ],
-    "mode": "active",
+    "mode": "ambient",
     "confidence": 0.2,
     "review_count": 2,
     "status": "active",
-    "mode_rationale": "Simple testing convention about positive and negative cases"
+    "mode_rationale": "This is a single-sentence reminder to cover positive and negative test cases \u2014 no multi-step guidance needed.",
+    "skill_worthy": false,
+    "skill_rationale": "This is a single-sentence reminder to cover positive and negative test cases \u2014 no multi-step guidance needed.",
+    "hook_worthy": false,
+    "hook_rationale": "Detecting missing positive/negative test cases requires understanding the function's input domain and expected behavior, not a pattern match."
   },
   {
     "id": "separate-shared-test-fixtures-into-own-files",
@@ -47090,7 +47395,7 @@
     "status": "active",
     "mode_rationale": "Simple performance convention about lazy streaming",
     "skill_worthy": true,
-    "skill_rationale": "Engineers benefit from code examples showing streaming alternatives (lazy iterators, pagination, cursors) for different collection processing scenarios.",
+    "skill_rationale": "Engineers benefit from code examples showing how to convert eager collection loading to streaming/lazy patterns with proper resource management.",
     "steps": [
       "Identify any repository or DAO call that loads an entire collection into memory (e.g., findAll(), listAll()) in a batch or bulk-processing context.",
       "Replace the eager collection fetch with a streaming alternative such as a reactive stream (Observable, Source), database cursor, or paginated iterator that processes records in bounded chunks.",
@@ -47099,7 +47404,9 @@
       "Add logging or metrics to track batch progress (e.g., records processed, elapsed time) so operators can monitor long-running jobs.",
       "Load-test the batch path against a production-scale dataset to verify memory stays within bounds under realistic entity counts."
     ],
-    "skill_title": "Stream large collections instead of loading all into memory"
+    "skill_title": "Stream large collections instead of loading all into memory",
+    "hook_worthy": false,
+    "hook_rationale": "Determining whether a collection is large enough to need streaming requires understanding the data volume, not a simple file scan."
   },
   {
     "id": "stream-wrapper-supports-reread",
@@ -47832,7 +48139,7 @@
     "status": "active",
     "mode_rationale": "Single testing principle about assertion specificity",
     "skill_worthy": true,
-    "skill_rationale": "Engineers benefit from before/after examples contrasting generic side-effect checks with specific assertions that verify the intended code path was exercised.",
+    "skill_rationale": "Engineers benefit from examples showing how to write assertions that distinguish between similar code paths, including message matching and parameter verification techniques.",
     "steps": [
       "Identify all code paths that can produce the side effect you're testing (e.g., multiple conditions that trigger the same error handler or logger call).",
       "Choose assertions that distinguish the intended path from other paths \u2014 assert on message content, specific parameters, or call arguments rather than just call count.",
@@ -47841,7 +48148,9 @@
       "Add a brief comment explaining which code path the test targets when the distinction isn't obvious from the test name alone.",
       "Consider adding a negative test that confirms the other code paths do NOT trigger under the same conditions."
     ],
-    "skill_title": "Assert on specific code path details, not just side effects"
+    "skill_title": "Assert on specific code path details, not just side effects",
+    "hook_worthy": false,
+    "hook_rationale": "Evaluating whether test assertions are specific enough to verify the intended code path requires understanding the test's purpose and the code under test."
   },
   {
     "id": "test-at-the-appropriate-abstraction-level",
@@ -47863,7 +48172,7 @@
     "status": "active",
     "mode_rationale": "Single testing principle about choosing the right test layer",
     "skill_worthy": true,
-    "skill_rationale": "Requires a decision tree for choosing between unit, integration, and e2e test layers based on the behavior being verified.",
+    "skill_rationale": "Engineers benefit from a decision tree for choosing unit vs integration vs e2e tests based on the behavior being tested and system boundaries involved.",
     "steps": [
       "Identify the boundaries of the behavior under test: does it depend on a single class/function, or does it require multiple systems (e.g., HTTP layer, middleware, database) to interact?",
       "If the behavior is contained within a single unit, write a focused unit test that asserts on that unit's contract directly.",
@@ -47872,7 +48181,9 @@
       "Create a ticket or TODO for an integration or e2e test that exercises the full request path, referencing the specific cross-system behavior that unit tests cannot cover.",
       "In your PR description, note which assertions are covered at the unit level and which require integration test coverage, so reviewers can verify the testing strategy is complete."
     ],
-    "skill_title": "Test at the appropriate abstraction level"
+    "skill_title": "Test at the appropriate abstraction level",
+    "hook_worthy": false,
+    "hook_rationale": "Determining the appropriate test abstraction level requires understanding the system boundaries and behavior being verified, not a mechanical check."
   },
   {
     "id": "test-authorization-boundaries",
@@ -48751,7 +49062,7 @@
     "status": "active",
     "mode_rationale": "Testing guideline about what to cover, not a step-by-step procedure",
     "skill_worthy": true,
-    "skill_rationale": "Testing rollback stacks requires specific patterns for verifying execution order and error propagation that benefit from concrete code examples.",
+    "skill_rationale": "Engineers benefit from concrete test examples showing how to verify rollback execution order and error-in-rollback scenarios.",
     "steps": [
       "Identify the rollback/cleanup stack under test and enumerate all registered callbacks in expected execution order (typically LIFO).",
       "Write a test that registers multiple callbacks, triggers rollback, and asserts callbacks executed in exact reverse-registration order using an ordered log or sequence buffer.",
@@ -48760,7 +49071,9 @@
       "Verify that errors from individual rollback callbacks are collected and logged or attached as suppressed exceptions rather than silently discarded.",
       "Add an edge-case test for an empty rollback stack to confirm no errors are thrown when there is nothing to roll back."
     ],
-    "skill_title": "Test rollback stack execution order and failure resilience"
+    "skill_title": "Test rollback stack execution order and failure resilience",
+    "hook_worthy": false,
+    "hook_rationale": "Detecting missing rollback tests requires understanding which code implements rollback/cleanup stacks, which is not a simple pattern match."
   },
   {
     "id": "test-security-relevant-annotations-and-configuration-values",
@@ -49231,7 +49544,7 @@
     "status": "active",
     "mode_rationale": "Design principle for API response handling, not a multi-step procedure",
     "skill_worthy": true,
-    "skill_rationale": "Designing a partial-success response shape (included items, failed items with reasons) benefits from a concrete response structure example and decision tree.",
+    "skill_rationale": "Engineers benefit from an API response design pattern showing how to structure partial success responses with included/failed items and error reasons.",
     "steps": [
       "Define a response model that includes both a collection of successfully processed items and a collection of failures, each failure paired with its reason.",
       "Process each item independently, catching per-item exceptions rather than letting one failure abort the entire batch.",
@@ -49239,7 +49552,9 @@
       "Return the response with both successful and failed collections populated, along with an overall status indicating whether the operation was fully successful, partially successful, or fully failed.",
       "Log failed items with sufficient context for debugging, but do not expose internal stack traces in the API response."
     ],
-    "skill_title": "Track partial failures in bulk operation responses"
+    "skill_title": "Track partial failures in bulk operation responses",
+    "hook_worthy": false,
+    "hook_rationale": "Detecting whether an operation can partially succeed and needs partial failure tracking requires understanding the business logic, not a file scan."
   },
   {
     "id": "track-skipped-tests-with-tickets",
@@ -49566,7 +49881,7 @@
     "status": "active",
     "mode_rationale": "Architectural awareness check before adding route guards",
     "skill_worthy": true,
-    "skill_rationale": "Requires a decision tree to evaluate component mounting lifecycle and determine whether a guard will affect unrelated routes.",
+    "skill_rationale": "Engineers benefit from a diagnostic workflow for tracing component mounting lifecycle and determining whether a guard's scope matches the intended routes.",
     "steps": [
       "Identify where the component is rendered in the route hierarchy \u2014 check if it lives inside a specific <Route> or is mounted at the app shell level (e.g., inside a layout wrapper that persists across all routes).",
       "Trace the component's mount/unmount lifecycle by searching for all places it appears in router configurations and parent components.",
@@ -49575,7 +49890,9 @@
       "If you must keep logic in a globally-mounted component, scope the guard with an explicit pathname check (e.g., `if (location.pathname.startsWith('/protected'))`) so it only triggers for the intended routes.",
       "Test by navigating to unrelated routes and confirming the guard does not trigger redirects or side effects outside its intended scope."
     ],
-    "skill_title": "Scope route guards to route-specific components, not globally-mounted shells"
+    "skill_title": "Scope route guards to route-specific components, not globally-mounted shells",
+    "hook_worthy": false,
+    "hook_rationale": "Understanding a component's mounting scope and whether a guard affects unintended routes requires semantic understanding of the React component tree."
   },
   {
     "id": "understand-framework-lifecycle",
@@ -52036,13 +52353,13 @@
       "nucleus",
       "compute-providers"
     ],
-    "mode": "active",
+    "mode": "hook",
     "confidence": 0.2,
     "review_count": 2,
     "status": "active",
-    "mode_rationale": "Simple reminder to audit consumers when modifying shared config",
+    "mode_rationale": "A hook can detect modifications to known shared configuration files and warn that all consuming services must be audited and updated.",
     "skill_worthy": true,
-    "skill_rationale": "Auditing all consumers of a shared config requires a step-by-step process (grep for includes, check each service, test propagation).",
+    "skill_rationale": "Engineers benefit from a workflow for auditing all consumers of a shared config file using grep/dependency analysis and updating each one systematically.",
     "steps": [
       "Identify the configuration file being changed and grep the entire codebase for every include, reference, or import of that file (e.g., `grep -r 'include \"shared.conf\"'` or search for the specific config key paths).",
       "Build a complete list of every service and module that depends on the configuration, including transitive includes where one config file includes another that includes the changed file.",
@@ -52051,7 +52368,15 @@
       "Add or update integration tests that start each affected service with the new configuration to catch missing-key or type-mismatch errors at build time rather than deploy time.",
       "Include all affected services in the same pull request or coordinate a rollout order if changes must span multiple PRs, documenting the dependency in the PR description."
     ],
-    "skill_title": "Audit and update all consumers when changing shared configuration"
+    "skill_title": "Audit and update all consumers when changing shared configuration",
+    "hook_worthy": true,
+    "hook_rationale": "A hook can detect modifications to known shared configuration files and warn that all consuming services must be audited and updated.",
+    "hook_event": "PostToolUse",
+    "hook_tool": "Edit",
+    "hook_glob": "**/shared/**/resources/**/*.conf",
+    "hook_check": "BASENAME=$(basename \"$1\"); grep -rl \"include.*$BASENAME\" --include='*.conf' . 2>/dev/null | grep -qv \"$1\"",
+    "hook_message": "You edited a shared configuration file that other services include. Run: grep -rl \"include.*$(basename $FILE)\" --include='*.conf' . \u2014 and verify every consumer references the correct (possibly renamed) keys. Missed consumers compile fine but fail at runtime with ConfigException$Missing.",
+    "hook_blocking": false
   },
   {
     "id": "update-all-related-validation-checks-when-adding-fields",
@@ -52589,7 +52914,7 @@
     "review_count": 2,
     "status": "active",
     "skill_worthy": true,
-    "skill_rationale": "Correctly using Ant Form for state management vs layout-only requires before/after code examples showing the anti-pattern and correct approach.",
+    "skill_rationale": "Engineers benefit from code examples contrasting the anti-pattern (Form as layout wrapper with useState) vs the correct pattern (Form-managed field state).",
     "steps": [
       "Initialize form state using Form.useForm() and pass the form instance to <Form form={form}>.",
       "Define each field inside a <Form.Item name=\"fieldName\"> so Ant's Form internally tracks its value, validation status, and dirty state.",
@@ -52598,7 +52923,9 @@
       "Set initial values via the Form's initialValues prop or form.setFieldsValue() rather than defaulting useState variables.",
       "Handle submission through the Form's onFinish callback, which only fires after all validation passes, instead of manually validating state in an onClick handler."
     ],
-    "skill_title": "Let Ant Form manage field state instead of duplicating it with useState"
+    "skill_title": "Let Ant Form manage field state instead of duplicating it with useState",
+    "hook_worthy": false,
+    "hook_rationale": "Detecting whether Ant Form is used for state management vs just styling requires understanding the component's state management approach, not a simple grep."
   },
   {
     "id": "use-antd-flex-component",
@@ -52983,7 +53310,7 @@
     "status": "active",
     "mode_rationale": "Performance convention preferring bulk queries",
     "skill_worthy": true,
-    "skill_rationale": "The bulk query + in-memory diffing pattern benefits from a code example showing the $in query and set-difference approach.",
+    "skill_rationale": "Engineers benefit from before/after code examples showing how to refactor per-item queries into bulk $in queries with in-memory diffing.",
     "steps": [
       "Collect all IDs or keys you need to look up into a single collection (e.g., a Seq or Set).",
       "Issue one bulk query using $in (or equivalent batch operator) to fetch all matching records at once.",
@@ -52991,7 +53318,9 @@
       "Diff in memory: iterate the original collection and check against the local Map/Set to determine which items exist, are missing, or need processing.",
       "Handle missing items in a single pass rather than issuing follow-up queries one at a time."
     ],
-    "skill_title": "Replace per-item queries with bulk fetch and in-memory diffing"
+    "skill_title": "Replace per-item queries with bulk fetch and in-memory diffing",
+    "hook_worthy": false,
+    "hook_rationale": "Detecting per-item database queries inside loops requires understanding the relationship between loop iteration and query calls, which is a semantic analysis."
   },
   {
     "id": "use-camelcase-for-audit-event-target-fields",
@@ -54758,11 +55087,15 @@
     "modules": [
       "server"
     ],
-    "mode": "active",
+    "mode": "ambient",
     "confidence": 0.2,
     "review_count": 2,
     "status": "active",
-    "mode_rationale": "Simple preference for SDK utilities over hand-rolled code"
+    "mode_rationale": "This is a single-sentence reminder to use SDK utilities \u2014 no multi-step guidance needed beyond knowing they exist.",
+    "skill_worthy": false,
+    "skill_rationale": "This is a single-sentence reminder to use SDK utilities \u2014 no multi-step guidance needed beyond knowing they exist.",
+    "hook_worthy": false,
+    "hook_rationale": "Detecting hand-rolled conversions vs SDK utility usage requires knowing the full SDK API surface for each external system, which isn't a simple grep."
   },
   {
     "id": "use-project-test-utilities-for-dom-queries",
@@ -54804,11 +55137,21 @@
     "modules": [
       "frontend"
     ],
-    "mode": "active",
+    "mode": "hook",
     "confidence": 0.4,
     "review_count": 4,
     "status": "active",
-    "mode_rationale": "Convention to use utility hooks for theme access"
+    "mode_rationale": "A grep can detect direct theme object access patterns (e.g., theme.colors, theme.tokens) in frontend files and flag them to use the utility hooks instead.",
+    "skill_worthy": false,
+    "skill_rationale": "This is a single-sentence directive to use useThemeColor instead of direct theme access \u2014 no multi-step guidance needed.",
+    "hook_worthy": true,
+    "hook_rationale": "A grep can detect direct theme object access patterns (e.g., theme.colors, theme.tokens) in frontend files and flag them to use the utility hooks instead.",
+    "hook_event": "PostToolUse",
+    "hook_tool": "Edit",
+    "hook_glob": "**/*.tsx",
+    "hook_check": "grep -qE '\\buseTheme\\(\\)|\\btheme\\.(colors|palette|spacing|typography)\\.' \"$1\"",
+    "hook_message": "Direct theme access detected. Use utility hooks like `useThemeColor` or `useThemeSpacing` instead of `useTheme()` or accessing `theme.colors/palette/spacing/typography` directly. This maintains consistency and simplifies future refactors. (Source: PRs #42389, #41878, #44249)",
+    "hook_blocking": false
   },
   {
     "id": "use-route-links-in-spa",
@@ -54850,11 +55193,21 @@
     "modules": [
       "frontend"
     ],
-    "mode": "active",
+    "mode": "hook",
     "confidence": 0.2,
     "review_count": 2,
     "status": "active",
-    "mode_rationale": "Single convention for URL state management"
+    "mode_rationale": "A grep can detect history.push calls with transient state parameters (filters, tabs, selections) in frontend files and suggest using history.replace instead.",
+    "skill_worthy": false,
+    "skill_rationale": "This is a single-sentence rule \u2014 use replace instead of push for transient URL state \u2014 no multi-step guidance needed.",
+    "hook_worthy": true,
+    "hook_rationale": "A grep can detect history.push calls with transient state parameters (filters, tabs, selections) in frontend files and suggest using history.replace instead.",
+    "hook_event": "PostToolUse",
+    "hook_tool": "Edit",
+    "hook_glob": "**/*.tsx",
+    "hook_check": "grep -qE 'history\\.push\\(' \"$1\"",
+    "hook_message": "Detected history.push() \u2014 if updating transient URL state (filters, tabs, query params), use history.replace() instead to avoid polluting the browser back-button history. See PRs #43631, #45117.",
+    "hook_blocking": false
   },
   {
     "id": "use-secret-references-not-plain-values",
@@ -54940,7 +55293,11 @@
     "confidence": 0.2,
     "review_count": 2,
     "status": "active",
-    "mode_rationale": "Simple testing convention: use shared mock utilities pattern"
+    "mode_rationale": "Simple testing convention: use shared mock utilities pattern",
+    "skill_worthy": true,
+    "skill_rationale": "Engineers benefit from examples showing how to use the shared mock utilities pattern vs ad-hoc mocking, including how to retain prop/callback access.",
+    "hook_worthy": false,
+    "hook_rationale": "Detecting ad-hoc component mocking vs shared mock utility usage requires understanding the test's mocking approach, not a simple pattern match."
   },
   {
     "id": "use-domain-specific-methods",
@@ -55084,7 +55441,7 @@
     "status": "active",
     "mode_rationale": "Simple type design convention",
     "skill_worthy": true,
-    "skill_rationale": "Designing an enum with meaningful state names and transition semantics benefits from a code example showing the refactor from boolean to enum.",
+    "skill_rationale": "Engineers benefit from examples showing how to refactor boolean flags into enums/sealed types with named transitions for multi-state scenarios.",
     "steps": [
       "Identify every distinct state the value can occupy \u2014 list them explicitly before choosing a type.",
       "Define a sealed trait or enum with a case for each state, naming each case after the domain concept it represents (e.g., `Waiting`, `Requested`, `Completed`).",
@@ -55093,7 +55450,9 @@
       "Convert conditional checks from `if (flag)` to exhaustive pattern matches so the compiler catches unhandled states.",
       "Verify that serialization (JSON, DB columns) round-trips the enum correctly and add a migration if the storage format changes."
     ],
-    "skill_title": "Replace boolean flags with enums for multi-state lifecycles"
+    "skill_title": "Replace boolean flags with enums for multi-state lifecycles",
+    "hook_worthy": false,
+    "hook_rationale": "Detecting whether a boolean represents more than two meaningful states requires understanding the domain semantics of the flag."
   },
   {
     "id": "use-enums-for-related-constant-groups",
@@ -55118,13 +55477,13 @@
       "model-serving",
       "secretstore"
     ],
-    "mode": "active",
+    "mode": "ambient",
     "confidence": 0.8,
     "review_count": 8,
     "status": "active",
-    "mode_rationale": "Simple convention to prefer enums over loose constants",
-    "skill_worthy": true,
-    "skill_rationale": "The const object + extracted type pattern in TypeScript benefits from a code example showing the idiom and how to tie types to enum keys.",
+    "mode_rationale": "The rule is straightforward \u2014 group related constants into an enum \u2014 no multi-step guidance needed.",
+    "skill_worthy": false,
+    "skill_rationale": "The rule is straightforward \u2014 group related constants into an enum \u2014 no multi-step guidance needed.",
     "steps": [
       "Identify all related constants that form a logical group (e.g., statuses, modes, provider types).",
       "Define a TypeScript `enum` or a `const` object with `as const` assertion to hold the values.",
@@ -55133,7 +55492,9 @@
       "Update function signatures, props, and state types to use the derived union type instead of bare `string` or `number`.",
       "Verify that switch statements over the enum are exhaustive (use a `never` default or enable `noUncheckedIndexedAccess`)."
     ],
-    "skill_title": "Group related constants into enums with derived types"
+    "skill_title": "Group related constants into enums with derived types",
+    "hook_worthy": false,
+    "hook_rationale": "Detecting whether loose constants should be grouped into an enum requires understanding their semantic relationship, not a simple grep."
   },
   {
     "id": "use-env-vars-instead-of-hardcoded-values",
@@ -55273,13 +55634,13 @@
     "modules": [
       "frontend"
     ],
-    "mode": "active",
+    "mode": "ambient",
     "confidence": 0.7,
     "review_count": 7,
     "status": "active",
-    "mode_rationale": "Convention about checking design system before customizing",
-    "skill_worthy": true,
-    "skill_rationale": "Requires a multi-step decision process: check design system updates, compare with Figma, validate discrepancy with UX before overriding.",
+    "mode_rationale": "This is a single-sentence reminder to check the design system before overriding styles \u2014 no multi-step guidance needed.",
+    "skill_worthy": false,
+    "skill_rationale": "This is a single-sentence reminder to check the design system before overriding styles \u2014 no multi-step guidance needed.",
     "steps": [
       "Check the latest version of the design system component in Storybook to see if a variant, prop, or token already achieves the desired appearance.",
       "Search the codebase for existing wrapper components (e.g., DominoButton, DominoSelect) that may already encapsulate the style you need.",
@@ -55288,7 +55649,9 @@
       "Never apply style overrides via global CSS selectors (e.g., .ant-btn) \u2014 scope overrides to the specific component instance using CSS modules or styled-components.",
       "When the design system is updated to support the appearance natively, remove the override and switch to the built-in prop or variant."
     ],
-    "skill_title": "Check design system support before overriding component styles"
+    "skill_title": "Check design system support before overriding component styles",
+    "hook_worthy": false,
+    "hook_rationale": "Determining whether a component style override is unnecessary because the design system was updated requires checking the component library version, not a file scan."
   },
   {
     "id": "use-existing-conversion-utilities",
@@ -55757,7 +56120,7 @@
     "status": "active",
     "mode_rationale": "Simple error handling convention",
     "skill_worthy": true,
-    "skill_rationale": "Using Try/Either for partial matching requires code examples showing the pattern and how to compose results.",
+    "skill_rationale": "Engineers benefit from code examples showing Try/Either patterns vs exception throwing for partial matching, including when each approach is appropriate.",
     "steps": [
       "Identify functions that use partial pattern matching or don't handle all input variants",
       "Change the return type from T to Try[T], Either[ErrorType, T], or Option[T] depending on whether you need error context",
@@ -55766,7 +56129,9 @@
       "If the function is a PartialFunction by design, wrap it with Function.unlift or .lift to make partiality explicit in the type signature",
       "Add sealed trait error types when Left/Failure needs to carry structured context about why the input was unhandled"
     ],
-    "skill_title": "Return functional error types instead of throwing on unmatched cases"
+    "skill_title": "Return functional error types instead of throwing on unmatched cases",
+    "hook_worthy": false,
+    "hook_rationale": "Detecting when a function should return Try/Either instead of throwing requires understanding the function's input domain and error semantics."
   },
   {
     "id": "use-generated-api-types-for-mock-data",
@@ -57428,7 +57793,7 @@
     "status": "active",
     "mode_rationale": "Design convention favoring type polymorphism over optional fields",
     "skill_worthy": true,
-    "skill_rationale": "Refactoring from optional fields to sealed traits/subclasses requires code examples showing the type hierarchy and how invariants are enforced.",
+    "skill_rationale": "Engineers benefit from before/after code examples showing how to refactor optional-field models into polymorphic types with sealed traits/subclasses.",
     "steps": [
       "Identify the distinct variants of the entity and the fields unique to each variant.",
       "Define a sealed trait (or abstract base class) with the fields common to all variants.",
@@ -57437,7 +57802,9 @@
       "Update serialization/deserialization to use a type discriminator (e.g., a `type` field in JSON) that maps to the correct subclass.",
       "Remove any runtime validation that checked whether optional fields were present for a given variant \u2014 the compiler now enforces this."
     ],
-    "skill_title": "Use polymorphism instead of optional fields for entity variants"
+    "skill_title": "Use polymorphism instead of optional fields for entity variants",
+    "hook_worthy": false,
+    "hook_rationale": "Detecting whether optional fields represent variant-specific data vs genuinely optional fields requires understanding the domain model semantics."
   },
   {
     "id": "use-precise-collection-return-types-in-api-routes",
@@ -57966,7 +58333,7 @@
     "status": "active",
     "mode_rationale": "Single-sentence technique rule about responsive measurement",
     "skill_worthy": true,
-    "skill_rationale": "Setting up a ResizeObserver with cleanup and React integration benefits from a concrete hook code example.",
+    "skill_rationale": "Engineers benefit from a code example showing the ResizeObserver hook pattern with proper cleanup, ref management, and debouncing.",
     "steps": [
       "Identify any one-time measurements of viewport or container dimensions (e.g., calls to getBoundingClientRect, offsetWidth, or window.innerWidth during mount).",
       "Replace the one-time measurement with a ResizeObserver attached to the relevant container element.",
@@ -57974,7 +58341,9 @@
       "Clean up the ResizeObserver in the effect's teardown function to prevent memory leaks.",
       "If observing multiple elements, use a single ResizeObserver instance and dispatch updates by target element."
     ],
-    "skill_title": "Use ResizeObserver for viewport-dependent layout calculations"
+    "skill_title": "Use ResizeObserver for viewport-dependent layout calculations",
+    "hook_worthy": false,
+    "hook_rationale": "Detecting one-time viewport measurements that should use ResizeObserver requires understanding whether the measurement needs to stay reactive."
   },
   {
     "id": "use-retry-policy-not-infinite-loops",
@@ -58630,11 +58999,15 @@
       "compute-grid",
       "model-serving"
     ],
-    "mode": "active",
+    "mode": "ambient",
     "confidence": 0.2,
     "review_count": 2,
     "status": "active",
-    "mode_rationale": "Naming convention for configuration properties"
+    "mode_rationale": "This is a single-sentence naming guideline that doesn't require multi-step instructions or decision trees.",
+    "skill_worthy": false,
+    "skill_rationale": "This is a single-sentence naming guideline that doesn't require multi-step instructions or decision trees.",
+    "hook_worthy": false,
+    "hook_rationale": "Evaluating whether a name is too ambiguous is a judgment call about domain terminology, not a mechanical check."
   },
   {
     "id": "use-stable-dependency-versions",
@@ -58812,11 +59185,21 @@
       "server",
       "gates"
     ],
-    "mode": "active",
+    "mode": "hook",
     "confidence": 0.2,
     "review_count": 2,
     "status": "active",
-    "mode_rationale": "Single data modeling convention"
+    "mode_rationale": "A grep can detect API fields or database columns using comma-separated string patterns (e.g., split/join on commas for lists of IDs) and flag them for structured type refactoring.",
+    "skill_worthy": false,
+    "skill_rationale": "The rule is straightforward \u2014 use collection types instead of CSV strings \u2014 no multi-step guidance needed.",
+    "hook_worthy": true,
+    "hook_rationale": "A grep can detect API fields or database columns using comma-separated string patterns (e.g., split/join on commas for lists of IDs) and flag them for structured type refactoring.",
+    "hook_event": "PostToolUse",
+    "hook_tool": "Edit",
+    "hook_glob": "**/{server,gates}/**/*.scala",
+    "hook_check": "grep -nE '\\.(split|mkString)\\s*\\(\\s*\"[,;|]' \"$1\"",
+    "hook_message": "Detected CSV string splitting/joining pattern. When a field holds multiple values (user IDs, names, etc.), use a proper collection type (Seq, List, Array) instead of packing them into a comma-separated String. See PRs #42922, #46039.",
+    "hook_blocking": false
   },
   {
     "id": "use-styled-components-not-inline-styles",
@@ -58929,11 +59312,21 @@
     "modules": [
       "frontend"
     ],
-    "mode": "active",
+    "mode": "hook",
     "confidence": 0.2,
     "review_count": 2,
     "status": "active",
-    "mode_rationale": "Single rule about using theme function params over direct imports"
+    "mode_rationale": "A grep can detect direct color constant imports inside theme function files and flag them to use the function's parameters instead.",
+    "skill_worthy": false,
+    "skill_rationale": "The rule is a single directive \u2014 use function parameters instead of imports for theme values \u2014 no multi-step guidance needed.",
+    "hook_worthy": true,
+    "hook_rationale": "A grep can detect direct color constant imports inside theme function files and flag them to use the function's parameters instead.",
+    "hook_event": "PostToolUse",
+    "hook_tool": "Edit",
+    "hook_glob": "**/src/**/*.{ts,tsx}",
+    "hook_check": "grep -qE \"import\\s+.*from\\s+['\\\"].*(\\/colors|\\/palette|\\/color-tokens|\\/colorConstants)['\\\"]\" \"$1\"",
+    "hook_message": "Direct color/palette constant import detected. If this theme function already receives colors or tokens as parameters, use those instead of importing constants directly \u2014 direct imports bypass theme overrides and break dark mode.",
+    "hook_blocking": false
   },
   {
     "id": "use-theme-helpers-not-raw-values",
@@ -60571,7 +60964,7 @@
     "status": "active",
     "mode_rationale": "Single convention about verifying build output paths",
     "skill_worthy": true,
-    "skill_rationale": "Requires multi-step verification: check build output paths exist, verify build order, document the dependency chain.",
+    "skill_rationale": "Engineers need a checklist of what to verify (build output paths, package.json main/exports fields, build order) and concrete examples of correct package link configurations.",
     "steps": [
       "Identify every `link:` and `file:` reference in the package.json and trace each to its target directory.",
       "Confirm the target package's build step produces the expected output directory (e.g., /dist, /build, /lib) by checking its build script and tsconfig `outDir`.",
@@ -60580,7 +60973,9 @@
       "Ensure the monorepo's task runner (Nx, Turborepo, or workspace scripts) declares the build dependency so the linked package is always built before the consumer.",
       "Add a pre-install or pre-build check script that validates linked output directories exist, failing fast with a clear error message if they don't."
     ],
-    "skill_title": "Validate build output directories before linking monorepo packages"
+    "skill_title": "Validate build output directories before linking monorepo packages",
+    "hook_worthy": false,
+    "hook_rationale": "Verifying that build outputs will exist at resolution time requires understanding build orchestration context, not a simple file-edit grep."
   },
   {
     "id": "validate-colors-with-ux",
@@ -60645,7 +61040,7 @@
     "status": "active",
     "mode_rationale": "Single performance rule for bounded dynamic query inputs",
     "skill_worthy": true,
-    "skill_rationale": "Requires a multi-point checklist: verify list is bounded, check index coverage, validate query document size limits.",
+    "skill_rationale": "Engineers need a decision tree covering bound checks, index verification, and document size limits with concrete Mongo query examples showing safe vs unsafe patterns.",
     "steps": [
       "Identify every query where a runtime-constructed list of IDs is passed to a filter operator ($in, $nin, or equivalent SQL IN clause).",
       "Add an upper bound check on the list size before executing the query \u2014 reject or paginate if the list exceeds a safe threshold (e.g., 500\u20131000 IDs).",
@@ -60654,7 +61049,9 @@
       "For unbounded lists, refactor to use a paginated or chunked query strategy that processes the IDs in fixed-size batches and merges results.",
       "Add a logged warning or metric when the list size approaches the configured threshold so teams can detect growth before it causes failures."
     ],
-    "skill_title": "Bound and chunk dynamic ID lists in database queries"
+    "skill_title": "Bound and chunk dynamic ID lists in database queries",
+    "hook_worthy": false,
+    "hook_rationale": "Determining whether a list is bounded and a field is indexed requires runtime/schema context that cannot be reliably detected via static grep or regex."
   },
   {
     "id": "validate-default-value-semantics",
@@ -60718,7 +61115,7 @@
     "status": "active",
     "mode_rationale": "Single principle: assert valid state before transitions",
     "skill_worthy": true,
-    "skill_rationale": "Implementing state transition guards benefits from a decision tree and code example showing assertion patterns before state changes.",
+    "skill_rationale": "Engineers benefit from a state-machine validation pattern with code examples showing guard clauses and valid-transition maps before state-changing operations.",
     "steps": [
       "Identify all valid source states for the intended transition (e.g., only Running or Pending jobs can be cancelled).",
       "Add an explicit guard that reads the entity's current state immediately before the transition, inside the same transactional boundary if possible.",
@@ -60727,7 +61124,9 @@
       "Log the before and after states at INFO level to create an audit trail for debugging state corruption issues.",
       "Write unit tests that exercise each invalid-source-state path, confirming the transition is rejected and the entity remains unchanged."
     ],
-    "skill_title": "Validate entity state before performing state transitions"
+    "skill_title": "Validate entity state before performing state transitions",
+    "hook_worthy": false,
+    "hook_rationale": "Detecting missing state guards before transitions is a judgment call requiring understanding of business logic, not a mechanical file scan."
   },
   {
     "id": "validate-enum-cross-field-consistency",
@@ -60769,7 +61168,7 @@
     "status": "active",
     "mode_rationale": "Simple error handling rule for external command invocation",
     "skill_worthy": true,
-    "skill_rationale": "Requires a multi-step workflow: run command separately, capture output, validate result is meaningful, handle exceptions with clear messages.",
+    "skill_rationale": "Engineers need step-by-step guidance on subprocess invocation patterns: separating execution from validation, capturing stderr, and structured error handling with examples.",
     "steps": [
       "Run the external command in an isolated step with a bounded timeout so it cannot hang indefinitely.",
       "Capture both stdout and stderr along with the exit code \u2014 never assume a zero exit code.",
@@ -60778,7 +61177,9 @@
       "Wrap the entire invocation in a try/catch (or equivalent) to guard against process-launch failures, encoding issues, and unexpected exceptions.",
       "Log the full command, exit code, and sanitized output at an appropriate level to support debugging in production."
     ],
-    "skill_title": "Validate external command output before using it"
+    "skill_title": "Validate external command output before using it",
+    "hook_worthy": false,
+    "hook_rationale": "While subprocess calls can be grepped, determining whether their output is properly validated requires semantic understanding of the surrounding code."
   },
   {
     "id": "validate-external-service-limits",
@@ -60936,11 +61337,15 @@
     "modules": [
       "apps"
     ],
-    "mode": "active",
+    "mode": "ambient",
     "confidence": 0.2,
     "review_count": 2,
     "status": "active",
-    "mode_rationale": "Single validation placement guideline"
+    "mode_rationale": "The rule is a single clear directive \u2014 validate required fields at the entry point \u2014 that doesn't require multi-step guidance to apply.",
+    "skill_worthy": false,
+    "skill_rationale": "The rule is a single clear directive \u2014 validate required fields at the entry point \u2014 that doesn't require multi-step guidance to apply.",
+    "hook_worthy": false,
+    "hook_rationale": "Determining which optional fields are required for a specific operation is a design judgment that cannot be mechanically detected."
   },
   {
     "id": "validate-required-params-before-api-requests",
@@ -61003,13 +61408,13 @@
       "frontend",
       "remote-file-system"
     ],
-    "mode": "active",
+    "mode": "hook",
     "confidence": 0.8,
     "review_count": 8,
     "status": "active",
-    "mode_rationale": "Single testing principle about checking consumers",
+    "mode_rationale": "Edits to shared/base component files can be detected by glob pattern, and a hook can warn the developer to verify consumers \u2014 preventing regressions in widely-used components.",
     "skill_worthy": true,
-    "skill_rationale": "Requires a multi-step process to identify consumers, test interactive behaviors, and verify no regressions across usage sites.",
+    "skill_rationale": "Engineers need a regression testing checklist for shared components: identifying consumers, testing interactive behaviors, and a workflow for manual verification across usage sites.",
     "steps": [
       "Identify all consumers of the shared component by searching for imports and usages across the codebase (e.g., grep for `import { CodeEditor }` or `<CodeEditor`).",
       "For each consumer, review how it uses the component \u2014 note any custom props, overridden behaviors, event handlers, or CSS overrides that could interact with your change.",
@@ -61018,7 +61423,15 @@
       "If the shared component accepts configuration props or callbacks, verify that default behavior is preserved when those props are not explicitly passed by consumers.",
       "Add or update integration tests that cover the specific interactive behavior you changed, testing it through at least one representative consumer component."
     ],
-    "skill_title": "Validate shared component changes across all consumers before merging"
+    "skill_title": "Validate shared component changes across all consumers before merging",
+    "hook_worthy": true,
+    "hook_rationale": "Edits to shared/base component files can be detected by glob pattern, and a hook can warn the developer to verify consumers \u2014 preventing regressions in widely-used components.",
+    "hook_event": "PostToolUse",
+    "hook_tool": "Edit",
+    "hook_glob": "**/{shared,common,base}/**/*.tsx",
+    "hook_check": "grep -qE '(onKey(Down|Up|Press)|onChange|onInput|onBlur|onFocus|handleClick|addEventListener)' \"$1\"",
+    "hook_message": "Shared component with interactive behavior modified. Find all consumers with: grep -r '<ComponentName' src/ \u2014 then verify no regressions in interactive behaviors (auto-close brackets, tab handling, focus management). Add regression tests for each affected consumer before merging.",
+    "hook_blocking": false
   },
   {
     "id": "validate-shared-style-changes-with-design-stakeholders",
@@ -61239,13 +61652,13 @@
       "server",
       "compute-providers"
     ],
-    "mode": "active",
+    "mode": "hook",
     "confidence": 0.3,
     "review_count": 3,
     "status": "active",
-    "mode_rationale": "Security convention: verify each role's access level when modifying permissions",
+    "mode_rationale": "Edits to permission/role definition files can be detected by glob, and a hook can flag changes to restricted roles (e.g., grep for limitedAdmin) \u2014 high-severity security concern.",
     "skill_worthy": true,
-    "skill_rationale": "Benefits from a checklist/decision tree to systematically verify each role's access scope against intended permissions.",
+    "skill_rationale": "Engineers need a step-by-step audit workflow for verifying each role's access scope, with examples of permission matrix validation and testing restricted roles.",
     "steps": [
       "List every role affected by the change and document its intended access level (e.g., limitedAdmin can read but not write org-level settings).",
       "For each role, write or update a test that asserts the role CAN access permitted resources and CANNOT access restricted resources.",
@@ -61254,7 +61667,15 @@
       "Confirm that UI visibility and API-level enforcement are aligned\u2014a resource hidden in the UI must also be blocked at the API layer.",
       "Review any shared permission constants or enums to ensure the change doesn't inadvertently grant additional access to other roles that reference the same permission set."
     ],
-    "skill_title": "Verify role-based permissions match expected access levels"
+    "skill_title": "Verify role-based permissions match expected access levels",
+    "hook_worthy": true,
+    "hook_rationale": "Edits to permission/role definition files can be detected by glob, and a hook can flag changes to restricted roles (e.g., grep for limitedAdmin) \u2014 high-severity security concern.",
+    "hook_event": "PostToolUse",
+    "hook_tool": "Edit",
+    "hook_glob": "**/*{Permission,Role,Access}*.scala",
+    "hook_check": "grep -qiE 'permissionService|Roles\\.|role\\s*=' \"$1\" && ! grep -qiE 'Denied|Forbidden|notPermitted' \"$1\"",
+    "hook_message": "Permission/role file modified without negative access assertions. Ensure restricted roles (e.g., limitedAdmin) are explicitly tested for Denied access on actions outside their scope\u2014not just happy-path Permitted checks. See PRs #42394, #42264.",
+    "hook_blocking": false
   },
   {
     "id": "verify-backward-compatibility-of-data-format-changes",
@@ -61278,7 +61699,7 @@
     "status": "active",
     "mode_rationale": "Single verification rule for format changes",
     "skill_worthy": true,
-    "skill_rationale": "Requires a multi-step workflow: identify persisted data formats, test deserialization of old data, and plan migration if needed.",
+    "skill_rationale": "Engineers need a decision tree covering migration strategies, dual-read compatibility, and verification steps for ensuring persisted data remains interpretable after format changes.",
     "steps": [
       "Identify all locations where the affected data format is persisted (database fields, localStorage, cached API responses, user-generated content).",
       "Write a migration or adapter that can read both the old and new format, defaulting to graceful fallback for unrecognized shapes.",
@@ -61287,7 +61708,9 @@
       "If the old format cannot be supported indefinitely, implement a background migration to convert persisted data and log any records that fail conversion.",
       "Document the format change in a migration note so future developers understand why both shapes may exist in production data."
     ],
-    "skill_title": "Verify backward compatibility when changing data formats"
+    "skill_title": "Verify backward compatibility when changing data formats",
+    "hook_worthy": false,
+    "hook_rationale": "Detecting whether a serialization format change breaks existing persisted data requires understanding the data lifecycle, not a mechanical file scan."
   },
   {
     "id": "verify-color-token-semantics",
@@ -61329,12 +61752,12 @@
       "build",
       ".circleci"
     ],
-    "mode": "active",
+    "mode": "hook",
     "confidence": 0.4,
     "review_count": 4,
     "status": "active",
     "skill_worthy": true,
-    "skill_rationale": "Requires a multi-step search workflow across multiple repositories and CI pipelines to find all usages before removal.",
+    "skill_rationale": "Engineers need a multi-step workflow: searching across repos, checking CI pipelines, and verifying no downstream consumers depend on the resource being removed.",
     "steps": [
       "Identify all repositories that depend on the resource by searching the GitHub org with `gh search code` or `grep.app` for the variable name, script path, or resource identifier.",
       "Check CI/CD pipeline definitions (Jenkinsfiles, GitHub Actions, GitLab CI, Docker Compose files) across consuming repos for references to the resource.",
@@ -61343,7 +61766,16 @@
       "Add the removal to a migration checklist or changelog entry so downstream teams are aware of the change.",
       "After removal, monitor CI pipelines and deployment logs for the next release cycle to catch any missed references."
     ],
-    "skill_title": "Audit cross-repo usages before removing shared resources"
+    "skill_title": "Audit cross-repo usages before removing shared resources",
+    "hook_worthy": true,
+    "hook_rationale": "Deletions of env vars, scripts, or shared resources in build/.circleci files can be detected via diff, and a hook can warn about potential cross-repo breakage \u2014 high severity.",
+    "mode_rationale": "Deletions of env vars, scripts, or shared resources in build/.circleci files can be detected via diff, and a hook can warn about potential cross-repo breakage \u2014 high severity.",
+    "hook_event": "PostToolUse",
+    "hook_tool": "Edit",
+    "hook_glob": "**/{*.sbt,project/*.scala,.circleci/*.yml}",
+    "hook_check": "git diff -- \"$1\" | grep -qE '^\\-.*\\b[A-Z][A-Z0-9]*(_[A-Z0-9]+){2,}\\b'",
+    "hook_message": "Detected removal of an environment variable or shared resource. Before removing, run `gh search code '<VAR_NAME>' --owner cerebrotech` to check for cross-repo usages in CI pipelines, deploy scripts, and terraform configs. File PRs to migrate consumers before removing from this repo.",
+    "hook_blocking": false
   },
   {
     "id": "verify-test-selectors-before-removal",
@@ -61360,11 +61792,21 @@
     "modules": [
       "frontend"
     ],
-    "mode": "active",
+    "mode": "hook",
     "confidence": 0.2,
     "review_count": 2,
     "status": "active",
-    "mode_rationale": "Single practice: check for dependent tests before removing selectors"
+    "mode_rationale": "Removal of data-test attributes can be detected by diffing for deleted data-test strings, and a hook can grep the e2e test suite for references \u2014 preventing broken test suites.",
+    "skill_worthy": false,
+    "skill_rationale": "The rule is a single directive \u2014 search for data-test attribute usage before removing \u2014 that doesn't require multi-step guidance.",
+    "hook_worthy": true,
+    "hook_rationale": "Removal of data-test attributes can be detected by diffing for deleted data-test strings, and a hook can grep the e2e test suite for references \u2014 preventing broken test suites.",
+    "hook_event": "PostToolUse",
+    "hook_tool": "Edit",
+    "hook_glob": "**/*.{tsx,jsx}",
+    "hook_check": "git diff -- \"$1\" | grep -q '^-.*data-test'",
+    "hook_message": "Removed data-test attribute(s) detected. Before proceeding, verify that no existing E2E or integration tests (Cypress, Playwright, etc.) depend on the removed selectors. Search test files for the selector value to confirm safe removal.",
+    "hook_blocking": false
   },
   {
     "id": "validation-in-controller-layer",
@@ -61527,13 +61969,13 @@
     "modules": [
       "e2e-tests"
     ],
-    "mode": "active",
+    "mode": "hook",
     "confidence": 0.2,
     "review_count": 2,
     "status": "active",
-    "mode_rationale": "Simple reminder to check downstream consumers of shared fixtures",
-    "skill_worthy": true,
-    "skill_rationale": "Requires a multi-step workflow to discover all dependent tests, verify them, and handle breakage across test suites.",
+    "mode_rationale": "Edits to shared test fixture files can be detected by glob, and a hook can grep for imports of the modified fixture to list affected tests \u2014 preventing silent test breakage.",
+    "skill_worthy": false,
+    "skill_rationale": "The rule is a single directive \u2014 check all tests that import the modified fixture \u2014 that doesn't require multi-step guidance.",
     "steps": [
       "Identify the shared test file you are modifying and grep the codebase for all imports, references, or file reads that depend on it.",
       "List every test suite that consumes the shared file and note which specific fields, keys, or behaviors each consumer relies on.",
@@ -61542,7 +61984,15 @@
       "If any downstream test fails, update that test to accommodate the change or adjust your modification to remain backward-compatible.",
       "Add a comment at the top of the shared file listing its known consumers so future editors know what to verify."
     ],
-    "skill_title": "Verify all consumers before modifying shared test files"
+    "skill_title": "Verify all consumers before modifying shared test files",
+    "hook_worthy": true,
+    "hook_rationale": "Edits to shared test fixture files can be detected by glob, and a hook can grep for imports of the modified fixture to list affected tests \u2014 preventing silent test breakage.",
+    "hook_event": "PostToolUse",
+    "hook_tool": "Edit",
+    "hook_glob": "**/e2e-tests/**/fixtures/**",
+    "hook_check": "name=$(basename \"$1\") && grep -rl \"$name\" \"$(dirname \"$1\")/..\" --include=\"*.scala\" --include=\"*.ts\" 2>/dev/null | grep -qv \"$1\"",
+    "hook_message": "Shared fixture modified: other test files reference this fixture. Run `grep -r '$(basename \"$1\")' e2e-tests/src/` to find all consumers, then run their tests to verify they are unaffected.",
+    "hook_blocking": false
   },
   {
     "id": "verify-all-related-variables-used",
@@ -61604,7 +62054,7 @@
     "status": "active",
     "mode_rationale": "Single accessibility check when spreading props",
     "skill_worthy": true,
-    "skill_rationale": "Needs concrete code examples showing the pitfall of spreading aria attributes to multiple elements and the correct fix pattern.",
+    "skill_rationale": "Engineers need examples showing how spread props misroute aria-label across multiple elements, and a decision tree for when to destructure vs spread accessibility attributes.",
     "steps": [
       "Identify all elements in the component that receive spread props.",
       "Check whether any accessibility attributes (aria-label, aria-describedby, role, etc.) are included in the spread props by reviewing the component's call sites.",
@@ -61612,7 +62062,9 @@
       "Destructure accessibility-related props explicitly and apply them only to the intended target element instead of spreading them to all elements.",
       "Test with a screen reader or accessibility audit tool to confirm each element announces correctly."
     ],
-    "skill_title": "Destructure accessibility props instead of spreading them to multiple elements"
+    "skill_title": "Destructure accessibility props instead of spreading them to multiple elements",
+    "hook_worthy": false,
+    "hook_rationale": "Detecting whether spread props incorrectly distribute aria attributes requires understanding component structure and render output, not a simple regex."
   },
   {
     "id": "verify-auth-checks-on-new-service-endpoints",
@@ -61628,13 +62080,13 @@
     "modules": [
       "projects"
     ],
-    "mode": "active",
+    "mode": "hook",
     "confidence": 0.2,
     "review_count": 2,
     "status": "active",
-    "mode_rationale": "Single rule: verify auth checks are in place on new endpoints",
+    "mode_rationale": "New endpoint/route definitions can be detected by grep for route registration patterns, and a hook can flag endpoints missing auth decorators/middleware \u2014 critical security check.",
     "skill_worthy": true,
-    "skill_rationale": "Benefits from a checklist/decision tree of authentication and authorization checks to verify for each new endpoint.",
+    "skill_rationale": "Engineers need a checklist of authentication/authorization patterns to verify when adding endpoints, with code examples showing correct guard placement.",
     "steps": [
       "Identify the authentication mechanism used by sibling endpoints in the same controller or service (e.g., `authenticatedAction`, `AuthenticatedRequest`, or middleware filters) and apply the same mechanism to your new endpoint.",
       "Verify that authorization checks enforce the correct permission level \u2014 confirm the user has access to the specific resource (project, workspace, model) being acted upon, not just that they are authenticated.",
@@ -61643,7 +62095,16 @@
       "Add or verify integration tests that assert 401 for unauthenticated requests and 403 for authenticated but unauthorized requests to the new endpoint.",
       "Review whether the endpoint exposes data or actions that require a more restrictive permission scope than the endpoint you copied from \u2014 don't assume the original's auth level is sufficient."
     ],
-    "skill_title": "Verify authentication and authorization on every new endpoint"
+    "skill_title": "Verify authentication and authorization on every new endpoint",
+    "hook_worthy": true,
+    "hook_rationale": "New endpoint/route definitions can be detected by grep for route registration patterns, and a hook can flag endpoints missing auth decorators/middleware \u2014 critical security check.",
+    "hook_event": "PreToolUse",
+    "hook_tool": "Edit",
+    "hook_glob": "**/projects/**/*Controller*.scala",
+    "hook_check": "grep -nE '=\\s*Action(\\.|\\s*\\{)' \"$1\" | grep -vq 'authAction\\|AuthenticatedAction'",
+    "hook_message": "Unauthenticated endpoint detected: found Action.async or Action { without authAction/AuthenticatedAction wrapper. New service endpoints must use authAction.async and verify authorization (e.g., projectAuth.withProjectRole) before serving data. See PR #41485.",
+    "hook_blocking": true,
+    "hook_validation_rationale": "Missing auth wrappers on new endpoints is a security gate that should prevent the unprotected code from being written, not block after an unauthenticated endpoint already exists."
   },
   {
     "id": "verify-auth-enforcement-at-every-layer",
@@ -61741,13 +62202,13 @@
     "modules": [
       "jobs"
     ],
-    "mode": "active",
+    "mode": "ambient",
     "confidence": 0.2,
     "review_count": 2,
     "status": "active",
-    "mode_rationale": "Single guideline about checking downstream client tolerance",
-    "skill_worthy": true,
-    "skill_rationale": "Requires steps to identify all downstream clients, verify their tolerance of extra fields, and test end-to-end.",
+    "mode_rationale": "The rule is a single directive \u2014 check downstream clients tolerate extra fields \u2014 that doesn't require multi-step guidance.",
+    "skill_worthy": false,
+    "skill_rationale": "The rule is a single directive \u2014 check downstream clients tolerate extra fields \u2014 that doesn't require multi-step guidance.",
     "steps": [
       "Identify every downstream consumer of the DTO \u2014 including other microservices, frontend clients, CLI tools, and external API users.",
       "Verify each consumer's JSON deserialization is configured to ignore unknown fields (e.g., Jackson's DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES is disabled, or the equivalent in the client's language).",
@@ -61756,7 +62217,9 @@
       "Write an integration test that serializes the updated DTO and deserializes it with the previous schema to confirm forward compatibility.",
       "Document the new field in the API changelog or migration notes so downstream teams are aware of the change."
     ],
-    "skill_title": "Verify backward compatibility on additive DTO changes"
+    "skill_title": "Verify backward compatibility on additive DTO changes",
+    "hook_worthy": false,
+    "hook_rationale": "Determining whether downstream clients are tolerant of extra fields requires knowledge of client deserialization behavior, not a mechanical file check."
   },
   {
     "id": "verify-backward-compatibility-on-config-changes",
@@ -61818,13 +62281,13 @@
       "jobs",
       "apps"
     ],
-    "mode": "active",
+    "mode": "hook",
     "confidence": 0.3,
     "review_count": 3,
     "status": "active",
-    "mode_rationale": "Single convention: verify no clients depend on removed fields",
+    "mode_rationale": "Field removals from API/DTO files can be detected by diffing for deleted fields in known model files, and a hook can warn about potential client breakage \u2014 high severity.",
     "skill_worthy": true,
-    "skill_rationale": "Requires a multi-step workflow to discover all known clients across services and verify none depend on the removed field.",
+    "skill_rationale": "Engineers need a deprecation workflow: identifying all clients, checking for field usage, planning phased removal, and examples of backward-compatible migration strategies.",
     "steps": [
       "Grep the entire codebase for all references to the field name across services, clients, and tests to build a complete dependency map.",
       "Check serialization and deserialization paths \u2014 fields may be read indirectly via JSON/Protobuf parsing even if not explicitly referenced in code.",
@@ -61833,7 +62296,15 @@
       "Add a backwards-compatibility test that deserializes a payload containing the old field and confirms the system handles its absence gracefully.",
       "Update API documentation and changelog to communicate the breaking change before merging."
     ],
-    "skill_title": "Verify all consumers before removing an API field"
+    "skill_title": "Verify all consumers before removing an API field",
+    "hook_worthy": true,
+    "hook_rationale": "Field removals from API/DTO files can be detected by diffing for deleted fields in known model files, and a hook can warn about potential client breakage \u2014 high severity.",
+    "hook_event": "PostToolUse",
+    "hook_tool": "Edit",
+    "hook_glob": "**/{jobs,apps}/**/*.{scala,ts,tsx}",
+    "hook_check": "git diff -- \"$1\" | grep -v '^---' | grep -qE '^-\\s+\\w+\\s*[:=]'",
+    "hook_message": "Field removal detected in an API/service interface. Verify all known clients (frontend, other services) do not depend on this field before merging. Consider staged removal: deprecate first with @deprecated and Optional/nullable wrapper, confirm zero consumers, then remove in a later release. See PRs #46586, #47262 for context.",
+    "hook_blocking": false
   },
   {
     "id": "verify-behavior-before-consolidating-exception-cases",
@@ -61956,7 +62427,7 @@
     "status": "active",
     "mode_rationale": "Consistency convention: apply changes across all related entity types",
     "skill_worthy": true,
-    "skill_rationale": "Benefits from a decision tree mapping related entity types and a checklist to verify consistent changes across them.",
+    "skill_rationale": "Engineers need a checklist of related entity types to audit when modifying authorization or config for one type, with examples of common cross-entity inconsistencies.",
     "steps": [
       "Identify all entity types that share the same trait, base class, or authorization interface as the entity you're modifying.",
       "Search the codebase for parallel implementations (e.g., if you changed ProjectAuthorizationService, check for AppAuthorizationService, ModelAuthorizationService, LauncherAuthorizationService).",
@@ -61965,7 +62436,9 @@
       "Write integration tests that exercise the modified behavior across all affected entity types, not just the one you changed.",
       "Review the PR description to explicitly call out which entity types were updated and which were intentionally excluded, with justification."
     ],
-    "skill_title": "Verify changes are applied consistently across all related entity types"
+    "skill_title": "Verify changes are applied consistently across all related entity types",
+    "hook_worthy": false,
+    "hook_rationale": "Determining which other entity types need matching changes is a judgment call requiring domain knowledge about entity relationships, not a mechanical check."
   },
   {
     "id": "verify-code-generated-enum-casing-matches-api",
@@ -62368,11 +62841,15 @@
       "environments",
       "apps"
     ],
-    "mode": "active",
+    "mode": "ambient",
     "confidence": 0.2,
     "review_count": 2,
     "status": "active",
-    "mode_rationale": "Single convention: verify upstream invariants still hold when modifying logic"
+    "mode_rationale": "The rule is a general defensive programming principle \u2014 verify upstream invariants still hold \u2014 that doesn't lend itself to a specific step-by-step workflow.",
+    "skill_worthy": false,
+    "skill_rationale": "The rule is a general defensive programming principle \u2014 verify upstream invariants still hold \u2014 that doesn't lend itself to a specific step-by-step workflow.",
+    "hook_worthy": false,
+    "hook_rationale": "Detecting whether upstream invariants still hold after a logic change requires deep semantic understanding of the code's contracts, not a file scan."
   },
   {
     "id": "verify-legacy-code-paths",
@@ -62448,12 +62925,12 @@
     "modules": [
       "system-tests"
     ],
-    "mode": "active",
+    "mode": "ambient",
     "confidence": 0.2,
     "review_count": 2,
     "status": "active",
-    "skill_worthy": true,
-    "skill_rationale": "Needs a code example showing how loggers silently fail in nested functions and the correct pattern to ensure output.",
+    "skill_worthy": false,
+    "skill_rationale": "The rule is a single directive \u2014 ensure the logger is in scope and producing output in nested functions \u2014 that doesn't require multi-step guidance.",
     "steps": [
       "Identify whether the logger instance is declared in the outer scope or the nested function's own scope.",
       "Confirm the nested function has access to the logger via parameter passing, class membership, or closure capture \u2014 not by assuming implicit availability.",
@@ -62461,7 +62938,10 @@
       "Check that the logger's name or context (e.g., class name, MDC values) is correct for the nested scope, not inherited incorrectly from the parent.",
       "Run the relevant system tests with log output enabled and grep for the expected log lines to confirm they are actually emitted."
     ],
-    "skill_title": "Verify logger scope and output in nested functions"
+    "skill_title": "Verify logger scope and output in nested functions",
+    "hook_worthy": false,
+    "hook_rationale": "Detecting whether a logger silently fails in nested functions requires understanding scoping and runtime behavior, not a simple grep.",
+    "mode_rationale": "The rule is a single directive \u2014 ensure the logger is in scope and producing output in nested functions \u2014 that doesn't require multi-step guidance."
   },
   {
     "id": "verify-logging-does-not-leak-secrets",
@@ -62515,7 +62995,7 @@
     "status": "active",
     "mode_rationale": "Single testing convention to verify mock call arguments",
     "skill_worthy": true,
-    "skill_rationale": "Needs code examples showing mock verification patterns (verify calls with expected arguments) vs. the anti-pattern of unverified mocks.",
+    "skill_rationale": "Engineers need examples showing mock.verify() patterns, the difference between stub-only vs behavior-verifying mocks, and when to assert call arguments.",
     "steps": [
       "Identify every mocked dependency that represents a meaningful side effect or collaboration (e.g., repository saves, API calls, event publishing).",
       "After exercising the system under test, add explicit verification that each critical mock was called the expected number of times.",
@@ -62523,7 +63003,9 @@
       "For mocks that should NOT be called in certain branches, add `never()` or equivalent zero-invocation verification.",
       "Review the test: temporarily remove the production code that calls the mock and confirm the test fails \u2014 if it still passes, the verification is missing or ineffective."
     ],
-    "skill_title": "Verify mock interactions with argument assertions in tests"
+    "skill_title": "Verify mock interactions with argument assertions in tests",
+    "hook_worthy": false,
+    "hook_rationale": "Determining whether a mock is only preventing crashes vs actually validating behavior requires understanding test intent, not a mechanical check."
   },
   {
     "id": "verify-new-fields-with-tests",
@@ -62585,7 +63067,7 @@
     "status": "active",
     "mode_rationale": "Single-sentence test isolation convention",
     "skill_worthy": true,
-    "skill_rationale": "Benefits from concrete examples of isolation strategies for shared configuration like feature flags in parallel test environments.",
+    "skill_rationale": "Engineers need a workflow for identifying shared state in tests, scoping configuration changes, and patterns for test isolation with concrete examples of fixtures and teardown.",
     "steps": [
       "Identify all shared state the test touches (feature flags, system settings, database rows, environment variables).",
       "Scope each mutation to the narrowest possible context \u2014 prefer per-test or per-suite fixtures over global changes.",
@@ -62594,7 +63076,9 @@
       "If the configuration API doesn't support scoped overrides, acquire a lock or use a dedicated test organization/project to prevent cross-test interference.",
       "Run the test suite with parallel execution enabled locally and verify no flaky failures emerge from state leakage."
     ],
-    "skill_title": "Scope shared configuration mutations to prevent parallel test interference"
+    "skill_title": "Scope shared configuration mutations to prevent parallel test interference",
+    "hook_worthy": false,
+    "hook_rationale": "Detecting whether test configuration changes are properly scoped for parallel execution requires understanding test lifecycle and shared state, not a file-level check."
   },
   {
     "id": "verify-parameters-reach-external-calls",
@@ -62696,13 +63180,13 @@
       "frontend",
       "apps"
     ],
-    "mode": "active",
+    "mode": "hook",
     "confidence": 0.5,
     "review_count": 5,
     "status": "active",
-    "mode_rationale": "Single-sentence caution about checking consumers before removing props",
-    "skill_worthy": true,
-    "skill_rationale": "Requires a step-by-step audit process to find all consumers, assess impact, and coordinate timing before removing shared props.",
+    "mode_rationale": "Prop removals from shared/core UI component files can be detected by diffing for deleted props, and a hook can grep for those props across consumers \u2014 preventing breakage.",
+    "skill_worthy": false,
+    "skill_rationale": "The rule is a single directive \u2014 grep for prop usage across consumers before removing \u2014 that doesn't require multi-step guidance.",
     "steps": [
       "Run a codebase-wide search (grep/ripgrep) for all imports and usages of the component you're changing to build a complete consumer list.",
       "For each consumer, check whether the prop you're removing or renaming is actually used \u2014 don't rely on TypeScript errors alone, as dynamic prop spreading and wrapper components can hide dependencies.",
@@ -62711,7 +63195,15 @@
       "Coordinate with other teams whose code depends on the prop \u2014 open migration PRs or file tickets before landing the breaking change.",
       "Add or update unit tests to confirm that existing consumers still render correctly after your change."
     ],
-    "skill_title": "Audit all consumers before removing shared component props"
+    "skill_title": "Audit all consumers before removing shared component props",
+    "hook_worthy": true,
+    "hook_rationale": "Prop removals from shared/core UI component files can be detected by diffing for deleted props, and a hook can grep for those props across consumers \u2014 preventing breakage.",
+    "hook_event": "PostToolUse",
+    "hook_tool": "Edit",
+    "hook_glob": "**/shared/**/*.tsx",
+    "hook_check": "git diff -- \"$1\" | grep -qE '^\\-\\s+\\w+\\??\\s*:'",
+    "hook_message": "Shared component prop removal detected. Before removing props from shared/core components, audit all consumers: grep -r 'propName' apps/ workspaces/ frontend/. Add a @deprecated JSDoc tag with migration path and timeline instead of removing outright. See PRs #42070, #40370, #44127, #46041.",
+    "hook_blocking": false
   },
   {
     "id": "verify-storybook-stories-after-refactoring",

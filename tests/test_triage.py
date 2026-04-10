@@ -140,6 +140,99 @@ class TestTriageDryRun:
         assert pf.read_text() == original
 
 
+class TestTriageHookClassification:
+    def test_hook_worthy_sets_mode_hook(self, tmp_path):
+        """Patterns flagged as hook_worthy get mode='hook'."""
+        patterns = [make_test_pattern("security-auth-check")]
+        pf = tmp_path / "patterns.json"
+        pf.write_text(json.dumps(patterns))
+
+        def mock_claude(prompt, timeout=300):
+            return json.dumps([{
+                "id": "security-auth-check",
+                "skill_worthy": True,
+                "skill_rationale": "multi-step auth workflow",
+                "hook_worthy": True,
+                "hook_rationale": "mechanical grep for auth wrapper, security-critical",
+            }])
+
+        with patch("extract.call_claude", side_effect=mock_claude):
+            args = type("Args", (), {"input": str(pf), "dry_run": False, "force": False})()
+            cmd_triage(args)
+
+        result = json.loads(pf.read_text())
+        p = result[0]
+        assert p["mode"] == "hook"
+        assert p["hook_worthy"] is True
+        assert p["hook_rationale"] == "mechanical grep for auth wrapper, security-critical"
+
+    def test_hook_worthy_overrides_skill_worthy(self, tmp_path):
+        """When both hook_worthy and skill_worthy are true, mode is 'hook' not 'active'."""
+        patterns = [make_test_pattern("dual-worthy")]
+        pf = tmp_path / "patterns.json"
+        pf.write_text(json.dumps(patterns))
+
+        def mock_claude(prompt, timeout=300):
+            return json.dumps([{
+                "id": "dual-worthy",
+                "skill_worthy": True,
+                "skill_rationale": "needs steps",
+                "hook_worthy": True,
+                "hook_rationale": "automatable security check",
+            }])
+
+        with patch("extract.call_claude", side_effect=mock_claude):
+            args = type("Args", (), {"input": str(pf), "dry_run": False, "force": False})()
+            cmd_triage(args)
+
+        result = json.loads(pf.read_text())
+        assert result[0]["mode"] == "hook"
+
+    def test_not_hook_worthy_stays_active(self, tmp_path):
+        """Patterns with hook_worthy=false and skill_worthy=true stay active."""
+        patterns = [make_test_pattern("skill-only")]
+        pf = tmp_path / "patterns.json"
+        pf.write_text(json.dumps(patterns))
+
+        def mock_claude(prompt, timeout=300):
+            return json.dumps([{
+                "id": "skill-only",
+                "skill_worthy": True,
+                "skill_rationale": "needs guidance",
+                "hook_worthy": False,
+                "hook_rationale": "requires judgment",
+            }])
+
+        with patch("extract.call_claude", side_effect=mock_claude):
+            args = type("Args", (), {"input": str(pf), "dry_run": False, "force": False})()
+            cmd_triage(args)
+
+        result = json.loads(pf.read_text())
+        assert result[0]["mode"] == "active"
+
+    def test_hook_worthy_missing_defaults_false(self, tmp_path):
+        """When Claude response omits hook_worthy, it defaults to false."""
+        patterns = [make_test_pattern("old-format")]
+        pf = tmp_path / "patterns.json"
+        pf.write_text(json.dumps(patterns))
+
+        def mock_claude(prompt, timeout=300):
+            # Simulate old-format response without hook_worthy
+            return json.dumps([{
+                "id": "old-format",
+                "skill_worthy": True,
+                "skill_rationale": "needs steps",
+            }])
+
+        with patch("extract.call_claude", side_effect=mock_claude):
+            args = type("Args", (), {"input": str(pf), "dry_run": False, "force": False})()
+            cmd_triage(args)
+
+        result = json.loads(pf.read_text())
+        assert result[0]["mode"] == "active"
+        assert result[0]["hook_worthy"] is False
+
+
 class TestTriageErrorHandling:
     def test_handles_malformed_json(self, tmp_path):
         """Malformed Claude response doesn't crash; batch is skipped."""

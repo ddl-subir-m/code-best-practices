@@ -1,11 +1,11 @@
-"""Tests for extract.py enrich subcommand."""
+"""Tests for extract.py enrich and enrich-hooks subcommands."""
 
 import json
 from unittest.mock import patch
 
 import pytest
 
-from extract import cmd_enrich, enrich_single_pattern
+from extract import cmd_enrich, cmd_enrich_hooks, cmd_validate_hooks, enrich_single_pattern, enrich_single_hook
 
 
 def make_test_pattern(pid, **overrides):
@@ -126,3 +126,218 @@ class TestEnrichErrorHandling:
         # Failed enrichment falls back to ambient
         assert p["mode"] == "ambient"
         assert "failed" in p.get("mode_rationale", "").lower()
+
+
+# ---------------------------------------------------------------------------
+# Hook enrichment tests
+# ---------------------------------------------------------------------------
+
+MOCK_HOOK_ENRICHMENT = {
+    "hook_event": "PostToolUse",
+    "hook_tool": "Edit",
+    "hook_glob": "**/shared/**",
+    "hook_check": 'grep -rn "import.*$(basename $FILE)" --include="*.tsx" --include="*.ts" .',
+    "hook_message": "Shared file modified. Check all consumers for compatibility.",
+    "hook_blocking": False,
+}
+
+
+class TestEnrichHooksFiltering:
+    def test_filters_hook_mode_only(self, tmp_path):
+        """Only mode='hook' patterns get hook-enriched."""
+        patterns = [
+            make_test_pattern("hook-pattern", mode="hook"),
+            make_test_pattern("active-pattern", mode="active"),
+            make_test_pattern("ambient-pattern", mode="ambient"),
+        ]
+        pf = tmp_path / "patterns.json"
+        pf.write_text(json.dumps(patterns))
+
+        enrich_calls = []
+
+        def mock_claude(prompt, timeout=120):
+            enrich_calls.append(prompt)
+            return json.dumps(MOCK_HOOK_ENRICHMENT)
+
+        with patch("extract.call_claude", side_effect=mock_claude):
+            args = type("Args", (), {"input": str(pf), "force": False, "workers": 1})()
+            cmd_enrich_hooks(args)
+
+        assert len(enrich_calls) == 1
+        assert "hook-pattern" in enrich_calls[0]
+
+    def test_skips_already_enriched(self, tmp_path):
+        """Hook patterns with hook_event already set are skipped."""
+        patterns = [make_test_pattern(
+            "already-done", mode="hook", hook_event="PostToolUse",
+        )]
+        pf = tmp_path / "patterns.json"
+        pf.write_text(json.dumps(patterns))
+
+        enrich_calls = []
+
+        def mock_claude(prompt, timeout=120):
+            enrich_calls.append(prompt)
+            return json.dumps(MOCK_HOOK_ENRICHMENT)
+
+        with patch("extract.call_claude", side_effect=mock_claude):
+            args = type("Args", (), {"input": str(pf), "force": False, "workers": 1})()
+            cmd_enrich_hooks(args)
+
+        assert len(enrich_calls) == 0
+
+
+class TestEnrichHooksWritesFields:
+    def test_writes_all_hook_fields(self, tmp_path):
+        """Successful hook enrichment writes all 6 hook fields."""
+        patterns = [make_test_pattern("consumer-audit", mode="hook")]
+        pf = tmp_path / "patterns.json"
+        pf.write_text(json.dumps(patterns))
+
+        def mock_claude(prompt, timeout=120):
+            return json.dumps(MOCK_HOOK_ENRICHMENT)
+
+        with patch("extract.call_claude", side_effect=mock_claude):
+            args = type("Args", (), {"input": str(pf), "force": False, "workers": 1})()
+            cmd_enrich_hooks(args)
+
+        result = json.loads(pf.read_text())
+        p = result[0]
+        assert p["hook_event"] == "PostToolUse"
+        assert p["hook_tool"] == "Edit"
+        assert p["hook_glob"] == "**/shared/**"
+        assert "grep" in p["hook_check"]
+        assert "Shared file" in p["hook_message"]
+        assert p["hook_blocking"] is False
+
+    def test_pretooluse_blocking_hook(self, tmp_path):
+        """PreToolUse hooks with blocking=true are written correctly."""
+        patterns = [make_test_pattern("auth-check", mode="hook")]
+        pf = tmp_path / "patterns.json"
+        pf.write_text(json.dumps(patterns))
+
+        hook_response = {
+            "hook_event": "PreToolUse",
+            "hook_tool": "Edit",
+            "hook_glob": "**/*Controller*.scala",
+            "hook_check": 'grep -L "authAction\\|authenticatedAction" "$FILE"',
+            "hook_message": "Endpoint missing auth wrapper. Add authAction or authenticatedAction.",
+            "hook_blocking": True,
+        }
+
+        def mock_claude(prompt, timeout=120):
+            return json.dumps(hook_response)
+
+        with patch("extract.call_claude", side_effect=mock_claude):
+            args = type("Args", (), {"input": str(pf), "force": False, "workers": 1})()
+            cmd_enrich_hooks(args)
+
+        result = json.loads(pf.read_text())
+        p = result[0]
+        assert p["hook_event"] == "PreToolUse"
+        assert p["hook_blocking"] is True
+
+
+class TestEnrichHooksErrorHandling:
+    def test_failed_enrichment_falls_back_to_active(self, tmp_path):
+        """Failed hook enrichment falls back to mode='active'."""
+        patterns = [make_test_pattern("broken-hook", mode="hook")]
+        pf = tmp_path / "patterns.json"
+        pf.write_text(json.dumps(patterns))
+
+        def mock_claude(prompt, timeout=120):
+            return "not valid json"
+
+        with patch("extract.call_claude", side_effect=mock_claude):
+            args = type("Args", (), {"input": str(pf), "force": False, "workers": 1})()
+            cmd_enrich_hooks(args)
+
+        result = json.loads(pf.read_text())
+        p = result[0]
+        assert p["mode"] == "active"
+        assert "failed" in p.get("mode_rationale", "").lower()
+
+
+# ---------------------------------------------------------------------------
+# Validate-hooks tests
+# ---------------------------------------------------------------------------
+
+class TestValidateHooksCorrections:
+    def test_corrects_blocking_posttooluse(self, tmp_path):
+        """Blocking PostToolUse hooks get corrected to PreToolUse."""
+        patterns = [make_test_pattern(
+            "bad-combo", mode="hook",
+            hook_event="PostToolUse", hook_blocking=True,
+            hook_check='grep -q "secret" "$FILE"',
+            hook_glob="**/*.scala",
+            hook_message="Found secret",
+        )]
+        pf = tmp_path / "patterns.json"
+        pf.write_text(json.dumps(patterns))
+
+        def mock_claude(prompt, timeout=300):
+            return json.dumps([{
+                "id": "bad-combo",
+                "hook_event": "PreToolUse",
+                "hook_blocking": True,
+                "rationale": "Security check should block before edit, not after",
+            }])
+
+        with patch("extract.call_claude", side_effect=mock_claude):
+            args = type("Args", (), {"input": str(pf), "dry_run": False})()
+            cmd_validate_hooks(args)
+
+        result = json.loads(pf.read_text())
+        p = result[0]
+        assert p["hook_event"] == "PreToolUse"
+        assert p["hook_blocking"] is True
+        assert "before edit" in p.get("hook_validation_rationale", "").lower()
+
+    def test_no_corrections_needed(self, tmp_path):
+        """When all hooks are correct, no changes are made."""
+        patterns = [make_test_pattern(
+            "good-hook", mode="hook",
+            hook_event="PostToolUse", hook_blocking=False,
+            hook_check='grep -q "test" "$FILE"',
+            hook_glob="**/*.tsx",
+            hook_message="Found test",
+        )]
+        pf = tmp_path / "patterns.json"
+        original = json.dumps(patterns)
+        pf.write_text(original)
+
+        def mock_claude(prompt, timeout=300):
+            return "[]"
+
+        with patch("extract.call_claude", side_effect=mock_claude):
+            args = type("Args", (), {"input": str(pf), "dry_run": False})()
+            cmd_validate_hooks(args)
+
+        assert pf.read_text() == original
+
+    def test_dry_run_no_write(self, tmp_path):
+        """--dry-run prints corrections without modifying patterns.json."""
+        patterns = [make_test_pattern(
+            "dry-test", mode="hook",
+            hook_event="PostToolUse", hook_blocking=True,
+            hook_check='grep -q "x" "$FILE"',
+            hook_glob="**/*.scala",
+            hook_message="Found x",
+        )]
+        pf = tmp_path / "patterns.json"
+        original = json.dumps(patterns)
+        pf.write_text(original)
+
+        def mock_claude(prompt, timeout=300):
+            return json.dumps([{
+                "id": "dry-test",
+                "hook_event": "PreToolUse",
+                "hook_blocking": True,
+                "rationale": "should be pre",
+            }])
+
+        with patch("extract.call_claude", side_effect=mock_claude):
+            args = type("Args", (), {"input": str(pf), "dry_run": True})()
+            cmd_validate_hooks(args)
+
+        assert pf.read_text() == original

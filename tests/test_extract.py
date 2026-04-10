@@ -47,9 +47,9 @@ class TestPatternsJsonSchema:
             )
 
     def test_mode_values(self, patterns):
-        """Mode is either 'ambient' or 'active'."""
+        """Mode is 'ambient', 'active', or 'hook'."""
         for p in patterns:
-            assert p["mode"] in ("ambient", "active"), (
+            assert p["mode"] in ("ambient", "active", "hook"), (
                 f"Pattern '{p['id']}' has invalid mode: {p['mode']}"
             )
 

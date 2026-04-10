@@ -1,12 +1,15 @@
 """Tests for compile.py — pattern compilation into Claude rules, skills, and Cursor rules."""
 
 import json
+from pathlib import Path
+
 import pytest
 
 from compile import (
     generate_claude_rules,
     generate_claude_skills,
     generate_cursor_mdc,
+    generate_hooks,
     load_patterns,
 )
 
@@ -346,3 +349,134 @@ class TestEnrichedSkillGeneration:
         skill_dirs = [d for d in skills_dir.iterdir() if d.is_dir()]
         # Both should survive despite sharing "add-tests-for" prefix
         assert len(skill_dirs) == 2
+
+
+# ---------------------------------------------------------------------------
+# 6. Hook generation
+# ---------------------------------------------------------------------------
+
+def _make_hook_pattern(pid, **overrides):
+    """Create a pattern with hook enrichment fields for testing."""
+    p = {
+        "id": pid,
+        "rule": f"Rule for {pid}",
+        "trigger": "",
+        "rationale": "",
+        "good_example": None,
+        "bad_example": None,
+        "source_prs": ["#100"],
+        "scope": "security",
+        "modules": ["server"],
+        "mode": "hook",
+        "confidence": 0.5,
+        "review_count": 3,
+        "status": "active",
+        "hook_event": "PostToolUse",
+        "hook_tool": "Edit",
+        "hook_glob": "**/shared/**",
+        "hook_check": 'grep -rn "import" "$FILE"',
+        "hook_message": "Check consumers of this shared file.",
+        "hook_blocking": False,
+    }
+    p.update(overrides)
+    return p
+
+
+class TestGenerateHooks:
+    def test_generates_hook_scripts(self, tmp_path):
+        """Hook patterns produce executable .sh scripts."""
+        patterns = [_make_hook_pattern("consumer-audit")]
+
+        scripts, settings_path = generate_hooks(patterns, str(tmp_path))
+
+        assert len(scripts) == 1
+        assert scripts[0].endswith(".sh")
+
+        script = Path(scripts[0])
+        assert script.exists()
+        content = script.read_text()
+        assert content.startswith("#!/usr/bin/env bash")
+        assert "consumer-audit" in content
+        assert 'grep -rn "import" "$FILE"' in content
+
+    def test_generates_settings_hooks_json(self, tmp_path):
+        """Hook compilation produces a settings-hooks.json with correct structure."""
+        patterns = [
+            _make_hook_pattern("post-hook", hook_event="PostToolUse"),
+            _make_hook_pattern("pre-hook", hook_event="PreToolUse", hook_blocking=True),
+        ]
+
+        scripts, settings_path = generate_hooks(patterns, str(tmp_path))
+
+        assert settings_path is not None
+        settings = json.loads(Path(settings_path).read_text())
+        assert "hooks" in settings
+        assert "PostToolUse" in settings["hooks"]
+        assert "PreToolUse" in settings["hooks"]
+        assert len(settings["hooks"]["PostToolUse"]) == 1
+        assert len(settings["hooks"]["PreToolUse"]) == 1
+
+        pre_hook = settings["hooks"]["PreToolUse"][0]
+        assert pre_hook.get("blocking") is True
+
+    def test_no_hooks_returns_empty(self, tmp_path):
+        """When no hook patterns exist, returns empty lists."""
+        patterns = [
+            {
+                "id": "ambient-pattern",
+                "rule": "An ambient rule",
+                "trigger": "",
+                "rationale": "",
+                "good_example": None,
+                "bad_example": None,
+                "source_prs": ["#1"],
+                "scope": "naming",
+                "modules": ["server"],
+                "mode": "ambient",
+                "confidence": 0.5,
+                "review_count": 2,
+                "status": "active",
+            }
+        ]
+
+        scripts, settings_path = generate_hooks(patterns, str(tmp_path))
+        assert scripts == []
+        assert settings_path is None
+
+    def test_hook_scripts_are_executable(self, tmp_path):
+        """Generated hook scripts have executable permissions."""
+        import os
+        import stat
+
+        patterns = [_make_hook_pattern("exec-test")]
+        scripts, _ = generate_hooks(patterns, str(tmp_path))
+
+        mode = os.stat(scripts[0]).st_mode
+        assert mode & stat.S_IXUSR, "Script should be user-executable"
+
+    def test_cleans_stale_hook_scripts(self, tmp_path):
+        """Previous mined-*.sh scripts are removed before generating new ones."""
+        hooks_dir = tmp_path / ".claude" / "hooks"
+        hooks_dir.mkdir(parents=True)
+        stale = hooks_dir / "mined-old-hook.sh"
+        stale.write_text("#!/bin/bash\n# stale")
+
+        patterns = [_make_hook_pattern("new-hook")]
+        generate_hooks(patterns, str(tmp_path))
+
+        assert not stale.exists(), "Stale hook script should be cleaned up"
+        new_scripts = list(hooks_dir.glob("mined-*.sh"))
+        assert len(new_scripts) == 1
+        assert "new-hook" in new_scripts[0].name
+
+    def test_hook_glob_in_settings(self, tmp_path):
+        """Hook glob pattern appears in settings-hooks.json entry."""
+        patterns = [_make_hook_pattern(
+            "controller-auth",
+            hook_glob="**/*Controller*.scala",
+        )]
+
+        _, settings_path = generate_hooks(patterns, str(tmp_path))
+        settings = json.loads(Path(settings_path).read_text())
+        entry = settings["hooks"]["PostToolUse"][0]
+        assert entry["fileGlob"] == "**/*Controller*.scala"
