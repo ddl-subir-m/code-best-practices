@@ -5,30 +5,10 @@ from unittest.mock import patch
 
 import pytest
 
+from tests.helpers import make_test_pattern
 from extract.enrich import cmd_enrich, enrich_single_pattern
 from extract.enrich_hooks import cmd_enrich_hooks, enrich_single_hook, _lint_hook_check
 from extract.validate import cmd_validate_hooks
-
-
-def make_test_pattern(pid, **overrides):
-    """Create a minimal pattern dict for testing."""
-    p = {
-        "id": pid,
-        "rule": f"Rule for {pid}",
-        "trigger": "",
-        "rationale": "",
-        "good_example": None,
-        "bad_example": None,
-        "source_prs": ["#1"],
-        "scope": "testing",
-        "modules": ["server"],
-        "mode": "active",
-        "confidence": 0.3,
-        "review_count": 3,
-        "status": "active",
-    }
-    p.update(overrides)
-    return p
 
 
 MOCK_ENRICHMENT = {

@@ -111,16 +111,12 @@ def cmd_fetch(args):
             if not pr_number:
                 continue
 
-            # Filter bot comments
             filtered = filter_bot_comments(pr)
-
-            # Check if any human threads remain
             threads = filtered.get("reviewThreads", {}).get("nodes", [])
             if not threads:
                 print(f"  PR #{pr_number}: no human review threads, skipping")
                 continue
 
-            # Save raw review
             out_path = output_dir / f"pr-{pr_number}.json"
             with open(out_path, "w") as f:
                 json.dump({"data": {"repository": {"pullRequest": filtered}}}, f)
@@ -134,7 +130,6 @@ def cmd_fetch(args):
             break
         cursor = page_info.get("endCursor")
 
-    # Update state
     state["last_extraction_date"] = datetime.now().strftime("%Y-%m-%d")
     state["last_pr_number"] = highest_pr
     state["total_prs_processed"] += total_fetched

@@ -43,3 +43,5 @@ query($searchQuery: String!, $first: Int!, $after: String) {
 """
 
 MODULE_THRESHOLD = 5
+
+DEFAULT_CATEGORY = "code-organization"

@@ -5,7 +5,7 @@ import os
 import sys
 from pathlib import Path
 
-from .constants import VALID_CATEGORIES
+from .constants import DEFAULT_CATEGORY, VALID_CATEGORIES
 
 
 def normalize_rule(rule: str) -> str:
@@ -98,9 +98,9 @@ def extract_module_from_path(file_path: str) -> str:
 def raw_to_canonical(raw: dict) -> dict:
     """Convert a raw extracted pattern to canonical schema."""
     pattern_name = raw.get("pattern_name", "unknown")
-    category = raw.get("category", "code-organization")
+    category = raw.get("category", DEFAULT_CATEGORY)
     if category not in VALID_CATEGORIES:
-        category = "code-organization"
+        category = DEFAULT_CATEGORY
 
     rule = raw.get("rule", "")
     module = extract_module_from_path(raw.get("file_path", ""))
@@ -124,20 +124,22 @@ def raw_to_canonical(raw: dict) -> dict:
 
 def merge_duplicate_group(patterns: list[dict]) -> dict:
     """Merge a group of duplicate patterns into one canonical pattern."""
-    # Use the pattern with the longest rule as the base (most detailed wording)
     base = max(patterns, key=lambda p: len(p.get("rule", "")))
     merged = dict(base)
+    # Copy mutable nested lists so appends don't mutate the original pattern
+    merged["source_prs"] = list(base.get("source_prs", []))
+    merged["modules"] = list(base.get("modules", []))
 
     for p in patterns:
         if p is base:
             continue
         merged["review_count"] = merged.get("review_count", 1) + p.get("review_count", 1)
         for pr in p.get("source_prs", []):
-            if pr not in merged.get("source_prs", []):
-                merged.setdefault("source_prs", []).append(pr)
+            if pr not in merged["source_prs"]:
+                merged["source_prs"].append(pr)
         for mod in p.get("modules", []):
-            if mod not in merged.get("modules", []):
-                merged.setdefault("modules", []).append(mod)
+            if mod not in merged["modules"]:
+                merged["modules"].append(mod)
 
     merged["confidence"] = min(1.0, merged["review_count"] / 10)
     return merged

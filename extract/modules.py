@@ -22,9 +22,6 @@ def cmd_modules(args):
     dir_paths = defaultdict(set)
 
     for pattern in patterns:
-        for pr_ref in pattern.get("source_prs", []):
-            pass  # source_prs don't have paths
-
         for module in pattern.get("modules", []):
             if module:
                 dir_counts[module] += 1

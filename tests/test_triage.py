@@ -5,29 +5,9 @@ from unittest.mock import patch
 
 import pytest
 
+from tests.helpers import make_test_pattern
 from extract.triage import cmd_triage
 from extract.claude import parse_json_response
-
-
-def make_test_pattern(pid, **overrides):
-    """Create a minimal pattern dict for testing."""
-    p = {
-        "id": pid,
-        "rule": f"Rule for {pid}",
-        "trigger": "",
-        "rationale": "",
-        "good_example": None,
-        "bad_example": None,
-        "source_prs": ["#1"],
-        "scope": "testing",
-        "modules": ["server"],
-        "mode": "active",
-        "confidence": 0.3,
-        "review_count": 3,
-        "status": "active",
-    }
-    p.update(overrides)
-    return p
 
 
 class TestTriageFiltering:
