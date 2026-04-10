@@ -1242,6 +1242,10 @@ def build_enrich_hooks_prompt(pattern: dict) -> str:
         '4. "hook_check": a shell command (using grep, awk, or sed) that detects the '
         "anti-pattern in the file passed as $1. Exit code 0 = violation found, "
         "exit code 1 = no violation. Keep it simple and portable.\n"
+        "   IMPORTANT: For PreToolUse hooks, ONLY check lines being ADDED in the current edit, "
+        "not the entire file. Use: git diff -- \"$1\" | grep -E '^\\+[^+]' | grep -qE 'pattern'\n"
+        "   This prevents blocking edits to files that have pre-existing violations the developer "
+        "isn't touching. For PostToolUse hooks, grepping the whole file is fine.\n"
         '5. "hook_message": a concise warning message shown when the hook fires. '
         "Include what was detected and what the developer should do.\n"
         '6. "hook_blocking": true if the hook should block the action (security-critical), '
@@ -1270,7 +1274,7 @@ HOOK_CHECK_LINT_RULES = [
 ]
 
 
-def _lint_hook_check(hook_check: str) -> list[str]:
+def _lint_hook_check(hook_check: str, hook_event: str = "") -> list[str]:
     """Lint a hook_check shell command for common anti-patterns.
 
     Returns a list of warning strings (empty if clean).
@@ -1280,6 +1284,15 @@ def _lint_hook_check(hook_check: str) -> list[str]:
     for pattern, desc in HOOK_CHECK_LINT_RULES:
         if re.search(pattern, hook_check):
             warnings.append(desc)
+
+    # PreToolUse hooks must check git diff, not the whole file
+    if hook_event == "PreToolUse" and "git diff" not in hook_check:
+        warnings.append(
+            "PreToolUse hook greps the whole file — must use "
+            "'git diff -- \"$1\" | grep -E \"^\\+[^+]\"' to only check added lines, "
+            "otherwise pre-existing violations block unrelated edits"
+        )
+
     return warnings
 
 
@@ -1321,8 +1334,9 @@ def enrich_single_hook(pattern: dict) -> dict | None:
 
     # Lint the generated shell command and re-prompt Claude to fix issues
     pid = pattern.get("id", "?")
+    hook_event = result.get("hook_event", "")
     for attempt in range(MAX_LINT_RETRIES):
-        warnings = _lint_hook_check(result["hook_check"])
+        warnings = _lint_hook_check(result["hook_check"], hook_event)
         if not warnings:
             break
         for w in warnings:
@@ -1337,7 +1351,7 @@ def enrich_single_hook(pattern: dict) -> dict | None:
             break
 
     # Final lint check — reject if still broken
-    final_warnings = _lint_hook_check(result["hook_check"])
+    final_warnings = _lint_hook_check(result["hook_check"], hook_event)
     if final_warnings:
         print(f"  Rejecting {pid}: hook_check still has issues after {MAX_LINT_RETRIES} fix attempts",
               file=sys.stderr)

@@ -219,17 +219,26 @@ class TestEnrichHooksWritesFields:
         pf = tmp_path / "patterns.json"
         pf.write_text(json.dumps(patterns))
 
-        hook_response = {
-            "hook_event": "PreToolUse",
-            "hook_tool": "Edit",
-            "hook_glob": "**/*Controller*.scala",
-            "hook_check": 'grep -L "authAction\\|authenticatedAction" "$FILE"',
-            "hook_message": "Endpoint missing auth wrapper. Add authAction or authenticatedAction.",
-            "hook_blocking": True,
-        }
+        call_count = [0]
 
         def mock_claude(prompt, timeout=120):
-            return json.dumps(hook_response)
+            call_count[0] += 1
+            if call_count[0] == 1:
+                # Initial enrichment — returns PreToolUse but without git diff
+                return json.dumps({
+                    "hook_event": "PreToolUse",
+                    "hook_tool": "Edit",
+                    "hook_glob": "**/*Controller*.scala",
+                    "hook_check": 'grep -L "authAction" "$1"',
+                    "hook_message": "Endpoint missing auth wrapper.",
+                    "hook_blocking": True,
+                    "hook_fp_risk": "LOW",
+                })
+            else:
+                # Lint fix — returns corrected command with git diff
+                return json.dumps({
+                    "hook_check": 'git diff -- "$1" | grep -E \'^\\+[^+]\' | grep -qE \'= *Action[.{ ]\'',
+                })
 
         with patch("extract.call_claude", side_effect=mock_claude):
             args = type("Args", (), {"input": str(pf), "force": False, "workers": 1})()
@@ -239,6 +248,7 @@ class TestEnrichHooksWritesFields:
         p = result[0]
         assert p["hook_event"] == "PreToolUse"
         assert p["hook_blocking"] is True
+        assert "git diff" in p["hook_check"]
 
 
 class TestEnrichHooksErrorHandling:
@@ -346,6 +356,24 @@ class TestHookCheckLinter:
     def test_clean_pipeline_passes(self):
         """A pipeline ending in grep -q passes."""
         warnings = _lint_hook_check('grep -n "foo" "$1" | grep -q "bar"')
+        assert warnings == []
+
+    def test_pretooluse_requires_git_diff(self):
+        """PreToolUse hooks that grep the whole file are flagged."""
+        warnings = _lint_hook_check('grep -qE "Action" "$1"', hook_event="PreToolUse")
+        assert any("git diff" in w for w in warnings)
+
+    def test_pretooluse_with_git_diff_passes(self):
+        """PreToolUse hooks using git diff pass the check."""
+        warnings = _lint_hook_check(
+            'git diff -- "$1" | grep -E \'^\\+[^+]\' | grep -qE "Action"',
+            hook_event="PreToolUse",
+        )
+        assert warnings == []
+
+    def test_posttooluse_whole_file_is_fine(self):
+        """PostToolUse hooks can grep the whole file."""
+        warnings = _lint_hook_check('grep -qE "pattern" "$1"', hook_event="PostToolUse")
         assert warnings == []
 
 
