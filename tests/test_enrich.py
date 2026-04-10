@@ -5,7 +5,10 @@ from unittest.mock import patch
 
 import pytest
 
-from extract import cmd_enrich, cmd_enrich_hooks, cmd_validate_hooks, enrich_single_pattern, enrich_single_hook
+from extract import (
+    cmd_enrich, cmd_enrich_hooks, cmd_validate_hooks,
+    enrich_single_pattern, enrich_single_hook, _lint_hook_check,
+)
 
 
 def make_test_pattern(pid, **overrides):
@@ -256,6 +259,94 @@ class TestEnrichHooksErrorHandling:
         p = result[0]
         assert p["mode"] == "active"
         assert "failed" in p.get("mode_rationale", "").lower()
+
+    def test_lint_failure_rejects_hook(self, tmp_path):
+        """Hook with unfixable lint issues (e.g., pipe to head) is rejected."""
+        patterns = [make_test_pattern("lint-reject", mode="hook")]
+        pf = tmp_path / "patterns.json"
+        pf.write_text(json.dumps(patterns))
+
+        call_count = [0]
+
+        def mock_claude(prompt, timeout=120):
+            call_count[0] += 1
+            if call_count[0] == 1:
+                # Initial enrichment returns a broken hook_check
+                return json.dumps({
+                    **MOCK_HOOK_ENRICHMENT,
+                    "hook_check": 'grep -n "pattern" "$1" | head -1',
+                })
+            else:
+                # Fix attempts also return broken commands
+                return json.dumps({
+                    "hook_check": 'grep -n "pattern" "$1" | head -5',
+                })
+
+        with patch("extract.call_claude", side_effect=mock_claude):
+            args = type("Args", (), {"input": str(pf), "force": False, "workers": 1})()
+            cmd_enrich_hooks(args)
+
+        result = json.loads(pf.read_text())
+        p = result[0]
+        # Rejected → falls back to active
+        assert p["mode"] == "active"
+
+    def test_lint_fix_succeeds(self, tmp_path):
+        """Hook with fixable lint issue gets corrected by re-prompt."""
+        patterns = [make_test_pattern("lint-fix", mode="hook")]
+        pf = tmp_path / "patterns.json"
+        pf.write_text(json.dumps(patterns))
+
+        call_count = [0]
+
+        def mock_claude(prompt, timeout=120):
+            call_count[0] += 1
+            if call_count[0] == 1:
+                # Initial enrichment returns broken hook_check
+                return json.dumps({
+                    **MOCK_HOOK_ENRICHMENT,
+                    "hook_check": 'grep -n "pattern" "$1" | head -1',
+                })
+            else:
+                # Fix attempt returns a clean command
+                return json.dumps({
+                    "hook_check": 'grep -q "pattern" "$1"',
+                })
+
+        with patch("extract.call_claude", side_effect=mock_claude):
+            args = type("Args", (), {"input": str(pf), "force": False, "workers": 1})()
+            cmd_enrich_hooks(args)
+
+        result = json.loads(pf.read_text())
+        p = result[0]
+        assert p["mode"] == "hook"
+        assert p["hook_check"] == 'grep -q "pattern" "$1"'
+
+
+# ---------------------------------------------------------------------------
+# Hook check linter tests
+# ---------------------------------------------------------------------------
+
+class TestHookCheckLinter:
+    def test_catches_pipe_to_head(self):
+        """Pipe to head always exits 0 — should be flagged."""
+        warnings = _lint_hook_check('grep -n "pattern" "$1" | head -1')
+        assert any("head" in w for w in warnings)
+
+    def test_catches_pipe_to_wc(self):
+        """Pipe to wc always exits 0 — should be flagged."""
+        warnings = _lint_hook_check('grep -c "pattern" "$1" | wc -l')
+        assert any("wc" in w for w in warnings)
+
+    def test_clean_command_passes(self):
+        """A well-formed grep -q command has no warnings."""
+        warnings = _lint_hook_check('grep -qE "pattern" "$1"')
+        assert warnings == []
+
+    def test_clean_pipeline_passes(self):
+        """A pipeline ending in grep -q passes."""
+        warnings = _lint_hook_check('grep -n "foo" "$1" | grep -q "bar"')
+        assert warnings == []
 
 
 # ---------------------------------------------------------------------------

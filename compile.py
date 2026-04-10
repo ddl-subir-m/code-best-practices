@@ -360,6 +360,7 @@ def generate_hooks(patterns: list[dict], output_dir: str) -> tuple[list[str], st
         suppress_comment = f"hook-ok: {p['id']}"
 
         # Write the shell script
+        # Claude Code hook exit codes: 0 = pass (allow), non-zero = fail (block/warn)
         script_content = (
             "#!/usr/bin/env bash\n"
             "# Auto-generated hook script. Do not edit manually.\n"
@@ -367,21 +368,21 @@ def generate_hooks(patterns: list[dict], output_dir: str) -> tuple[list[str], st
             f"# Rule: {p['rule']}\n"
             f"# Sources: {', '.join(p.get('source_prs', []))}\n"
             "#\n"
-            "# Exit 0 = violation found (hook fires), Exit 1 = no violation\n"
+            "# Exit 0 = no violation (pass), Exit 1 = violation found (block/warn)\n"
             f"# Suppress with: // {suppress_comment}\n"
             "\n"
             'FILE="${1:?Usage: $0 <file>}"\n'
             "\n"
             "# Skip if file contains a suppression comment for this hook\n"
-            f'grep -q "{suppress_comment}" "$FILE" && exit 1\n'
+            f'grep -q "{suppress_comment}" "$FILE" && exit 0\n'
             "\n"
             "# Run the check in a subshell so embedded exits don't leak\n"
             f"if ( {hook_check} ); then\n"
             f"  echo '{safe_message}'\n"
             f"  echo 'Suppress: add // {suppress_comment} to the file'\n"
-            "  exit 0\n"
+            "  exit 1\n"
             "fi\n"
-            "exit 1\n"
+            "exit 0\n"
         )
 
         with open(script_path, "w") as f:

@@ -2783,7 +2783,7 @@
     "hook_event": "PreToolUse",
     "hook_tool": "Edit",
     "hook_glob": "**/*Controller*.scala",
-    "hook_check": "grep -qE '\\.(toMap|asMap|toProperties)\\s*\\)|toJson\\(\\s*(config|settings|credentials)\\b' \"$1\"",
+    "hook_check": "grep -qE '\\.(toMap|asMap|toProperties)\\s*[({]|toJson\\(\\s*(config|settings|credentials)\\b' \"$1\"",
     "hook_message": "Potential secret leakage: this controller serializes a full config/settings object directly (via .toMap or raw toJson). Use an allowlist approach \u2014 create a dedicated case class with only safe fields and serialize that instead of exposing the entire object.",
     "hook_blocking": true
   },
@@ -6214,7 +6214,7 @@
     "hook_event": "PostToolUse",
     "hook_tool": "Edit",
     "hook_glob": "**/*.{ts,tsx,js,jsx}",
-    "hook_check": "grep -nE '\\|\\|\\s*0\\b|\\?\\?\\s*0\\b' \"$1\" | grep -iE 'config|limit|max|size|threshold|quota|capacity' | head -1",
+    "hook_check": "grep -nE '\\|\\|\\s*0\\b|\\?\\?\\s*0\\b' \"$1\" | grep -qiE 'config|limit|max|size|threshold|quota|capacity'",
     "hook_message": "Potential unsafe zero default for a config-driven limit detected. Defaulting to 0 when a config value is missing can silently block all operations (e.g., max file size of 0 rejects every upload). Use a sensible non-zero default and explicitly document if 0 means 'no limit'. See PRs #44194, #47271.",
     "hook_blocking": false
   },

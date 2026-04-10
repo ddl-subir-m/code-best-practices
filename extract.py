@@ -1241,6 +1241,53 @@ def build_enrich_hooks_prompt(pattern: dict) -> str:
     )
 
 
+HOOK_CHECK_LINT_RULES = [
+    # (pattern, description) — if the regex matches hook_check, it's flagged
+    (r'\|\s*head\b', "pipe to head always exits 0 — use grep -q instead"),
+    (r'\|\s*tail\b', "pipe to tail always exits 0 — use grep -q instead"),
+    (r'\|\s*wc\b', "pipe to wc always exits 0 — use grep -q or grep -c instead"),
+    (r'\\s\*\\[)\]]', "\\s*\\) after method name misses the opening paren — use \\s*[({] or \\s*\\("),
+    (r'\bexit\s+0\s*\|\|', "exit 0 || pattern may short-circuit subshell unexpectedly"),
+]
+
+
+def _lint_hook_check(hook_check: str) -> list[str]:
+    """Lint a hook_check shell command for common anti-patterns.
+
+    Returns a list of warning strings (empty if clean).
+    """
+    import re
+    warnings = []
+    for pattern, desc in HOOK_CHECK_LINT_RULES:
+        if re.search(pattern, hook_check):
+            warnings.append(desc)
+    return warnings
+
+
+MAX_LINT_RETRIES = 2
+
+
+def _build_lint_fix_prompt(pattern: dict, hook_check: str, warnings: list[str]) -> str:
+    """Build a prompt asking Claude to fix a broken hook_check command."""
+    warning_text = "\n".join(f"- {w}" for w in warnings)
+    return (
+        "You previously generated this shell command for a hook check, but it has issues:\n\n"
+        f"Pattern: {pattern['id']}\n"
+        f"Rule: {pattern['rule']}\n"
+        f"Current hook_check: {hook_check}\n\n"
+        f"Issues found:\n{warning_text}\n\n"
+        "Fix the command. Requirements:\n"
+        "- The exit code of the LAST command in the pipeline determines the result\n"
+        "- Do NOT pipe to head, tail, or wc — they always exit 0 regardless of input\n"
+        "- Use grep -q for existence checks (exits 0 if found, 1 if not)\n"
+        "- If you need to filter then check, pipe through grep then end with grep -q\n"
+        "- The file path is passed as $1\n"
+        "- Exit 0 = violation found, Exit 1 = no violation\n\n"
+        'Return ONLY the fixed shell command as a JSON object: {"hook_check": "fixed command"}\n'
+        "Return ONLY the JSON object, no other text."
+    )
+
+
 def enrich_single_hook(pattern: dict) -> dict | None:
     """Enrich a single hook pattern via Claude. Returns hook fields or None on failure."""
     prompt = build_enrich_hooks_prompt(pattern)
@@ -1251,6 +1298,30 @@ def enrich_single_hook(pattern: dict) -> dict | None:
 
     # Validate required hook fields
     if not result.get("hook_event") or not result.get("hook_check"):
+        return None
+
+    # Lint the generated shell command and re-prompt Claude to fix issues
+    pid = pattern.get("id", "?")
+    for attempt in range(MAX_LINT_RETRIES):
+        warnings = _lint_hook_check(result["hook_check"])
+        if not warnings:
+            break
+        for w in warnings:
+            print(f"  Lint ({pid}, attempt {attempt + 1}): {w}", file=sys.stderr)
+        fix_prompt = _build_lint_fix_prompt(pattern, result["hook_check"], warnings)
+        fix_response = call_claude(fix_prompt, timeout=60)
+        fix_result = parse_json_object(fix_response)
+        if fix_result and fix_result.get("hook_check"):
+            result["hook_check"] = fix_result["hook_check"]
+        else:
+            print(f"  Lint fix failed for {pid}, keeping original", file=sys.stderr)
+            break
+
+    # Final lint check — reject if still broken
+    final_warnings = _lint_hook_check(result["hook_check"])
+    if final_warnings:
+        print(f"  Rejecting {pid}: hook_check still has issues after {MAX_LINT_RETRIES} fix attempts",
+              file=sys.stderr)
         return None
 
     return result
