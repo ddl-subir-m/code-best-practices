@@ -1,6 +1,10 @@
 modules:
   .circleci:
   - /.circleci/
+  3rdparty:
+  - /3rdparty/
+  WORKSPACE:
+  - /WORKSPACE/
   activity:
   - /activity/
   admin:
@@ -20,6 +24,8 @@ modules:
   client:
   - /client-api/
   - /client/
+  comments:
+  - /comments/
   common:
   - /common-core/
   - /common/
@@ -60,6 +66,8 @@ modules:
   - /gen-ai/
   guardrails:
   - /guardrails/
+  hardwaretier:
+  - /hardwaretier/
   homepage-tasks:
   - /homepage-tasks/
   jobs:
@@ -71,8 +79,12 @@ modules:
   - /model-api-sagas/
   model-serving:
   - /model-serving/
+  modelmanager:
+  - /modelmanager/
   nucleus:
   - /nucleus/
+  organizations:
+  - /organizations/
   personalaccesstoken:
   - /personalaccesstoken/
   ppm:
@@ -91,8 +103,6 @@ modules:
   - /run/
   runprep:
   - /runprep/
-  scheduler:
-  - /scheduler/
   secretstore:
   - /secretstore/
   server:
@@ -113,4 +123,4 @@ modules:
   - '*'
 threshold: 5
 auto_generated: true
-last_updated: '2026-03-27'
+last_updated: '2026-04-10'

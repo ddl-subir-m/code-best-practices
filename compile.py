@@ -379,7 +379,7 @@ def generate_hooks(patterns: list[dict], output_dir: str) -> tuple[list[str], st
             "# Run the check in a subshell so embedded exits don't leak\n"
             f"if ( {hook_check} ); then\n"
             f"  echo '{safe_message}'\n"
-            f"  echo 'Suppress: add // {suppress_comment} to the file'\n"
+            f"  echo 'Ask the developer: should I (1) fix the issue, or (2) suppress this check by adding // {suppress_comment} to the file?'\n"
             "  exit 1\n"
             "fi\n"
             "exit 0\n"
