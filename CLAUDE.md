@@ -76,5 +76,8 @@ output/
 ├── .claude/skills/mined-{topic}/SKILL.md       — on-demand skills
 ├── .claude/hooks/mined-{pattern-id}.sh         — auto-triggered hook scripts
 ├── .claude/settings-hooks.json                 — hook wiring config (merge into settings.json)
-└── .cursor/rules/mined-{module}-practices.mdc  — per-module Cursor rules
+├── .cursor/rules/mined-{module}-practices.mdc  — per-module Cursor rules
+├── .cursor/skills/mined-{topic}/SKILL.md       — Cursor skills (same format as Claude)
+├── .cursor/hooks/mined-{pattern-id}.sh         — Cursor hook scripts (stdin JSON → stdout JSON)
+└── .cursor/hooks.json                          — Cursor hook wiring config
 ```

@@ -1,16 +1,18 @@
 # code-best-practices
 
-Turn your team's PR review history into AI-native developer tooling. Mines recurring patterns from GitHub PR review threads and compiles them into Claude Code rules, Claude Code skills, Claude Code hooks, and Cursor rules — so engineers get best practices embedded in their workflow automatically.
+Turn your team's PR review history into AI-native developer tooling. Mines recurring patterns from GitHub PR review threads and compiles them into rules, skills, and hooks for both Claude Code and Cursor — so engineers get best practices embedded in their workflow automatically.
 
 ## How It Works
 
 ```
-GitHub PR reviews ──→ Extract patterns ──→ patterns.json ──→ Compile ──→ Rules
+GitHub PR reviews ──→ Extract patterns ──→ patterns.json ──→ Compile ──→ Output
                         (Claude Code)       (source of truth)              │
-                                                                           ├─ .claude/rules/  (ambient)
-                                                                           ├─ .claude/skills/ (on-demand)
-                                                                           ├─ .claude/hooks/  (automated)
-                                                                           └─ .cursor/rules/  (Cursor)
+                                                                           ├─ .claude/rules/   (ambient)
+                                                                           ├─ .claude/skills/  (on-demand)
+                                                                           ├─ .claude/hooks/   (automated)
+                                                                           ├─ .cursor/rules/   (ambient)
+                                                                           ├─ .cursor/skills/  (on-demand)
+                                                                           └─ .cursor/hooks/   (automated)
 ```
 
 1. **Fetch** PR review threads from GitHub via `gh api graphql`
@@ -139,14 +141,21 @@ output/
 │   ├── skills/
 │   │   └── mined-{topic}/SKILL.md       # On-demand skills (procedural patterns)
 │   ├── hooks/
-│   │   └── mined-{pattern-id}.sh        # Auto-triggered hook scripts
+│   │   └── mined-{pattern-id}.sh        # Auto-triggered hook scripts ($FILE as $1)
 │   └── settings-hooks.json              # Hook wiring config (merge into settings.json)
 └── .cursor/
-    └── rules/
-        ├── mined-global-practices.mdc   # Cross-cutting Cursor rules
-        ├── mined-apps-practices.mdc     # Per-module Cursor rules
-        └── ...                          # One .mdc per module
+    ├── rules/
+    │   ├── mined-global-practices.mdc   # Cross-cutting Cursor rules
+    │   ├── mined-apps-practices.mdc     # Per-module Cursor rules
+    │   └── ...                          # One .mdc per module
+    ├── skills/
+    │   └── mined-{topic}/SKILL.md       # Cursor skills (same format as Claude)
+    ├── hooks/
+    │   └── mined-{pattern-id}.sh        # Cursor hook scripts (stdin JSON → stdout JSON)
+    └── hooks.json                       # Cursor hook wiring config
 ```
+
+Cursor and Claude skill files share identical content — the only difference is the directory. Cursor hook scripts differ from Claude hook scripts: they read the target file path from stdin-delivered JSON (as Cursor does), return a permission decision as JSON on stdout, and embed glob-based path filtering directly in the script (since Cursor's `afterFileEdit` has no config-level file-glob option).
 
 ### How Rules Are Scoped
 
@@ -154,16 +163,20 @@ Rules are grouped by **module** (derived from file paths in PR threads), not jus
 
 ### Ambient vs Active vs Hook
 
-- **Ambient rules** (`.claude/rules/`) are loaded automatically by Claude Code on every interaction. Engineers don't need to do anything.
-- **Active skills** (`.claude/skills/`) are invoked explicitly via `/skill-name`. Only created for procedural patterns (setup guides, workflows, checklists).
-- **Hooks** (`.claude/hooks/`) run automatically when files are edited. Used for high-severity, mechanically automatable checks (security gates, auth wrappers, secret leakage). Hooks can block edits (PreToolUse) or warn after (PostToolUse).
+Each mode is generated for both Claude Code and Cursor from the same `patterns.json`:
+
+- **Ambient rules** (`.claude/rules/`, `.cursor/rules/`) are loaded automatically on every interaction. Engineers don't need to do anything.
+- **Active skills** (`.claude/skills/`, `.cursor/skills/`) are invoked explicitly via `/skill-name`. Only created for procedural patterns (setup guides, workflows, checklists). Cursor and Claude use the same `SKILL.md` format.
+- **Hooks** (`.claude/hooks/`, `.cursor/hooks/`) run automatically when files are edited. Used for high-severity, mechanically automatable checks (security gates, auth wrappers, secret leakage). Hooks can block edits or just warn. The two runtimes differ:
+  - Claude: `PreToolUse`/`PostToolUse` events, file path passed as `$1`, blocking via exit code.
+  - Cursor: `preToolUse` (`matcher: "Write"`) / `afterFileEdit` events, JSON in via stdin and JSON decision out via stdout (`{"permission":"deny"}` + exit 2 to block). Blocking hooks also set `failClosed: true` so a crashing script still blocks.
 
 ## Deploying Rules to Your Repo
 
 After running the pipeline:
 
 ```bash
-# Copy generated rules to your target repo
+# Copy generated rules/skills/hooks to your target repo
 cp -r output/.claude/ /path/to/your-repo/.claude/
 cp -r output/.cursor/ /path/to/your-repo/.cursor/
 
@@ -174,7 +187,10 @@ git commit -m "Update AI coding rules from PR review mining"
 git push
 ```
 
-Engineers get the rules automatically when they pull.
+Engineers get the rules automatically when they pull. To activate hooks:
+
+- **Claude Code**: merge `output/.claude/settings-hooks.json` into the repo's `.claude/settings.json`.
+- **Cursor**: `.cursor/hooks.json` is picked up automatically by Cursor on reload.
 
 ## Pattern Schema
 
@@ -214,14 +230,21 @@ Each pattern in `patterns.json` follows this schema:
 | `review_count` | Number of distinct PRs where this was flagged |
 | `status` | `active`, `deprecated`, or `rejected` |
 
+Active-mode patterns (skills) also include enrichment fields:
+
+| Field | Description |
+|-------|-------------|
+| `skill_title` | Human-readable title used for the SKILL directory slug and heading |
+| `steps` | Ordered list of procedural steps rendered as numbered instructions |
+
 Hook-mode patterns also include:
 
 | Field | Description |
 |-------|-------------|
-| `hook_event` | `PreToolUse` (block before edit) or `PostToolUse` (warn after edit) |
-| `hook_tool` | Which tool triggers it — `Edit` or `Write` |
-| `hook_glob` | File glob pattern to match (e.g., `**/*Controller*.scala`) |
-| `hook_check` | Shell command that detects the anti-pattern (exit 0 = violation) |
+| `hook_event` | `PreToolUse` (block before edit) or `PostToolUse` (warn after edit). Mapped to Cursor's `preToolUse` / `afterFileEdit` at compile time |
+| `hook_tool` | Which tool triggers it — `Edit` or `Write` (Claude); Cursor hooks always use `matcher: "Write"` for pre-tool events |
+| `hook_glob` | File glob pattern to match (e.g., `**/*Controller*.scala`). Used as `fileGlob` in Claude settings; compiled to a regex embedded in the script for Cursor |
+| `hook_check` | Shell command that detects the anti-pattern (exit 0 = violation). Receives the file path as `$1` (and `$FILE` in Cursor scripts) |
 | `hook_message` | Warning message shown when the hook fires |
 | `hook_blocking` | Whether the hook blocks the action or just warns |
 | `hook_fp_risk` | `LOW`, `MEDIUM`, or `HIGH` — false positive risk assessment |
@@ -281,7 +304,7 @@ pytest tests/ -v
 ```
 
 Tests covering:
-- Compiler: module grouping, global patterns, special characters, skills generation, hooks generation, Cursor .mdc generation, schema validation
+- Compiler: module grouping, global patterns, special characters, Claude + Cursor skills, Claude + Cursor hooks (script generation, event mapping, blocking/non-blocking decisions, embedded glob filtering, executable bit), Cursor `.mdc` generation, glob→regex conversion, schema validation
 - Extract: patterns.json schema, state.json schema, modules.yaml schema, reclass guard
 - Triage: filtering, demotion, dry-run, hook classification, error handling
 - Enrich: filtering, field writing, hook enrichment, lint/fix pipeline, hook validation, error handling

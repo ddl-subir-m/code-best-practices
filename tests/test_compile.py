@@ -6,9 +6,12 @@ from pathlib import Path
 import pytest
 
 from compile import (
+    _glob_to_regex,
     generate_claude_rules,
     generate_claude_skills,
+    generate_cursor_hooks,
     generate_cursor_mdc,
+    generate_cursor_skills,
     generate_hooks,
     load_patterns,
 )
@@ -480,3 +483,202 @@ class TestGenerateHooks:
         settings = json.loads(Path(settings_path).read_text())
         entry = settings["hooks"]["PostToolUse"][0]
         assert entry["fileGlob"] == "**/*Controller*.scala"
+
+
+# ---------------------------------------------------------------------------
+# 7. Cursor skill generation
+# ---------------------------------------------------------------------------
+
+class TestGenerateCursorSkills:
+    def test_active_only(self, sample_patterns, tmp_path):
+        """Only active-mode patterns produce Cursor skill directories."""
+        generate_cursor_skills(sample_patterns, str(tmp_path))
+
+        skills_dir = tmp_path / ".cursor" / "skills"
+        assert skills_dir.exists(), "Cursor skills directory should be created"
+
+        skill_dirs = [d for d in skills_dir.iterdir() if d.is_dir()]
+        assert len(skill_dirs) == 1
+
+        skill_md = skill_dirs[0] / "SKILL.md"
+        assert skill_md.exists()
+        content = skill_md.read_text()
+        assert content.startswith("---")
+        assert "name:" in content
+        assert "description:" in content
+
+    def test_no_active_patterns(self, tmp_path):
+        """When no patterns are active, no Cursor skills directory is created."""
+        ambient_only = [{
+            "id": "ambient-1", "rule": "Rule one", "trigger": "", "rationale": "",
+            "good_example": None, "bad_example": None, "source_prs": ["#1"],
+            "scope": "general", "modules": ["apps"], "mode": "ambient",
+            "confidence": 0.7, "review_count": 2, "status": "active",
+        }]
+        generate_cursor_skills(ambient_only, str(tmp_path))
+        assert not (tmp_path / ".cursor" / "skills").exists()
+
+    def test_content_matches_claude_skills(self, tmp_path):
+        """Cursor and Claude skill SKILL.md files have identical content for the same pattern."""
+        pattern = _make_enriched_pattern(
+            "shared-pattern",
+            steps=["Step A", "Step B"],
+            skill_title="Shared pattern across IDEs",
+        )
+        generate_claude_skills([pattern], str(tmp_path))
+        generate_cursor_skills([pattern], str(tmp_path))
+
+        claude_skill = next((tmp_path / ".claude" / "skills").iterdir()) / "SKILL.md"
+        cursor_skill = next((tmp_path / ".cursor" / "skills").iterdir()) / "SKILL.md"
+        assert claude_skill.read_text() == cursor_skill.read_text()
+
+
+# ---------------------------------------------------------------------------
+# 8. Cursor hook generation
+# ---------------------------------------------------------------------------
+
+class TestGenerateCursorHooks:
+    def test_generates_scripts_and_hooks_json(self, tmp_path):
+        """Cursor hook patterns produce scripts under .cursor/hooks/ and a hooks.json."""
+        patterns = [_make_hook_pattern("consumer-audit")]
+
+        scripts, settings_path = generate_cursor_hooks(patterns, str(tmp_path))
+
+        assert len(scripts) == 1
+        assert ".cursor/hooks/" in scripts[0]
+        script = Path(scripts[0])
+        content = script.read_text()
+        assert content.startswith("#!/usr/bin/env bash")
+        assert 'grep -rn "import" "$FILE"' in content
+        # Stdin-driven, not argv-driven
+        assert "INPUT=$(cat)" in content
+        assert "file_path" in content
+
+        assert settings_path is not None
+        assert settings_path.endswith(".cursor/hooks.json")
+        config = json.loads(Path(settings_path).read_text())
+        assert config.get("version") == 1
+        # PostToolUse maps to afterFileEdit
+        assert "afterFileEdit" in config["hooks"]
+        entry = config["hooks"]["afterFileEdit"][0]
+        assert entry["command"].startswith(".cursor/hooks/mined-")
+        assert entry["type"] == "command"
+
+    def test_pretooluse_maps_to_cursor_pretooluse_with_write_matcher(self, tmp_path):
+        """PreToolUse + Edit maps to Cursor preToolUse with matcher='Write'."""
+        patterns = [_make_hook_pattern(
+            "pre-edit-check",
+            hook_event="PreToolUse",
+            hook_blocking=True,
+        )]
+        _, settings_path = generate_cursor_hooks(patterns, str(tmp_path))
+        config = json.loads(Path(settings_path).read_text())
+
+        assert "preToolUse" in config["hooks"]
+        entry = config["hooks"]["preToolUse"][0]
+        assert entry["matcher"] == "Write"
+        # Blocking hooks should be failClosed so a crashing script still blocks
+        assert entry["failClosed"] is True
+
+    def test_blocking_hook_emits_deny_and_exit_2(self, tmp_path):
+        """Blocking hooks produce a deny payload with exit code 2."""
+        patterns = [_make_hook_pattern(
+            "blocking-check",
+            hook_event="PreToolUse",
+            hook_blocking=True,
+        )]
+        scripts, _ = generate_cursor_hooks(patterns, str(tmp_path))
+        content = Path(scripts[0]).read_text()
+
+        assert '"permission":"deny"' in content
+        assert "exit 2" in content
+
+    def test_nonblocking_hook_emits_allow_with_message(self, tmp_path):
+        """Non-blocking hooks surface a message but allow the action (exit 0)."""
+        patterns = [_make_hook_pattern(
+            "warn-only",
+            hook_event="PostToolUse",
+            hook_blocking=False,
+            hook_message="Heads up: shared file changed.",
+        )]
+        scripts, _ = generate_cursor_hooks(patterns, str(tmp_path))
+        content = Path(scripts[0]).read_text()
+
+        assert '"permission":"allow"' in content
+        assert "Heads up: shared file changed." in content
+        # Violation branch still exits 0, since non-blocking
+        assert "exit 2" not in content
+
+    def test_glob_filter_embedded_in_script(self, tmp_path):
+        """The hook_glob is converted to a regex and embedded in the script for path filtering."""
+        patterns = [_make_hook_pattern(
+            "controller-auth",
+            hook_glob="**/*Controller*.scala",
+        )]
+        scripts, _ = generate_cursor_hooks(patterns, str(tmp_path))
+        content = Path(scripts[0]).read_text()
+        assert "grep -qE" in content
+        assert "Controller" in content
+        assert r"\.scala" in content
+
+    def test_scripts_are_executable(self, tmp_path):
+        """Generated Cursor hook scripts have executable permissions."""
+        import os
+        import stat
+
+        patterns = [_make_hook_pattern("exec-test")]
+        scripts, _ = generate_cursor_hooks(patterns, str(tmp_path))
+        mode = os.stat(scripts[0]).st_mode
+        assert mode & stat.S_IXUSR
+
+    def test_no_hooks_returns_empty(self, tmp_path):
+        """No hook patterns → no .cursor/hooks/ directory or hooks.json."""
+        patterns = [{
+            "id": "ambient", "rule": "x", "trigger": "", "rationale": "",
+            "good_example": None, "bad_example": None, "source_prs": ["#1"],
+            "scope": "x", "modules": ["server"], "mode": "ambient",
+            "confidence": 0.5, "review_count": 2, "status": "active",
+        }]
+        scripts, settings_path = generate_cursor_hooks(patterns, str(tmp_path))
+        assert scripts == []
+        assert settings_path is None
+
+
+# ---------------------------------------------------------------------------
+# 9. Glob → regex conversion (used by Cursor hook script path filtering)
+# ---------------------------------------------------------------------------
+
+class TestGlobToRegex:
+    def test_double_star_matches_any_depth(self):
+        import re
+        rx = _glob_to_regex("**/*.scala")
+        assert re.match(rx, "foo.scala")
+        assert re.match(rx, "a/b/c/foo.scala")
+        assert not re.match(rx, "foo.py")
+
+    def test_single_star_does_not_cross_slashes(self):
+        import re
+        rx = _glob_to_regex("src/*.ts")
+        assert re.match(rx, "src/foo.ts")
+        assert not re.match(rx, "src/sub/foo.ts")
+
+    def test_brace_expansion(self):
+        import re
+        rx = _glob_to_regex("**/*.{ts,tsx,js,jsx}")
+        for f in ("a.ts", "a/b.tsx", "x/y/z.js", "p.jsx"):
+            assert re.match(rx, f), f"Expected match for {f}"
+        assert not re.match(rx, "a.py")
+
+    def test_literal_dots_escaped(self):
+        import re
+        rx = _glob_to_regex("*.scala")
+        # Should not treat the dot as wildcard
+        assert not re.match(rx, "fooXscala")
+        assert re.match(rx, "foo.scala")
+
+    def test_specific_path_segment(self):
+        import re
+        rx = _glob_to_regex("**/compute-providers/**/*.scala")
+        assert re.match(rx, "src/compute-providers/foo/Bar.scala")
+        assert re.match(rx, "compute-providers/Bar.scala")
+        assert not re.match(rx, "src/other/foo/Bar.scala")
